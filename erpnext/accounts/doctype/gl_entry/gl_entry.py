@@ -97,8 +97,7 @@ class GLEntry(Document):
 
 	def check_pl_account(self):
 		if self.is_opening=='Yes' and \
-				frappe.db.get_value("Account", self.account, "report_type")=="Profit and Loss" and \
-				self.voucher_type not in ['Purchase Invoice', 'Sales Invoice']:
+				frappe.db.get_value("Account", self.account, "report_type")=="Profit and Loss":
 			frappe.throw(_("{0} {1}: 'Profit and Loss' type account {2} not allowed in Opening Entry")
 				.format(self.voucher_type, self.voucher_no, self.account))
 
@@ -138,7 +137,8 @@ class GLEntry(Document):
 			frappe.throw(_("{0} {1}: Cost Center {2} does not belong to Company {3}")
 				.format(self.voucher_type, self.voucher_no, self.cost_center, self.company))
 
-		if self.cost_center and _check_is_group():
+		if not self.flags.from_repost and not self.voucher_type == 'Period Closing Voucher' \
+			and self.cost_center and _check_is_group():
 			frappe.throw(_("""{0} {1}: Cost Center {2} is a group cost center and group cost centers cannot
 				be used in transactions""").format(self.voucher_type, self.voucher_no, frappe.bold(self.cost_center)))
 
@@ -293,4 +293,8 @@ def rename_temporarily_named_docs(doctype):
 		oldname = doc.name
 		set_name_from_naming_options(frappe.get_meta(doctype).autoname, doc)
 		newname = doc.name
-		frappe.db.sql("""UPDATE `tab{}` SET name = %s, to_rename = 0 where name = %s""".format(doctype), (newname, oldname))
+		frappe.db.sql(
+			"UPDATE `tab{}` SET name = %s, to_rename = 0 where name = %s".format(doctype),
+			(newname, oldname),
+			auto_commit=True
+		)

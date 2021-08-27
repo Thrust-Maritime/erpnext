@@ -187,7 +187,7 @@ frappe.ui.form.on('Payment Entry', {
 
 		frm.toggle_display("base_received_amount", (
 			frm.doc.paid_to_account_currency != company_currency &&
-			frm.doc.paid_from_account_currency != frm.doc.paid_to_account_currency 
+			frm.doc.paid_from_account_currency != frm.doc.paid_to_account_currency
 			&& frm.doc.base_paid_amount != frm.doc.base_received_amount
 		));
 
@@ -386,6 +386,8 @@ frappe.ui.form.on('Payment Entry', {
 
 	set_account_currency_and_balance: function(frm, account, currency_field,
 			balance_field, callback_function) {
+
+		var company_currency = frappe.get_doc(":Company", frm.doc.company).default_currency;
 		if (frm.doc.posting_date && account) {
 			frappe.call({
 				method: "erpnext.accounts.doctype.payment_entry.payment_entry.get_account_details",
@@ -412,6 +414,14 @@ frappe.ui.form.on('Payment Entry', {
 
 									if(!frm.doc.paid_amount && frm.doc.received_amount)
 										frm.events.received_amount(frm);
+
+									if (frm.doc.paid_from_account_currency == frm.doc.paid_to_account_currency
+										&& frm.doc.paid_amount != frm.doc.received_amount) {
+											if (company_currency != frm.doc.paid_from_account_currency &&
+												frm.doc.payment_type == "Pay") {
+													frm.doc.paid_amount = frm.doc.received_amount;
+												}
+										}
 								}
 							},
 							() => {
@@ -583,12 +593,22 @@ frappe.ui.form.on('Payment Entry', {
 			{fieldtype:"Column Break"},
 			{fieldtype:"Float", label: __("Less Than Amount"), fieldname:"outstanding_amt_less_than"},
 			{fieldtype:"Section Break"},
+			{fieldtype:"Link", label:__("Cost Center"), fieldname:"cost_center", options:"Cost Center",
+                "get_query": function() {
+                    return {
+                        "filters": {"company": frm.doc.company}
+					}
+				}
+			},
+			{fieldtype:"Column Break"},
+			{fieldtype:"Section Break"},
 			{fieldtype:"Check", label: __("Allocate Payment Amount"), fieldname:"allocate_payment_amount", default:1},
 		];
 
 		frappe.prompt(fields, function(filters){
 			frappe.flags.allocate_payment_amount = true;
 			frm.events.validate_filters_data(frm, filters);
+			frm.doc.cost_center = filters.cost_center;
 			frm.events.get_outstanding_documents(frm, filters);
 		}, __("Filters"), __("Get Outstanding Documents"));
 	},
@@ -1031,18 +1051,10 @@ frappe.ui.form.on('Payment Entry', {
 				},
 				callback: function(r, rt) {
 					if(r.message) {
-						frappe.run_serially([
-							() => {
+						
 								frm.set_value("paid_from_account_balance", r.message.paid_from_account_balance);
 								frm.set_value("paid_to_account_balance", r.message.paid_to_account_balance);
 								frm.set_value("party_balance", r.message.party_balance);
-							},
-							() => {
-								if(frm.doc.payment_type != "Internal") {
-									frm.clear_table("references");
-								}
-							}
-						]);
 
 					}
 				}
