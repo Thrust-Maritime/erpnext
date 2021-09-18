@@ -2,15 +2,18 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
+import copy
+
 import frappe
 from frappe import _
 from frappe.utils import flt
-from erpnext.accounts.report.financial_statements import (get_period_list, get_columns, get_data)
-import copy
+
+from erpnext.accounts.report.financial_statements import get_columns, get_data, get_period_list
 
 def execute(filters=None):
-	period_list = get_period_list(filters.from_fiscal_year, filters.to_fiscal_year,
-		filters.periodicity, filters.accumulated_values, filters.company)
+	period_list = get_period_list(filters.from_fiscal_year, filters.to_fiscal_year, filters.period_start_date,
+		filters.period_end_date, filters.filter_based_on, filters.periodicity, filters.accumulated_values, filters.company)
 
 	columns, data = [], []
 
@@ -34,7 +37,6 @@ def execute(filters=None):
 			"account": "'" + _("Nothing is included in gross") + "'"
 		})
 		return columns, data
-
 
 	# to avoid error eg: gross_income[0] : list index out of range
 	if not gross_income:

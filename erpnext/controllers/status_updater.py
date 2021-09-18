@@ -2,10 +2,12 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
+
 import frappe
-from frappe.utils import flt, comma_or, nowdate, getdate, now
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import comma_or, flt, getdate, now, nowdate
+
 
 class OverAllowanceError(frappe.ValidationError): pass
 
@@ -58,6 +60,7 @@ status_map = {
 	"Delivery Note": [
 		["Draft", None],
 		["To Bill", "eval:self.per_billed < 100 and self.docstatus == 1"],
+		["Return Issued", "eval:self.per_returned == 100 and self.docstatus == 1"],
 		["Completed", "eval:self.per_billed == 100 and self.docstatus == 1"],
 		["Cancelled", "eval:self.docstatus==2"],
 		["Closed", "eval:self.status=='Closed'"],
@@ -65,6 +68,7 @@ status_map = {
 	"Purchase Receipt": [
 		["Draft", None],
 		["To Bill", "eval:self.per_billed < 100 and self.docstatus == 1"],
+		["Return Issued", "eval:self.per_returned == 100 and self.docstatus == 1"],
 		["Completed", "eval:self.per_billed == 100 and self.docstatus == 1"],
 		["Cancelled", "eval:self.docstatus==2"],
 		["Closed", "eval:self.status=='Closed'"],
@@ -74,17 +78,35 @@ status_map = {
 		["Stopped", "eval:self.status == 'Stopped'"],
 		["Cancelled", "eval:self.docstatus == 2"],
 		["Pending", "eval:self.status != 'Stopped' and self.per_ordered == 0 and self.docstatus == 1"],
-		["Partially Ordered", "eval:self.status != 'Stopped' and self.per_ordered < 100 and self.per_ordered > 0 and self.docstatus == 1"],
 		["Ordered", "eval:self.status != 'Stopped' and self.per_ordered == 100 and self.docstatus == 1 and self.material_request_type == 'Purchase'"],
 		["Transferred", "eval:self.status != 'Stopped' and self.per_ordered == 100 and self.docstatus == 1 and self.material_request_type == 'Material Transfer'"],
 		["Issued", "eval:self.status != 'Stopped' and self.per_ordered == 100 and self.docstatus == 1 and self.material_request_type == 'Material Issue'"],
 		["Received", "eval:self.status != 'Stopped' and self.per_received == 100 and self.docstatus == 1 and self.material_request_type == 'Purchase'"],
 		["Partially Received", "eval:self.status != 'Stopped' and self.per_received > 0 and self.per_received < 100 and self.docstatus == 1 and self.material_request_type == 'Purchase'"],
+		["Partially Ordered", "eval:self.status != 'Stopped' and self.per_ordered < 100 and self.per_ordered > 0 and self.docstatus == 1"],
 		["Manufactured", "eval:self.status != 'Stopped' and self.per_ordered == 100 and self.docstatus == 1 and self.material_request_type == 'Manufacture'"]
 	],
 	"Bank Transaction": [
 		["Unreconciled", "eval:self.docstatus == 1 and self.unallocated_amount>0"],
-		["Reconciled", "eval:self.docstatus == 1 and self.unallocated_amount<=0"]
+		["Reconciled", "eval:self.docstatus == 1 and self.unallocated_amount<=0"],
+		["Cancelled", "eval:self.docstatus == 2"]
+	],
+	"POS Opening Entry": [
+		["Draft", None],
+		["Open", "eval:self.docstatus == 1 and not self.pos_closing_entry"],
+		["Closed", "eval:self.docstatus == 1 and self.pos_closing_entry"],
+		["Cancelled", "eval:self.docstatus == 2"],
+	],
+	"POS Closing Entry": [
+		["Draft", None],
+		["Submitted", "eval:self.docstatus == 1"],
+		["Queued", "eval:self.status == 'Queued'"],
+		["Failed", "eval:self.status == 'Failed'"],
+		["Cancelled", "eval:self.docstatus == 2"],
+	],
+	"Transaction Deletion Record": [
+		["Draft", None],
+		["Completed", "eval:self.docstatus == 1"],
 	]
 }
 
@@ -187,10 +209,14 @@ class StatusUpdater(Document):
 			get_allowance_for(item['item_code'], self.item_allowance,
 				self.global_qty_allowance, self.global_amount_allowance, qty_or_amount)
 
-		overflow_percent = ((item[args['target_field']] - item[args['target_ref_field']]) /
-		 	item[args['target_ref_field']]) * 100
+		role_allowed_to_over_deliver_receive = frappe.db.get_single_value('Stock Settings', 'role_allowed_to_over_deliver_receive')
+		role_allowed_to_over_bill = frappe.db.get_single_value('Accounts Settings', 'role_allowed_to_over_bill')
+		role = role_allowed_to_over_deliver_receive if qty_or_amount == 'qty' else role_allowed_to_over_bill
 
-		if overflow_percent - allowance > 0.01:
+		overflow_percent = ((item[args['target_field']] - item[args['target_ref_field']]) /
+			item[args['target_ref_field']]) * 100
+
+		if overflow_percent - allowance > 0.01 and role not in frappe.get_roles():
 			item['max_allowed'] = flt(item[args['target_ref_field']] * (100+allowance)/100)
 			item['reduce_by'] = item[args['target_field']] - item['max_allowed']
 
@@ -226,7 +252,7 @@ class StatusUpdater(Document):
 
 			self._update_children(args, update_modified)
 
-			if "percent_join_field" in args:
+			if "percent_join_field" in args or "percent_join_field_parent" in args:
 				self._update_percent_field_in_targets(args, update_modified)
 
 	def _update_children(self, args, update_modified):
@@ -270,13 +296,19 @@ class StatusUpdater(Document):
 
 	def _update_percent_field_in_targets(self, args, update_modified=True):
 		"""Update percent field in parent transaction"""
-		distinct_transactions = set([d.get(args['percent_join_field'])
-			for d in self.get_all_children(args['source_dt'])])
+		if args.get('percent_join_field_parent'):
+			# if reference to target doc where % is to be updated, is
+			# in source doc's parent form, consider percent_join_field_parent
+			args['name'] = self.get(args['percent_join_field_parent'])
+			self._update_percent_field(args, update_modified)
+		else:
+			distinct_transactions = set(d.get(args['percent_join_field'])
+				for d in self.get_all_children(args['source_dt']))
 
-		for name in distinct_transactions:
-			if name:
-				args['name'] = name
-				self._update_percent_field(args, update_modified)
+			for name in distinct_transactions:
+				if name:
+					args['name'] = name
+					self._update_percent_field(args, update_modified)
 
 	def _update_percent_field(self, args, update_modified=True):
 		"""Update percent field in parent transaction"""
@@ -355,10 +387,12 @@ class StatusUpdater(Document):
 			ref_doc.db_set("per_billed", per_billed)
 			ref_doc.set_status(update=True)
 
-def get_allowance_for(item_code, item_allowance={}, global_qty_allowance=None, global_amount_allowance=None, qty_or_amount="qty"):
+def get_allowance_for(item_code, item_allowance=None, global_qty_allowance=None, global_amount_allowance=None, qty_or_amount="qty"):
 	"""
 		Returns the allowance for the item, if not set, returns global allowance
 	"""
+	if item_allowance is None:
+		item_allowance = {}
 	if qty_or_amount == "qty":
 		if item_allowance.get(item_code, frappe._dict()).get("qty"):
 			return item_allowance[item_code].qty, item_allowance, global_qty_allowance, global_amount_allowance

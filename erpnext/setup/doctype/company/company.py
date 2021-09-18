@@ -2,17 +2,23 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
-import frappe, os, json
-from frappe import _
-from frappe.utils import get_timestamp
 
-from frappe.utils import cint, today, formatdate
+import functools
+import json
+import os
+
+import frappe
 import frappe.defaults
+from frappe import _
 from frappe.cache_manager import clear_defaults_cache
-
-from frappe.model.document import Document
 from frappe.contacts.address_and_contact import load_address_and_contact
+from frappe.utils import cint, formatdate, get_timestamp, today
 from frappe.utils.nestedset import NestedSet
+from past.builtins import cmp
+
+from erpnext.accounts.doctype.account.account import get_account_currency
+from erpnext.setup.setup_wizard.operations.taxes_setup import setup_taxes_and_charges
+
 
 from past.builtins import cmp
 import functools
@@ -45,12 +51,14 @@ class Company(NestedSet):
 		self.validate_currency()
 		self.validate_coa_input()
 		self.validate_perpetual_inventory()
+		self.validate_perpetual_inventory_for_non_stock_items()
 		self.check_country_change()
 		self.set_chart_of_accounts()
+		self.validate_parent_company()
 
 	def validate_abbr(self):
 		if not self.abbr:
-			self.abbr = ''.join([c[0] for c in self.company_name.split()]).upper()
+			self.abbr = ''.join(c[0] for c in self.company_name.split()).upper()
 
 		self.abbr = self.abbr.strip()
 
@@ -63,27 +71,29 @@ class Company(NestedSet):
 		if frappe.db.sql("select abbr from tabCompany where name!=%s and abbr=%s", (self.name, self.abbr)):
 			frappe.throw(_("Abbreviation already used for another company"))
 
+	@frappe.whitelist()
 	def create_default_tax_template(self):
-		from erpnext.setup.setup_wizard.operations.taxes_setup import create_sales_tax
-		create_sales_tax({
-			'country': self.country,
-			'company_name': self.name
-		})
+		setup_taxes_and_charges(self.name, self.country)
 
 	def validate_default_accounts(self):
 		accounts = [
-			"default_bank_account", "default_cash_account",
-			"default_receivable_account", "default_payable_account",
-			"default_expense_account", "default_income_account",
-			"stock_received_but_not_billed", "stock_adjustment_account",
-			"expenses_included_in_valuation", "default_payroll_payable_account"
+			["Default Bank Account", "default_bank_account"], ["Default Cash Account", "default_cash_account"],
+			["Default Receivable Account", "default_receivable_account"], ["Default Payable Account", "default_payable_account"],
+			["Default Expense Account", "default_expense_account"], ["Default Income Account", "default_income_account"],
+			["Stock Received But Not Billed Account", "stock_received_but_not_billed"], ["Stock Adjustment Account", "stock_adjustment_account"],
+			["Expense Included In Valuation Account", "expenses_included_in_valuation"], ["Default Payroll Payable Account", "default_payroll_payable_account"]
 		]
 
-		for field in accounts:
-			if self.get(field):
-				for_company = frappe.db.get_value("Account", self.get(field), "company")
+		for account in accounts:
+			if self.get(account[1]):
+				for_company = frappe.db.get_value("Account", self.get(account[1]), "company")
 				if for_company != self.name:
-					frappe.throw(_("Account {0} does not belong to company: {1}").format(self.get(field), self.name))
+					frappe.throw(_("Account {0} does not belong to company: {1}").format(self.get(account[1]), self.name))
+
+				if get_account_currency(self.get(account[1])) != self.default_currency:
+					error_message = _("{0} currency must be same as company's default currency. Please select another account.") \
+						.format(frappe.bold(account[0]))
+					frappe.throw(error_message)
 
 	def validate_currency(self):
 		if self.is_new():
@@ -103,16 +113,16 @@ class Company(NestedSet):
 				self.create_default_accounts()
 				self.create_default_warehouses()
 
+		if not frappe.db.get_value("Cost Center", {"is_group": 0, "company": self.name}):
+			self.create_default_cost_center()
+
 		if frappe.flags.country_change:
-			install_country_fixtures(self.name)
+			install_country_fixtures(self.name, self.country)
 			self.create_default_tax_template()
 
 		if not frappe.db.get_value("Department", {"company": self.name}):
 			from erpnext.setup.setup_wizard.operations.install_fixtures import install_post_company_fixtures
 			install_post_company_fixtures(frappe._dict({'company_name': self.name}))
-
-		if not frappe.db.get_value("Cost Center", {"is_group": 0, "company": self.name}):
-			self.create_default_cost_center()
 
 		if not frappe.local.flags.ignore_chart_of_accounts:
 			self.set_default_accounts()
@@ -133,7 +143,8 @@ class Company(NestedSet):
 			{"warehouse_name": _("All Warehouses"), "is_group": 1},
 			{"warehouse_name": _("Stores"), "is_group": 0},
 			{"warehouse_name": _("Work In Progress"), "is_group": 0},
-			{"warehouse_name": _("Finished Goods"), "is_group": 0}]:
+			{"warehouse_name": _("Finished Goods"), "is_group": 0},
+			{"warehouse_name": _("Goods In Transit"), "is_group": 0, "warehouse_type": "Transit"}]:
 
 			if not frappe.db.exists("Warehouse", "{0} - {1}".format(wh_detail["warehouse_name"], self.abbr)):
 				warehouse = frappe.get_doc({
@@ -142,7 +153,8 @@ class Company(NestedSet):
 					"is_group": wh_detail["is_group"],
 					"company": self.name,
 					"parent_warehouse": "{0} - {1}".format(_("All Warehouses"), self.abbr) \
-						if not wh_detail["is_group"] else ""
+						if not wh_detail["is_group"] else "",
+					"warehouse_type" : wh_detail["warehouse_type"] if "warehouse_type" in wh_detail else None
 				})
 				warehouse.flags.ignore_permissions = True
 				warehouse.flags.ignore_mandatory = True
@@ -176,6 +188,12 @@ class Company(NestedSet):
 				frappe.msgprint(_("Set default inventory account for perpetual inventory"),
 					alert=True, indicator='orange')
 
+	def validate_perpetual_inventory_for_non_stock_items(self):
+		if not self.get("__islocal"):
+			if cint(self.enable_perpetual_inventory_for_non_stock_items) == 1 and not self.service_received_but_not_billed:
+				frappe.throw(_("Set default {0} account for perpetual inventory for non stock items").format(
+					frappe.bold('Service Received But Not Billed')))
+
 	def check_country_change(self):
 		frappe.flags.country_change = False
 
@@ -188,6 +206,13 @@ class Company(NestedSet):
 		if self.parent_company:
 			self.create_chart_of_accounts_based_on = "Existing Company"
 			self.existing_company = self.parent_company
+
+	def validate_parent_company(self):
+		if self.parent_company:
+			is_group = frappe.get_value('Company', self.parent_company, 'is_group')
+
+			if not is_group:
+				frappe.throw(_("Parent Company must be a group company"))
 
 	def set_default_accounts(self):
 		default_accounts = {
@@ -270,7 +295,7 @@ class Company(NestedSet):
 		cash = frappe.db.get_value('Mode of Payment', {'type': 'Cash'}, 'name')
 		if cash and self.default_cash_account \
 			and not frappe.db.get_value('Mode of Payment Account', {'company': self.name, 'parent': cash}):
-			mode_of_payment = frappe.get_doc('Mode of Payment', cash)
+			mode_of_payment = frappe.get_doc('Mode of Payment', cash, for_update=True)
 			mode_of_payment.append('accounts', {
 				'company': self.name,
 				'default_account': self.default_cash_account
@@ -314,7 +339,7 @@ class Company(NestedSet):
 		clear_defaults_cache()
 
 	def abbreviate(self):
-		self.abbr = ''.join([c[0].upper() for c in self.company_name.split()])
+		self.abbr = ''.join(c[0].upper() for c in self.company_name.split())
 
 	def on_trash(self):
 		"""
@@ -367,12 +392,18 @@ class Company(NestedSet):
 		frappe.db.sql("delete from tabDepartment where company=%s", self.name)
 		frappe.db.sql("delete from `tabTax Withholding Account` where company=%s", self.name)
 
+		# delete tax templates
 		frappe.db.sql("delete from `tabSales Taxes and Charges Template` where company=%s", self.name)
 		frappe.db.sql("delete from `tabPurchase Taxes and Charges Template` where company=%s", self.name)
+		frappe.db.sql("delete from `tabItem Tax Template` where company=%s", self.name)
+
+		# delete Process Deferred Accounts if no GL Entry found
+		if not frappe.db.get_value('GL Entry', {'company': self.name}):
+			frappe.db.sql("delete from `tabProcess Deferred Accounting` where company=%s", self.name)
 
 @frappe.whitelist()
 def enqueue_replace_abbr(company, old, new):
-	kwargs = dict(queue='long', company=company, old=old, new=new)
+	kwargs = dict(queue="long", company=company, old=old, new=new)
 	frappe.enqueue('erpnext.setup.doctype.company.company.replace_abbr', **kwargs)
 
 
@@ -384,8 +415,6 @@ def replace_abbr(company, old, new):
 
 	frappe.only_for("System Manager")
 
-	frappe.db.set_value("Company", company, "abbr", new)
-
 	def _rename_record(doc):
 		parts = doc[0].rsplit(" - ", 1)
 		if len(parts) == 1 or parts[1].lower() == old.lower():
@@ -396,10 +425,19 @@ def replace_abbr(company, old, new):
 		doc = (d for d in frappe.db.sql("select name from `tab%s` where company=%s" % (dt, '%s'), company))
 		for d in doc:
 			_rename_record(d)
+	try:
+		frappe.db.auto_commit_on_many_writes = 1
+		frappe.db.set_value("Company", company, "abbr", new)
+		for dt in ["Warehouse", "Account", "Cost Center", "Department",
+				"Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"]:
+			_rename_records(dt)
+			frappe.db.commit()
 
-	for dt in ["Warehouse", "Account", "Cost Center", "Department",
-			"Sales Taxes and Charges Template", "Purchase Taxes and Charges Template"]:
-		_rename_records(dt)
+	except Exception:
+		frappe.log_error(title=_('Abbreviation Rename Error'))
+	finally:
+		frappe.db.auto_commit_on_many_writes = 0
+
 
 def get_name_with_abbr(name, company):
 	company_abbr = frappe.get_cached_value('Company',  company,  "abbr")
@@ -410,16 +448,15 @@ def get_name_with_abbr(name, company):
 
 	return " - ".join(parts)
 
-def install_country_fixtures(company):
-	company_doc = frappe.get_doc("Company", company)
-	path = frappe.get_app_path('erpnext', 'regional', frappe.scrub(company_doc.country))
+def install_country_fixtures(company, country):
+	path = frappe.get_app_path('erpnext', 'regional', frappe.scrub(country))
 	if os.path.exists(path.encode("utf-8")):
 		try:
-			module_name = "erpnext.regional.{0}.setup.setup".format(frappe.scrub(company_doc.country))
-			frappe.get_attr(module_name)(company_doc, False)
+			module_name = "erpnext.regional.{0}.setup.setup".format(frappe.scrub(country))
+			frappe.get_attr(module_name)(company, False)
 		except Exception as e:
-			frappe.log_error(title=str(e), message=frappe.get_traceback())
-			frappe.throw(_("Failed to setup defaults for country {0}. Please contact support@erpnext.com").format(frappe.bold(company_doc.country)))
+			frappe.log_error()
+			frappe.throw(_("Failed to setup defaults for country {0}. Please contact support@erpnext.com").format(frappe.bold(country)))
 
 
 def update_company_current_month_sales(company):
@@ -446,8 +483,9 @@ def update_company_current_month_sales(company):
 
 def update_company_monthly_sales(company):
 	'''Cache past year monthly sales of every company based on sales invoices'''
-	from frappe.utils.goal import get_monthly_results
 	import json
+
+	from frappe.utils.goal import get_monthly_results
 	filter_str = "company = {0} and status != 'Draft' and docstatus=1".format(frappe.db.escape(company))
 	month_to_value_dict = get_monthly_results("Sales Invoice", "base_grand_total",
 		"posting_date", filter_str, "sum")
@@ -589,3 +627,12 @@ def get_default_company_address(name, sort_key='is_primary_address', existing_ad
 		return sorted(out, key = functools.cmp_to_key(lambda x,y: cmp(y[1], x[1])))[0][0]
 	else:
 		return None
+
+@frappe.whitelist()
+def create_transaction_deletion_request(company):
+	tdr = frappe.get_doc({
+		'doctype': 'Transaction Deletion Record',
+		'company': company
+	})
+	tdr.insert()
+	tdr.submit()

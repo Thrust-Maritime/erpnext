@@ -3,9 +3,11 @@
 
 
 from __future__ import unicode_literals
+
 import frappe
 from frappe import _
-from frappe.utils import time_diff_in_hours, flt
+from frappe.utils import flt, time_diff_in_hours
+
 
 def get_columns():
 	return [
@@ -53,7 +55,7 @@ def get_columns():
 def get_data(filters):
 	data = []
 	if(filters.from_date > filters.to_date):
-		frappe.msgprint(_(" From Date can not be greater than To Date"))
+		frappe.msgprint(_("From Date can not be greater than To Date"))
 		return data
 
 	timesheets = get_timesheets(filters)
@@ -126,7 +128,7 @@ def get_timesheet_details(filters, timesheet_list):
 	timesheet_details = frappe.get_all(
 		"Timesheet Detail",
 		filters = timesheet_details_filter,
-		fields=["from_time", "to_time", "hours", "billable", "billing_hours", "billing_rate", "parent"]
+		fields=["from_time", "to_time", "hours", "is_billable", "billing_hours", "billing_rate", "parent"]
 	)
 
 	timesheet_details_map = frappe._dict()
@@ -139,7 +141,7 @@ def get_billable_and_total_duration(activity, start_time, end_time):
 	precision = frappe.get_precision("Timesheet Detail", "hours")
 	activity_duration = time_diff_in_hours(end_time, start_time)
 	billing_duration = 0.0
-	if activity.billable:
+	if activity.is_billable:
 		billing_duration = activity.billing_hours
 		if activity_duration != activity.billing_hours:
 			billing_duration = activity_duration * activity.billing_hours / activity.hours

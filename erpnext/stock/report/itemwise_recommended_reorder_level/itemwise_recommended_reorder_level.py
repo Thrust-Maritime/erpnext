@@ -4,11 +4,12 @@ from __future__ import unicode_literals
 
 import frappe
 from frappe import _
-from frappe.utils import getdate, flt
+from frappe.utils import flt, getdate
+
 
 def execute(filters=None):
 	if not filters: filters = {}
-	float_preceision = frappe.db.get_default("float_preceision")
+	float_precision = frappe.db.get_default("float_precision")
 
 	condition = get_condition(filters)
 
@@ -25,7 +26,7 @@ def execute(filters=None):
 	data = []
 	for item in items:
 		total_outgoing = flt(consumed_item_map.get(item.name, 0)) + flt(delivered_item_map.get(item.name,0))
-		avg_daily_outgoing = flt(total_outgoing / diff, float_preceision)
+		avg_daily_outgoing = flt(total_outgoing / diff, float_precision)
 		reorder_level = (avg_daily_outgoing * flt(item.lead_time_days)) + flt(item.safety_stock)
 
 		data.append([item.name, item.item_name, item.item_group, item.brand, item.description,
@@ -66,7 +67,7 @@ def get_consumed_items(condition):
 			purpose is NULL
 			or purpose not in ({})
 		)
-	""".format(', '.join(["'{}'".format(p) for p in purpose_to_exclude]))
+	""".format(', '.join(f"'{p}'" for p in purpose_to_exclude))
 	condition = condition.replace("posting_date", "sle.posting_date")
 
 	consumed_items = frappe.db.sql("""
@@ -77,8 +78,7 @@ def get_consumed_items(condition):
 			actual_qty < 0
 			and voucher_type not in ('Delivery Note', 'Sales Invoice')
 			%s
-		group by item_code
-	""" % condition, as_dict=1)
+		group by item_code""" % condition, as_dict=1)
 
 	consumed_items_map = {item.item_code : item.consumed_qty for item in consumed_items}
 	return consumed_items_map

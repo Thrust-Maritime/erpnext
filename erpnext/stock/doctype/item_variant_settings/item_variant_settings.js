@@ -4,8 +4,8 @@
 frappe.ui.form.on('Item Variant Settings', {
 	setup: function(frm) {
 		const allow_fields = [];
-		const exclude_fields = ["naming_series", "item_code", "item_name", "show_in_website",
-		"show_variant_in_website", "opening_stock", "variant_of", "valuation_rate"];
+		const exclude_fields = ["naming_series", "item_code", "item_name", "published_in_website",
+			"opening_stock", "variant_of", "valuation_rate"];
 
 		frappe.model.with_doctype('Item', () => {
 			frappe.get_meta('Item').fields.forEach(d => {
@@ -15,8 +15,9 @@ frappe.ui.form.on('Item Variant Settings', {
 				}
 			});
 
-			const child = frappe.meta.get_docfield("Variant Field", "field_name", frm.doc.name);
-			child.options = allow_fields;
+			frm.fields_dict.fields.grid.update_docfield_property(
+				'field_name', 'options', allow_fields
+			);
 		});
 	}
 });

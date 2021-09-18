@@ -3,16 +3,25 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
 from frappe import _
-from erpnext.hr.utils import EmployeeBoardingController
 from frappe.model.mapper import get_mapped_doc
+
+from erpnext.hr.utils import EmployeeBoardingController
+
 
 class IncompleteTaskError(frappe.ValidationError): pass
 
 class EmployeeOnboarding(EmployeeBoardingController):
 	def validate(self):
 		super(EmployeeOnboarding, self).validate()
+		self.validate_duplicate_employee_onboarding()
+
+	def validate_duplicate_employee_onboarding(self):
+		emp_onboarding = frappe.db.exists("Employee Onboarding",{"job_applicant": self.job_applicant})
+		if emp_onboarding and emp_onboarding != self.name:
+			frappe.throw(_("Employee Onboarding: {0} is already for Job Applicant: {1}").format(frappe.bold(emp_onboarding), frappe.bold(self.job_applicant)))
 
 	def validate_employee_creation(self):
 		if self.docstatus != 1:
@@ -51,4 +60,3 @@ def make_employee(source_name, target_doc=None):
 				}}
 		}, target_doc, set_missing_values)
 	return doc
-

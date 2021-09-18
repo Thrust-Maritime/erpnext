@@ -3,11 +3,13 @@
 # See license.txt
 from __future__ import unicode_literals
 
-import frappe
 import unittest
+
+import frappe
 from bs4 import BeautifulSoup
-from frappe.tests.test_website import set_request
+from frappe.utils import set_request
 from frappe.website.render import render
+
 
 class TestHomepageSection(unittest.TestCase):
 	def test_homepage_section_card(self):
@@ -28,7 +30,7 @@ class TestHomepageSection(unittest.TestCase):
 		set_request(method='GET', path='home')
 		response = render()
 
-		self.assertEquals(response.status_code, 200)
+		self.assertEqual(response.status_code, 200)
 
 		html = frappe.safe_decode(response.get_data())
 
@@ -61,7 +63,7 @@ class TestHomepageSection(unittest.TestCase):
 		set_request(method='GET', path='home')
 		response = render()
 
-		self.assertEquals(response.status_code, 200)
+		self.assertEqual(response.status_code, 200)
 
 		html = frappe.safe_decode(response.get_data())
 

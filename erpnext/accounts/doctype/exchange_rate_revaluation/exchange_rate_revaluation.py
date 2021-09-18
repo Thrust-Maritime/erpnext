@@ -3,13 +3,17 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
-import frappe, erpnext
+
+import frappe
 from frappe import _
-from frappe.utils import flt
 from frappe.model.document import Document
 from frappe.model.meta import get_field_precision
-from erpnext.setup.utils import get_exchange_rate
+from frappe.utils import flt
+
+import erpnext
 from erpnext.accounts.doctype.journal_entry.journal_entry import get_balance_on
+from erpnext.setup.utils import get_exchange_rate
+
 
 class ExchangeRateRevaluation(Document):
 	def validate(self):
@@ -27,6 +31,27 @@ class ExchangeRateRevaluation(Document):
 		if not (self.company and self.posting_date):
 			frappe.throw(_("Please select Company and Posting Date to getting entries"))
 
+	def on_cancel(self):
+		self.ignore_linked_doctypes = ('GL Entry')
+
+	@frappe.whitelist()
+	def check_journal_entry_condition(self):
+		total_debit = frappe.db.get_value("Journal Entry Account", {
+			'reference_type': 'Exchange Rate Revaluation',
+			'reference_name': self.name,
+			'docstatus': 1
+		}, "sum(debit) as sum")
+
+		total_amt = 0
+		for d in self.accounts:
+			total_amt = total_amt + d.new_balance_in_base_currency
+
+		if total_amt != total_debit:
+			return True
+
+		return False
+
+	@frappe.whitelist()
 	def get_accounts_data(self, account=None):
 		accounts = []
 		self.validate_mandatory()
@@ -82,6 +107,7 @@ class ExchangeRateRevaluation(Document):
 				from `tabGL Entry`
 				where account in (%s)
 				and posting_date <= %s
+				and is_cancelled = 0
 				group by account, NULLIF(party_type,''), NULLIF(party,'')
 				having sum(debit) != sum(credit)
 				order by account
@@ -96,6 +122,7 @@ class ExchangeRateRevaluation(Document):
 			message = _("No outstanding invoices found")
 		frappe.msgprint(message)
 
+	@frappe.whitelist()
 	def make_jv_entry(self):
 		if self.total_gain_loss == 0:
 			return

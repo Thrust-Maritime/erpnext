@@ -2,20 +2,28 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
-import frappe, erpnext
+
+import frappe
 from frappe import _
 from frappe.utils import flt
-from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register import (get_tax_accounts,
-	get_grand_total, add_total_row, get_display_value, get_group_by_and_display_fields, add_sub_total_row,
-	get_group_by_conditions)
+
+import erpnext
+from erpnext.accounts.report.item_wise_sales_register.item_wise_sales_register import (
+	add_sub_total_row,
+	add_total_row,
+	get_grand_total,
+	get_group_by_and_display_fields,
+	get_group_by_conditions,
+	get_tax_accounts,
+)
 from erpnext.selling.report.item_wise_sales_history.item_wise_sales_history import get_item_details
+
 
 def execute(filters=None):
 	return _execute(filters)
 
 def _execute(filters=None, additional_table_columns=None, additional_query_columns=None):
 	if not filters: filters = {}
-	filters.update({"from_date": filters.get("date_range")[0], "to_date": filters.get("date_range")[1]})
 	columns = get_columns(additional_table_columns, filters)
 
 	company_currency = erpnext.get_company_currency(filters.company)
@@ -50,7 +58,8 @@ def _execute(filters=None, additional_table_columns=None, additional_query_colum
 		elif d.po_detail:
 			purchase_receipt = ", ".join(po_pr_map.get(d.po_detail, []))
 
-		expense_account = d.expense_account or aii_account_map.get(d.company)
+		expense_account = d.unrealized_profit_loss_account or d.expense_account \
+			or aii_account_map.get(d.company)
 
 		row = {
 			'item_code': d.item_code,
@@ -271,13 +280,6 @@ def get_columns(additional_table_columns, filters):
 			'fieldtype': 'Currency',
 			'options': 'currency',
 			'width': 100
-		},
-		{
-			'fieldname': 'currency',
-			'label': _('Currency'),
-			'fieldtype': 'Currency',
-			'width': 80,
-			'hidden': 1
 		}
 	]
 
@@ -323,6 +325,7 @@ def get_items(filters, additional_query_columns):
 			`tabPurchase Invoice Item`.`name`, `tabPurchase Invoice Item`.`parent`,
 			`tabPurchase Invoice`.posting_date, `tabPurchase Invoice`.credit_to, `tabPurchase Invoice`.company,
 			`tabPurchase Invoice`.supplier, `tabPurchase Invoice`.remarks, `tabPurchase Invoice`.base_net_total,
+			`tabPurchase Invoice`.unrealized_profit_loss_account,
 			`tabPurchase Invoice Item`.`item_code`, `tabPurchase Invoice Item`.description,
 			`tabPurchase Invoice Item`.`item_name`, `tabPurchase Invoice Item`.`item_group`,
 			`tabPurchase Invoice Item`.`project`, `tabPurchase Invoice Item`.`purchase_order`,
@@ -340,7 +343,7 @@ def get_aii_accounts():
 
 def get_purchase_receipts_against_purchase_order(item_list):
 	po_pr_map = frappe._dict()
-	po_item_rows = list(set([d.po_detail for d in item_list]))
+	po_item_rows = list(set(d.po_detail for d in item_list))
 
 	if po_item_rows:
 		purchase_receipts = frappe.db.sql("""

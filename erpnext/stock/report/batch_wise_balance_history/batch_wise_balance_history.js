@@ -37,7 +37,7 @@ frappe.query_reports["Batch-Wise Balance History"] = {
 					filters: {
 						"has_batch_no": 1
 					}
-				}
+				};
 			}
 		},
 		{
@@ -51,7 +51,7 @@ frappe.query_reports["Batch-Wise Balance History"] = {
 					filters: {
 						"company": company
 					}
-				}
+				};
 			}
 		},
 		{
@@ -61,14 +61,28 @@ frappe.query_reports["Batch-Wise Balance History"] = {
 			"options": "Batch",
 			"get_query": function() {
 				let item_code = frappe.query_report.get_filter_value('item_code');
-				if (item_code) {
-					return {
-						filters: {
-							"item": item_code
-						}
+				return {
+					filters: {
+						"item": item_code
 					}
-				}
+				};
 			}
 		},
-	]
+	],
+	"formatter": function (value, row, column, data, default_formatter) {
+		if (column.fieldname == "Batch" && data && !!data["Batch"]) {
+			value = data["Batch"];
+			column.link_onclick = "frappe.query_reports['Batch-Wise Balance History'].set_batch_route_to_stock_ledger(" + JSON.stringify(data) + ")";
+		}
+
+		value = default_formatter(value, row, column, data);
+		return value;
+	},
+	"set_batch_route_to_stock_ledger": function (data) {
+		frappe.route_options = {
+			"batch_no": data["Batch"]
+		};
+
+		frappe.set_route("query-report", "Stock Ledger");
+	}
 }

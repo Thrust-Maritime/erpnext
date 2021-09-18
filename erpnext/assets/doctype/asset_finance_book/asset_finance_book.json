@@ -1,4 +1,5 @@
 {
+ "actions": [],
  "creation": "2018-05-08 14:44:37.095570",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -49,11 +50,11 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:parent.doctype == 'Asset'",
    "fieldname": "depreciation_start_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Depreciation Posting Date"
+   "label": "Depreciation Posting Date",
+   "mandatory_depends_on": "eval:parent.doctype == 'Asset'"
   },
   {
    "default": "0",
@@ -66,7 +67,6 @@
   {
    "fieldname": "value_after_depreciation",
    "fieldtype": "Currency",
-   "hidden": 1,
    "label": "Value After Depreciation",
    "no_copy": 1,
    "options": "Company:company:default_currency",
@@ -81,8 +81,10 @@
    "label": "Rate of Depreciation"
   }
  ],
+ "index_web_pages_for_search": 1,
  "istable": 1,
- "modified": "2020-12-30 15:43:03.188256",
+ "links": [],
+ "modified": "2021-06-17 12:59:05.743683",
  "modified_by": "Administrator",
  "module": "Assets",
  "name": "Asset Finance Book",

@@ -6,11 +6,11 @@ frappe.ui.form.on("Customer", {
 
 		frm.make_methods = {
 			'Quotation': () => frappe.model.open_mapped_doc({
-				method: 'erpnext.selling.doctype.customer.customer.make_quotation',
+				method: "erpnext.selling.doctype.customer.customer.make_quotation",
 				frm: cur_frm
 			}),
 			'Opportunity': () => frappe.model.open_mapped_doc({
-				method: 'erpnext.selling.doctype.customer.customer.make_opportunity',
+				method: "erpnext.selling.doctype.customer.customer.make_opportunity",
 				frm: cur_frm
 			})
 		}
@@ -111,7 +111,6 @@ frappe.ui.form.on("Customer", {
 		}
 
 		frappe.dynamic_link = {doc: frm.doc, fieldname: 'name', doctype: 'Customer'}
-		frm.toggle_display(['address_html','contact_html'], !frm.doc.__islocal);
 
 		if(!frm.doc.__islocal) {
 			frappe.contacts.render_address_and_contact(frm);
@@ -130,6 +129,10 @@ frappe.ui.form.on("Customer", {
 				erpnext.utils.make_pricing_rule(frm.doc.doctype, frm.doc.name);
 			}, __('Create'));
 
+			frm.add_custom_button(__('Get Customer Group Details'), function () {
+				frm.trigger("get_customer_group_details");
+			}, __('Actions'));
+
 			// indicator
 			erpnext.utils.set_party_dashboard_indicators(frm);
 
@@ -145,4 +148,15 @@ frappe.ui.form.on("Customer", {
 		if(frm.doc.lead_name) frappe.model.clear_doc("Lead", frm.doc.lead_name);
 
 	},
+	get_customer_group_details: function(frm) {
+		frappe.call({
+			method: "get_customer_group_details",
+			doc: frm.doc,
+			callback: function() {
+				frm.refresh();
+			}
+		});
+
+	}
 });
+

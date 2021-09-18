@@ -1,21 +1,25 @@
 from __future__ import unicode_literals
+
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
 from erpnext.regional.india.setup import add_permissions, add_print_formats
+
 
 def execute():
 	company = frappe.get_all('Company', filters = {'country': 'India'})
 	if not company:
 		return
 
+	frappe.reload_doc("custom", "doctype", "custom_field")
 	frappe.reload_doc("regional", "doctype", "e_invoice_settings")
 	custom_fields = {
 		'Sales Invoice': [
 			dict(fieldname='irn', label='IRN', fieldtype='Data', read_only=1, insert_after='customer', no_copy=1, print_hide=1,
 				depends_on='eval:in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category) && doc.irn_cancelled === 0'),
-			
+
 			dict(fieldname='ack_no', label='Ack. No.', fieldtype='Data', read_only=1, hidden=1, insert_after='irn', no_copy=1, print_hide=1),
-		
+
 			dict(fieldname='ack_date', label='Ack. Date', fieldtype='Data', read_only=1, hidden=1, insert_after='ack_no', no_copy=1, print_hide=1),
 
 			dict(fieldname='irn_cancelled', label='IRN Cancelled', fieldtype='Check', no_copy=1, print_hide=1,
@@ -35,9 +39,16 @@ def execute():
 	add_permissions()
 	add_print_formats()
 
+	einvoice_cond = 'in_list(["Registered Regular", "SEZ", "Overseas", "Deemed Export"], doc.gst_category)'
 	t = {
 		'mode_of_transport': [{'default': None}],
+		'distance': [{'mandatory_depends_on': f'eval:{einvoice_cond} && doc.transporter'}],
+		'gst_vehicle_type': [{'mandatory_depends_on': f'eval:{einvoice_cond} && doc.mode_of_transport == "Road"'}],
+		'lr_date': [{'mandatory_depends_on': f'eval:{einvoice_cond} && in_list(["Air", "Ship", "Rail"], doc.mode_of_transport)'}],
+		'lr_no': [{'mandatory_depends_on': f'eval:{einvoice_cond} && in_list(["Air", "Ship", "Rail"], doc.mode_of_transport)'}],
+		'vehicle_no': [{'mandatory_depends_on': f'eval:{einvoice_cond} && doc.mode_of_transport == "Road"'}],
 		'ewaybill': [
+			{'read_only_depends_on': 'eval:doc.irn && doc.ewaybill'},
 			{'depends_on': 'eval:((doc.docstatus === 1 || doc.ewaybill) && doc.eway_bill_cancelled === 0)'}
 		]
 	}

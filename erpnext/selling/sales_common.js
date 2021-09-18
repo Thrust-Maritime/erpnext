@@ -42,16 +42,6 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 		me.frm.set_query('customer_address', erpnext.queries.address_query);
 		me.frm.set_query('shipping_address_name', erpnext.queries.address_query);
 
-		if(this.frm.fields_dict.taxes_and_charges) {
-			this.frm.set_query("taxes_and_charges", function() {
-				return {
-					filters: [
-						['Sales Taxes and Charges Template', 'company', '=', me.frm.doc.company],
-						['Sales Taxes and Charges Template', 'docstatus', '!=', 2]
-					]
-				}
-			});
-		}
 
 		if(this.frm.fields_dict.selling_price_list) {
 			this.frm.set_query("selling_price_list", function() {
@@ -100,10 +90,7 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 
 		this.frm.toggle_display("customer_name",
 			(this.frm.doc.customer_name && this.frm.doc.customer_name!==this.frm.doc.customer));
-		if(this.frm.fields_dict.packed_items) {
-			var packing_list_exists = (this.frm.doc.packed_items || []).length;
-			this.frm.toggle_display("packing_list", packing_list_exists ? true : false);
-		}
+
 		this.toggle_editable_price_list_rate();
 	},
 
@@ -135,20 +122,6 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 	selling_price_list: function() {
 		this.apply_price_list();
 		this.set_dynamic_labels();
-	},
-
-	price_list_rate: function(doc, cdt, cdn) {
-		var item = frappe.get_doc(cdt, cdn);
-		frappe.model.round_floats_in(item, ["price_list_rate", "discount_percentage"]);
-
-		// check if child doctype is Sales Order Item/Qutation Item and calculate the rate
-		if(in_list(["Quotation Item", "Sales Order Item", "Delivery Note Item", "Sales Invoice Item"]), cdt)
-			this.apply_pricing_rule_on_item(item);
-		else
-			item.rate = flt(item.price_list_rate * (1 - item.discount_percentage / 100.0),
-				precision("rate", item));
-
-		this.calculate_taxes_and_totals();
 	},
 
 	discount_percentage: function(doc, cdt, cdn) {
@@ -229,10 +202,7 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 		var me = this;
 		var item = frappe.get_doc(cdt, cdn);
 
-		let serial_no_count = item.serial_no
-			? item.serial_no.split(`\n`).filter(d => d).length : 0;
-
-		if (item.serial_no && item.qty === serial_no_count) {
+		if (item.serial_no && item.qty === item.serial_no.split(`\n`).length) {
 			return;
 		}
 
@@ -273,7 +243,12 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 		var editable_price_list_rate = cint(frappe.defaults.get_default("editable_price_list_rate"));
 
 		if(df && editable_price_list_rate) {
-			df.read_only = 0;
+			const parent_field = frappe.meta.get_parentfield(this.frm.doc.doctype, this.frm.doc.doctype + " Item");
+			if (!this.frm.fields_dict[parent_field]) return;
+
+			this.frm.fields_dict[parent_field].grid.update_docfield_property(
+				'price_list_rate', 'read_only', 0
+			);
 		}
 	},
 
@@ -315,6 +290,11 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 	batch_no: function(doc, cdt, cdn) {
 		var me = this;
 		var item = frappe.get_doc(cdt, cdn);
+
+		if (item.serial_no) {
+			return;
+		}
+
 		item.serial_no = null;
 		var has_serial_no;
 		frappe.db.get_value('Item', {'item_code': item.item_code}, 'has_serial_no', (r) => {
@@ -361,26 +341,6 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 		refresh_field('product_bundle_help');
 	},
 
-	margin_rate_or_amount: function(doc, cdt, cdn) {
-		// calculated the revised total margin and rate on margin rate changes
-		var item = locals[cdt][cdn];
-		this.apply_pricing_rule_on_item(item)
-		this.calculate_taxes_and_totals();
-		cur_frm.refresh_fields();
-	},
-
-	margin_type: function(doc, cdt, cdn){
-		// calculate the revised total margin and rate on margin type changes
-		var item = locals[cdt][cdn];
-		if(!item.margin_type) {
-			frappe.model.set_value(cdt, cdn, "margin_rate_or_amount", 0);
-		} else {
-			this.apply_pricing_rule_on_item(item, doc,cdt, cdn)
-			this.calculate_taxes_and_totals();
-			cur_frm.refresh_fields();
-		}
-	},
-
 	company_address: function() {
 		var me = this;
 		if(this.frm.doc.company_address) {
@@ -407,6 +367,10 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 			}
 	},
 
+	batch_no: function(doc, cdt, cdn) {
+		this._super(doc, cdt, cdn);
+	},
+
 	qty: function(doc, cdt, cdn) {
 		this._super(doc, cdt, cdn);
 
@@ -428,6 +392,10 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 	},
 
 	_set_batch_number: function(doc) {
+		if (doc.batch_no) {
+			return
+		}
+
 		let args = {'item_code': doc.item_code, 'warehouse': doc.warehouse, 'qty': flt(doc.qty) * flt(doc.conversion_factor)};
 		if (doc.has_serial_no && doc.serial_no) {
 			args['serial_no'] = doc.serial_no
@@ -477,7 +445,7 @@ frappe.ui.form.on(cur_frm.doctype,"project", function(frm) {
 						$.each(frm.doc["items"] || [], function(i, row) {
 							if(r.message) {
 								frappe.model.set_value(row.doctype, row.name, "cost_center", r.message);
-								frappe.msgprint(__("Cost Center For Item with Item Code '"+row.item_name+"' has been Changed to "+ r.message));
+								frappe.msgprint(__("Cost Center For Item with Item Code {0} has been Changed to {1}", [row.item_name, r.message]));
 							}
 						})
 					}

@@ -3,14 +3,20 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
-from frappe.model.document import Document
 from frappe import _
 from frappe.desk.form.linked_with import get_linked_doctypes
+from frappe.model.document import Document
+from frappe.utils import getdate, today
+
 from erpnext.education.utils import check_content_completion, check_quiz_completion
+
+
 class Student(Document):
 	def validate(self):
 		self.title = " ".join(filter(None, [self.first_name, self.middle_name, self.last_name]))
+		self.validate_dates()
 
 		if self.student_applicant:
 			self.check_unique()
@@ -18,6 +24,20 @@ class Student(Document):
 
 		if frappe.get_value("Student", self.name, "title") != self.title:
 			self.update_student_name_in_linked_doctype()
+
+	def validate_dates(self):
+		for sibling in self.siblings:
+			if sibling.date_of_birth and getdate(sibling.date_of_birth) > getdate():
+				frappe.throw(_("Row {0}:Sibling Date of Birth cannot be greater than today.").format(sibling.idx))
+
+		if self.date_of_birth and getdate(self.date_of_birth) >= getdate(today()):
+			frappe.throw(_("Date of Birth cannot be greater than today."))
+
+		if self.date_of_birth and getdate(self.date_of_birth) >= getdate(self.joining_date):
+			frappe.throw(_("Date of Birth cannot be greater than Joining Date."))
+
+		if self.joining_date and self.date_of_leaving and getdate(self.joining_date) > getdate(self.date_of_leaving):
+			frappe.throw(_("Joining Date can not be greater than Leaving Date"))
 
 	def update_student_name_in_linked_doctype(self):
 		linked_doctypes = get_linked_doctypes("Student")
@@ -97,7 +117,7 @@ class Student(Document):
 					status = check_content_completion(content.name, content.doctype, course_enrollment_name)
 					progress.append({'content': content.name, 'content_type': content.doctype, 'is_complete': status})
 				elif content.doctype == 'Quiz':
-					status, score, result = check_quiz_completion(content, course_enrollment_name)
+					status, score, result, time_taken = check_quiz_completion(content, course_enrollment_name)
 					progress.append({'content': content.name, 'content_type': content.doctype, 'is_complete': status, 'score': score, 'result': result})
 		return progress
 
@@ -130,7 +150,7 @@ class Student(Document):
 			enrollment.save(ignore_permissions=True)
 		except frappe.exceptions.ValidationError:
 			enrollment_name = frappe.get_list("Course Enrollment", filters={"student": self.name, "course": course_name, "program_enrollment": program_enrollment})[0].name
-			return frappe.get_doc("Program Enrollment", enrollment_name)
+			return frappe.get_doc("Course Enrollment", enrollment_name)
 		else:
 			return enrollment
 
@@ -140,5 +160,5 @@ def get_timeline_data(doctype, name):
 		from `tabStudent Attendance` where
 			student=%s
 			and `date` > date_sub(curdate(), interval 1 year)
-			and status = 'Present'
+			and docstatus = 1 and status = 'Present'
 			group by date''', name))

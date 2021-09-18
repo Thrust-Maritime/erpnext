@@ -3,11 +3,13 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
-from frappe.model.document import Document
+from frappe import _, throw
 from frappe.desk.form import assign_to
-from frappe import throw, _
+from frappe.model.document import Document
 from frappe.utils import add_days, add_months, add_years, getdate, nowdate
+
 
 class AssetMaintenance(Document):
 	def validate(self):
@@ -41,7 +43,7 @@ def assign_tasks(asset_maintenance_name, assign_to_member, maintenance_task, nex
 	team_member = frappe.db.get_value('User', assign_to_member, "email")
 	args = {
 		'doctype' : 'Asset Maintenance',
-		'assign_to' : team_member,
+		'assign_to' : [team_member],
 		'name' : asset_maintenance_name,
 		'description' : maintenance_task,
 		'date' : next_due_date

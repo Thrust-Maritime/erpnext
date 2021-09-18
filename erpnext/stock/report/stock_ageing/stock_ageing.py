@@ -2,18 +2,22 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
+
+from operator import itemgetter
+
 import frappe
 from frappe import _
-from frappe.utils import date_diff, flt
+from frappe.utils import cint, date_diff, flt
 from six import iteritems
+
 from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 
-def execute(filters=None):
 
+def execute(filters=None):
 	columns = get_columns(filters)
 	item_details = get_fifo_queue(filters)
 	to_date = filters["to_date"]
-	_func = lambda x: x[1]
+	_func = itemgetter(1)
 
 	data = []
 	for item, item_dict in iteritems(item_details):
@@ -21,13 +25,13 @@ def execute(filters=None):
 
 		fifo_queue = sorted(filter(_func, item_dict["fifo_queue"]), key=_func)
 		details = item_dict["details"]
+
 		if not fifo_queue: continue
 
 		average_age = get_average_age(fifo_queue, to_date)
-
-		if fifo_queue:
-			earliest_age = date_diff(to_date, fifo_queue[0][1])
-			latest_age = date_diff(to_date, fifo_queue[-1][1])
+		earliest_age = date_diff(to_date, fifo_queue[0][1])
+		latest_age = date_diff(to_date, fifo_queue[-1][1])
+		range1, range2, range3, above_range3 = get_range_age(filters, fifo_queue, to_date, item_dict)
 
 		row = [details.name, details.item_name,
 			details.description, details.item_group, details.brand]
@@ -36,27 +40,50 @@ def execute(filters=None):
 			row.append(details.warehouse)
 
 		row.extend([item_dict.get("total_qty"), average_age,
+			range1, range2, range3, above_range3,
 			earliest_age, latest_age, details.stock_uom])
 
 		data.append(row)
 
-	return columns, data
+	chart_data = get_chart_data(data, filters)
+
+	return columns, data, None, chart_data
 
 def get_average_age(fifo_queue, to_date):
 	batch_age = age_qty = total_qty = 0.0
 	for batch in fifo_queue:
 		batch_age = date_diff(to_date, batch[1])
 
-		if type(batch[0]) in ['int', 'float']:
+		if isinstance(batch[0], (int, float)):
 			age_qty += batch_age * batch[0]
 			total_qty += batch[0]
 		else:
 			age_qty += batch_age * 1
 			total_qty += 1
 
-	return (age_qty / total_qty) if total_qty else 0.0
+	return flt(age_qty / total_qty, 2) if total_qty else 0.0
+
+def get_range_age(filters, fifo_queue, to_date, item_dict):
+	range1 = range2 = range3 = above_range3 = 0.0
+
+	for item in fifo_queue:
+		age = date_diff(to_date, item[1])
+		qty = flt(item[0]) if not item_dict["has_serial_no"] else 1.0
+
+		if age <= filters.range1:
+			range1 += qty
+		elif age <= filters.range2:
+			range2 += qty
+		elif age <= filters.range3:
+			range3 += qty
+		else:
+			above_range3 += qty
+
+	return range1, range2, range3, above_range3
 
 def get_columns(filters):
+	range_columns = []
+	setup_ageing_columns(filters, range_columns)
 	columns = [
 		{
 			"label": _("Item Code"),
@@ -113,7 +140,9 @@ def get_columns(filters):
 			"fieldname": "average_age",
 			"fieldtype": "Float",
 			"width": 100
-		},
+		}])
+	columns.extend(range_columns)
+	columns.extend([
 		{
 			"label": _("Earliest"),
 			"fieldname": "earliest",
@@ -175,9 +204,7 @@ def get_fifo_queue(filters, sle=None):
 					fifo_queue.append([d.actual_qty, d.posting_date])
 		else:
 			if serial_no_list:
-				for serial_no in fifo_queue:
-					if serial_no[0] in serial_no_list:
-						fifo_queue.remove(serial_no)
+				fifo_queue[:] = [serial_no for serial_no in fifo_queue if serial_no[0] not in serial_no_list]
 			else:
 				qty_to_pop = abs(d.actual_qty)
 				while qty_to_pop:
@@ -200,14 +227,16 @@ def get_fifo_queue(filters, sle=None):
 		else:
 			item_details[key]["total_qty"] += d.actual_qty
 
+		item_details[key]["has_serial_no"] = d.has_serial_no
+
 	return item_details
 
 def get_stock_ledger_entries(filters):
 	return frappe.db.sql("""select
-			item.name, item.item_name, item_group, brand, description, item.stock_uom,
+			item.name, item.item_name, item_group, brand, description, item.stock_uom, item.has_serial_no,
 			actual_qty, posting_date, voucher_type, voucher_no, serial_no, batch_no, qty_after_transaction, warehouse
 		from `tabStock Ledger Entry` sle,
-			(select name, item_name, description, stock_uom, brand, item_group
+			(select name, item_name, description, stock_uom, brand, item_group, has_serial_no
 				from `tabItem` {item_conditions}) item
 		where item_code = item.name and
 			company = %(company)s and
@@ -235,3 +264,49 @@ def get_sle_conditions(filters):
 			where wh.lft >= {0} and rgt <= {1})""".format(lft, rgt))
 
 	return "and {}".format(" and ".join(conditions)) if conditions else ""
+
+def get_chart_data(data, filters):
+	if not data:
+		return []
+
+	labels, datapoints = [], []
+
+	if filters.get("show_warehouse_wise_stock"):
+		return {}
+
+	data.sort(key = lambda row: row[6], reverse=True)
+
+	if len(data) > 10:
+		data = data[:10]
+
+	for row in data:
+		labels.append(row[0])
+		datapoints.append(row[6])
+
+	return {
+		"data" : {
+			"labels": labels,
+			"datasets": [
+				{
+					"name": _("Average Age"),
+					"values": datapoints
+				}
+			]
+		},
+		"type" : "bar"
+	}
+
+def setup_ageing_columns(filters, range_columns):
+	for i, label in enumerate(["0-{range1}".format(range1=filters["range1"]),
+		"{range1}-{range2}".format(range1=cint(filters["range1"])+ 1, range2=filters["range2"]),
+		"{range2}-{range3}".format(range2=cint(filters["range2"])+ 1, range3=filters["range3"]),
+		"{range3}-{above}".format(range3=cint(filters["range3"])+ 1, above=_("Above"))]):
+			add_column(range_columns, label="Age ("+ label +")", fieldname='range' + str(i+1))
+
+def add_column(range_columns, label, fieldname, fieldtype='Float', width=140):
+	range_columns.append(dict(
+		label=label,
+		fieldname=fieldname,
+		fieldtype=fieldtype,
+		width=width
+	))

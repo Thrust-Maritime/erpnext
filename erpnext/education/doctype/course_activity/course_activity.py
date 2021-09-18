@@ -3,9 +3,11 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
+
 
 class CourseActivity(Document):
 	def validate(self):
@@ -16,4 +18,4 @@ class CourseActivity(Document):
 		if frappe.db.exists("Course Enrollment", self.enrollment):
 			return True
 		else:
-			frappe.throw(_("Course Enrollment {0} does not exists".format(self.enrollment)))
+			frappe.throw(_("Course Enrollment {0} does not exists").format(self.enrollment))

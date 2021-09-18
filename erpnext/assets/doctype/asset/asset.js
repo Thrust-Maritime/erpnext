@@ -2,6 +2,7 @@
 // For license information, please see license.txt
 
 frappe.provide("erpnext.asset");
+frappe.provide("erpnext.accounts.dimensions");
 
 frappe.ui.form.on('Asset', {
 	onload: function(frm) {
@@ -32,13 +33,11 @@ frappe.ui.form.on('Asset', {
 			};
 		});
 
-		frm.set_query("cost_center", function() {
-			return {
-				"filters": {
-					"company": frm.doc.company,
-				}
-			};
-		});
+		erpnext.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
+	},
+
+	company: function(frm) {
+		erpnext.accounts.dimensions.update_dimension(frm, frm.doctype);
 	},
 
 	setup: function(frm) {
@@ -83,24 +82,46 @@ frappe.ui.form.on('Asset', {
 			if (in_list(["Submitted", "Partially Depreciated", "Fully Depreciated"], frm.doc.status)) {
 				frm.add_custom_button("Transfer Asset", function() {
 					erpnext.asset.transfer_asset(frm);
-				});
+				}, __("Manage"));
 
 				frm.add_custom_button("Scrap Asset", function() {
 					erpnext.asset.scrap_asset(frm);
-				});
+				}, __("Manage"));
 
 				frm.add_custom_button("Sell Asset", function() {
 					frm.trigger("make_sales_invoice");
-				});
+				}, __("Manage"));
 
 			} else if (frm.doc.status=='Scrapped') {
 				frm.add_custom_button("Restore Asset", function() {
 					erpnext.asset.restore_asset(frm);
-				});
+				}, __("Manage"));
+			}
+
+			if (frm.doc.maintenance_required && !frm.doc.maintenance_schedule) {
+				frm.add_custom_button(__("Maintain Asset"), function() {
+					frm.trigger("create_asset_maintenance");
+				}, __("Manage"));
+			}
+
+			frm.add_custom_button(__("Repair Asset"), function() {
+				frm.trigger("create_asset_repair");
+			}, __("Manage"));
+
+			if (frm.doc.status != 'Fully Depreciated') {
+				frm.add_custom_button(__("Adjust Asset Value"), function() {
+					frm.trigger("create_asset_adjustment");
+				}, __("Manage"));
+			}
+
+			if (!frm.doc.calculate_depreciation) {
+				frm.add_custom_button(__("Create Depreciation Entry"), function() {
+					frm.trigger("make_journal_entry");
+				}, __("Manage"));
 			}
 
 			if (frm.doc.purchase_receipt || !frm.doc.is_existing_asset) {
-				frm.add_custom_button("General Ledger", function() {
+				frm.add_custom_button("View General Ledger", function() {
 					frappe.route_options = {
 						"voucher_no": frm.doc.name,
 						"from_date": frm.doc.available_for_use_date,
@@ -108,27 +129,9 @@ frappe.ui.form.on('Asset', {
 						"company": frm.doc.company
 					};
 					frappe.set_route("query-report", "General Ledger");
-				});
+				}, __("Manage"));
 			}
 
-			if (frm.doc.maintenance_required && !frm.doc.maintenance_schedule) {
-				frm.add_custom_button(__("Asset Maintenance"), function() {
-					frm.trigger("create_asset_maintenance");
-				}, __('Create'));
-			}
-			if (frm.doc.status != 'Fully Depreciated') {
-				frm.add_custom_button(__("Asset Value Adjustment"), function() {
-					frm.trigger("create_asset_adjustment");
-				}, __('Create'));
-			}
-
-			if (!frm.doc.calculate_depreciation) {
-				frm.add_custom_button(__("Depreciation Entry"), function() {
-					frm.trigger("make_journal_entry");
-				}, __('Create'));
-			}
-
-			frm.page.set_inner_btn_group_as_primary(__('Create'));
 			frm.trigger("setup_chart");
 		}
 
@@ -307,6 +310,20 @@ frappe.ui.form.on('Asset', {
 		})
 	},
 
+	create_asset_repair: function(frm) {
+		frappe.call({
+			args: {
+				"asset": frm.doc.name,
+				"asset_name": frm.doc.asset_name
+			},
+			method: "erpnext.assets.doctype.asset.asset.create_asset_repair",
+			callback: function(r) {
+				var doclist = frappe.model.sync(r.message);
+				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
+			}
+		});
+	},
+
 	create_asset_adjustment: function(frm) {
 		frappe.call({
 			args: {
@@ -379,14 +396,15 @@ frappe.ui.form.on('Asset', {
 			doctype_field = frappe.scrub(doctype)
 			frm.set_value(doctype_field, '');
 			frappe.msgprint({
-				title: __(`Invalid ${doctype}`),
-				message: __(`The selected ${doctype} doesn't contains selected Asset Item.`),
+				title: __('Invalid {0}', [__(doctype)]),
+				message: __('The selected {0} does not contain the selected Asset Item.', [__(doctype)]),
 				indicator: 'red'
 			});
 		}
 		frm.set_value('gross_purchase_amount', item.base_net_rate + item.item_tax_amount);
 		frm.set_value('purchase_receipt_amount', item.base_net_rate + item.item_tax_amount);
-		frm.set_value('location', item.asset_location);
+		item.asset_location && frm.set_value('location', item.asset_location);
+		frm.set_value('cost_center', item.cost_center || purchase_doc.cost_center);
 	},
 
 	set_depreciation_rate: function(frm, row) {
@@ -441,7 +459,7 @@ frappe.ui.form.on('Asset Finance Book', {
 	depreciation_start_date: function(frm, cdt, cdn) {
 		const book = locals[cdt][cdn];
 		if (frm.doc.available_for_use_date && book.depreciation_start_date == frm.doc.available_for_use_date) {
-			frappe.msgprint(__(`Depreciation Posting Date should not be equal to Available for Use Date.`));
+			frappe.msgprint(__("Depreciation Posting Date should not be equal to Available for Use Date."));
 			book.depreciation_start_date = "";
 			frm.refresh_field("finance_books");
 		}

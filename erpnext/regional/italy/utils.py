@@ -2,13 +2,14 @@ from __future__ import unicode_literals
 
 import io
 import json
+
 import frappe
-from frappe.utils import flt, cstr
-from erpnext.controllers.taxes_and_totals import get_itemised_tax
 from frappe import _
-from frappe.core.doctype.file.file import remove_file
+from frappe.utils import cstr, flt
+from frappe.utils.file_manager import remove_file
 from six import string_types
-from frappe.desk.form.load import get_attachments
+
+from erpnext.controllers.taxes_and_totals import get_itemised_tax
 from erpnext.regional.italy import state_codes
 
 
@@ -256,7 +257,7 @@ def sales_invoice_validate(doc):
 	else:
 		for row in doc.taxes:
 			if row.rate == 0 and row.tax_amount == 0 and not row.tax_exemption_reason:
-				frappe.throw(_("Row {0}: Please set at Tax Exemption Reason in Sales Taxes and Charges".format(row.idx)),
+				frappe.throw(_("Row {0}: Please set at Tax Exemption Reason in Sales Taxes and Charges").format(row.idx),
 					title=_("E-Invoicing Information Missing"))
 
 	for schedule in doc.payment_schedule:
@@ -276,10 +277,10 @@ def sales_invoice_on_submit(doc, method):
 	else:
 		for schedule in doc.payment_schedule:
 			if not schedule.mode_of_payment:
-				frappe.throw(_("Row {0}: Please set the Mode of Payment in Payment Schedule".format(schedule.idx)),
+				frappe.throw(_("Row {0}: Please set the Mode of Payment in Payment Schedule").format(schedule.idx),
 					title=_("E-Invoicing Information Missing"))
 			elif not frappe.db.get_value("Mode of Payment", schedule.mode_of_payment, "mode_of_payment_code"):
-				frappe.throw(_("Row {0}: Please set the correct code on Mode of Payment {1}".format(schedule.idx, schedule.mode_of_payment)),
+				frappe.throw(_("Row {0}: Please set the correct code on Mode of Payment {1}").format(schedule.idx, schedule.mode_of_payment),
 					title=_("E-Invoicing Information Missing"))
 
 	prepare_and_attach_invoice(doc)
@@ -370,7 +371,7 @@ def validate_address(address_name):
 
 	for field in fields:
 		if not data.get(field):
-			frappe.throw(_("Please set {0} for address {1}".format(field.replace('-',''), address_name)),
+			frappe.throw(_("Please set {0} for address {1}").format(field.replace('-',''), address_name),
 				title=_("E-Invoicing Information Missing"))
 
 def get_unamended_name(doc):

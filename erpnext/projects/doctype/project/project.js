@@ -18,8 +18,8 @@ frappe.ui.form.on("Project", {
 		};
 	},
 	onload: function (frm) {
-		var so = frappe.meta.get_docfield("Project", "sales_order");
-		so.get_route_options_for_new_doc = function (field) {
+		const so = frm.get_docfield("sales_order");
+		so.get_route_options_for_new_doc = () => {
 			if (frm.is_new()) return;
 			return {
 				"customer": frm.doc.customer,
@@ -76,6 +76,7 @@ frappe.ui.form.on("Project", {
 				frm.events.set_status(frm, 'Cancelled');
 			}, __('Set Status'));
 
+
 			if (frappe.model.can_read("Task")) {
 				frm.add_custom_button(__("Gantt Chart"), function () {
 					frappe.route_options = {
@@ -93,6 +94,8 @@ frappe.ui.form.on("Project", {
 				});
 			}
 		}
+
+
 	},
 
 	create_duplicate: function(frm) {

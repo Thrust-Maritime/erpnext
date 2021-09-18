@@ -76,10 +76,9 @@ frappe.ui.form.on("Work Order", {
 		frm.set_query("production_item", function() {
 			return {
 				query: "erpnext.controllers.queries.item_query",
-				filters:[
-					['is_stock_item', '=',1],
-					['default_bom', '!=', '']
-				]
+				filters: {
+					"is_stock_item": 1,
+				}
 			};
 		});
 
@@ -142,8 +141,9 @@ frappe.ui.form.on("Work Order", {
 		}
 
 		if (frm.doc.docstatus === 1
-			&& frm.doc.operations && frm.doc.operations.length
-			&& frm.doc.qty != frm.doc.produced_qty) {
+			// && frm.doc.operations && frm.doc.operations.length
+			// && frm.doc.qty != frm.doc.produced_qty) {
+			&& frm.doc.operations && frm.doc.operations.length) {
 
 			const not_completed = frm.doc.operations.filter(d => {
 				if(d.status != 'Completed') {
@@ -191,35 +191,41 @@ frappe.ui.form.on("Work Order", {
 		const dialog = frappe.prompt({fieldname: 'operations', fieldtype: 'Table', label: __('Operations'),
 			fields: [
 				{
-					fieldtype:'Link',
-					fieldname:'operation',
+					fieldtype: 'Link',
+					fieldname: 'operation',
 					label: __('Operation'),
-					read_only:1,
-					in_list_view:1
+					read_only: 1,
+					in_list_view: 1
 				},
 				{
-					fieldtype:'Link',
-					fieldname:'workstation',
+					fieldtype: 'Link',
+					fieldname: 'workstation',
 					label: __('Workstation'),
-					read_only:1,
-					in_list_view:1
+					read_only: 1,
+					in_list_view: 1
 				},
 				{
-					fieldtype:'Data',
-					fieldname:'name',
+					fieldtype: 'Data',
+					fieldname: 'name',
 					label: __('Operation Id')
 				},
 				{
-					fieldtype:'Float',
-					fieldname:'pending_qty',
+					fieldtype: 'Float',
+					fieldname: 'pending_qty',
 					label: __('Pending Qty'),
 				},
 				{
-					fieldtype:'Float',
-					fieldname:'qty',
+					fieldtype: 'Float',
+					fieldname: 'qty',
 					label: __('Quantity to Manufacture'),
-					read_only:0,
-					in_list_view:1,
+					read_only: 0,
+					in_list_view: 1,
+				},
+				{
+					fieldtype: 'Float',
+					fieldname: 'batch_size',
+					label: __('Batch Size'),
+					read_only: 1
 				},
 			],
 			data: operations_data,
@@ -230,9 +236,13 @@ frappe.ui.form.on("Work Order", {
 		}, function(data) {
 			frappe.call({
 				method: "erpnext.manufacturing.doctype.work_order.work_order.make_job_card",
+				freeze: true,
 				args: {
 					work_order: frm.doc.name,
 					operations: data.operations,
+				},
+				callback: function() {
+					frm.reload_doc();
 				}
 			});
 		}, __("Job Card"), __("Create"));
@@ -244,13 +254,16 @@ frappe.ui.form.on("Work Order", {
 			if(data.completed_qty != frm.doc.qty) {
 				pending_qty = frm.doc.qty - flt(data.completed_qty);
 
-				dialog.fields_dict.operations.df.data.push({
-					'name': data.name,
-					'operation': data.operation,
-					'workstation': data.workstation,
-					'qty': pending_qty,
-					'pending_qty': pending_qty,
-				});
+				if (pending_qty) {
+					dialog.fields_dict.operations.df.data.push({
+						'name': data.name,
+						'operation': data.operation,
+						'workstation': data.workstation,
+						'batch_size': data.batch_size,
+						'qty': pending_qty,
+						'pending_qty': pending_qty
+					});
+				}
 			}
 		});
 		dialog.fields_dict.operations.grid.refresh();
@@ -401,7 +414,6 @@ frappe.ui.form.on("Work Order", {
 	},
 
 	before_submit: function(frm) {
-		frm.toggle_reqd(["fg_warehouse", "wip_warehouse"], true);
 		frm.fields_dict.required_items.grid.toggle_reqd("source_warehouse", true);
 		frm.toggle_reqd("transfer_material_against",
 			frm.doc.operations && frm.doc.operations.length > 0);
@@ -448,6 +460,32 @@ frappe.ui.form.on("Work Order Item", {
 				callback: function (r) {
 					frappe.model.set_value(row.doctype, row.name,
 						"available_qty_at_source_warehouse", r.message);
+				}
+			});
+		}
+	},
+
+	item_code: function(frm, cdt, cdn) {
+		let row = locals[cdt][cdn];
+
+		if (row.item_code) {
+			frappe.call({
+				method: "erpnext.stock.doctype.item.item.get_item_details",
+				args: {
+					item_code: row.item_code,
+					company: frm.doc.company
+				},
+				callback: function(r) {
+					if (r.message) {
+						frappe.model.set_value(cdt, cdn, {
+							"required_qty": 1,
+							"item_name": r.message.item_name,
+							"description": r.message.description,
+							"source_warehouse": r.message.default_warehouse,
+							"allow_alternative_item": r.message.allow_alternative_item,
+							"include_item_in_manufacturing": r.message.include_item_in_manufacturing
+						});
+					}
 				}
 			});
 		}
@@ -582,6 +620,7 @@ erpnext.work_order = {
 					if (!r.exe) {
 						frm.set_value("wip_warehouse", r.message.wip_warehouse);
 						frm.set_value("fg_warehouse", r.message.fg_warehouse);
+						frm.set_value("scrap_warehouse", r.message.scrap_warehouse);
 					}
 				}
 			});
@@ -679,6 +718,8 @@ erpnext.work_order = {
 	stop_work_order: function(frm, status) {
 		frappe.call({
 			method: "erpnext.manufacturing.doctype.work_order.work_order.stop_unstop",
+			freeze: true,
+			freeze_message: __("Updating Work Order status"),
 			args: {
 				work_order: frm.doc.name,
 				status: status

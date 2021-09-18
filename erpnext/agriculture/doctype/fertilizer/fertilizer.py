@@ -3,10 +3,13 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
 from frappe.model.document import Document
 
+
 class Fertilizer(Document):
+	@frappe.whitelist()
 	def load_contents(self):
 		docs = frappe.get_all("Agriculture Analysis Criteria", filters={'linked_doctype':'Fertilizer'})
 		for doc in docs:

@@ -3,9 +3,11 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
+
 
 class ItemAlternative(Document):
 	def validate(self):
@@ -40,7 +42,7 @@ class ItemAlternative(Document):
 	def validate_duplicate(self):
 		if frappe.db.get_value("Item Alternative", {'item_code': self.item_code,
 			'alternative_item_code': self.alternative_item_code, 'name': ('!=', self.name)}):
-			frappe.throw(_("Already record exists for the item {0}".format(self.item_code)))
+			frappe.throw(_("Already record exists for the item {0}").format(self.item_code))
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs

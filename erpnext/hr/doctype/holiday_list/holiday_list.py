@@ -3,11 +3,14 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
-import frappe
+
 import json
-from frappe.utils import cint, getdate, formatdate, today
-from frappe import throw, _
+
+import frappe
+from frappe import _, throw
 from frappe.model.document import Document
+from frappe.utils import cint, formatdate, getdate, today
+
 
 class OverlapError(frappe.ValidationError): pass
 
@@ -16,6 +19,7 @@ class HolidayList(Document):
 		self.validate_days()
 		self.total_holidays = len(self.holidays)
 
+	@frappe.whitelist()
 	def get_weekly_off_dates(self):
 		self.validate_values()
 		date_list = self.get_weekly_off_date_list(self.from_date, self.to_date)
@@ -24,6 +28,7 @@ class HolidayList(Document):
 			ch = self.append('holidays', {})
 			ch.description = self.weekly_off
 			ch.holiday_date = d
+			ch.weekly_off = 1
 			ch.idx = last_idx + i + 1
 
 	def validate_values(self):
@@ -42,9 +47,10 @@ class HolidayList(Document):
 	def get_weekly_off_date_list(self, start_date, end_date):
 		start_date, end_date = getdate(start_date), getdate(end_date)
 
-		from dateutil import relativedelta
-		from datetime import timedelta
 		import calendar
+		from datetime import timedelta
+
+		from dateutil import relativedelta
 
 		date_list = []
 		existing_date_list = []
@@ -60,6 +66,7 @@ class HolidayList(Document):
 
 		return date_list
 
+	@frappe.whitelist()
 	def clear_table(self):
 		self.set('holidays', [])
 

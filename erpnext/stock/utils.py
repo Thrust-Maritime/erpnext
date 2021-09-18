@@ -2,12 +2,16 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
-import frappe, erpnext
-from frappe import _
-import json
-from frappe.utils import flt, cstr, nowdate, nowtime, get_link_to_form
 
+import json
+
+import frappe
+from frappe import _
+from frappe.utils import cstr, flt, get_link_to_form, nowdate, nowtime
 from six import string_types
+
+import erpnext
+
 
 class InvalidWarehouseCompany(frappe.ValidationError): pass
 
@@ -63,6 +67,7 @@ def get_stock_value_on(warehouse=None, posting_date=None, item_code=None):
 		SELECT item_code, stock_value, name, warehouse
 		FROM `tabStock Ledger Entry` sle
 		WHERE posting_date <= %s {0}
+			and is_cancelled = 0
 		ORDER BY timestamp(posting_date, posting_time) DESC, creation DESC
 	""".format(condition), values, as_dict=1)
 
@@ -96,7 +101,11 @@ def get_stock_balance(item_code, warehouse, posting_date=None, posting_time=None
 
 	if with_valuation_rate:
 		if with_serial_no:
-			serial_nos = get_serial_nos_data_after_transactions(args)
+			serial_nos = last_entry.get("serial_no")
+
+			if (serial_nos and
+				len(get_serial_nos_data(serial_nos)) < last_entry.qty_after_transaction):
+				serial_nos = get_serial_nos_data_after_transactions(args)
 
 			return ((last_entry.qty_after_transaction, last_entry.valuation_rate, serial_nos)
 				if last_entry else (0.0, 0.0, 0.0))
@@ -115,17 +124,10 @@ def get_serial_nos_data_after_transactions(args):
 			order by posting_date, posting_time asc """, args, as_dict=1)
 
 	for d in data:
-		for sn in get_serial_nos_data(d.serial_no):
-			if d.actual_qty > 0:
-				if sn not in serial_nos:
-					serial_nos.append(sn)
-				else:
-					serial_nos.remove(sn)
-			elif d.actual_qty < 0:
-				if sn in serial_nos:
-					serial_nos.remove(sn)
-				else:
-					serial_nos.append(sn)
+		if d.actual_qty > 0:
+			serial_nos.extend(get_serial_nos_data(d.serial_no))
+		else:
+			serial_nos = list(set(serial_nos) - set(get_serial_nos_data(d.serial_no)))
 
 	return '\n'.join(serial_nos)
 
@@ -174,12 +176,12 @@ def get_bin(item_code, warehouse):
 		bin_obj.flags.ignore_permissions = 1
 		bin_obj.insert()
 	else:
-		bin_obj = frappe.get_cached_doc('Bin', bin)
+		bin_obj = frappe.get_doc('Bin', bin, for_update=True)
 	bin_obj.flags.ignore_permissions = True
 	return bin_obj
 
 def update_bin(args, allow_negative_stock=False, via_landed_cost_voucher=False):
-	is_stock_item = frappe.db.get_value('Item', args.get("item_code"), 'is_stock_item')
+	is_stock_item = frappe.get_cached_value('Item', args.get("item_code"), 'is_stock_item')
 	if is_stock_item:
 		bin = get_bin(args.get("item_code"), args.get("warehouse"))
 		bin.update_stock(args, allow_negative_stock, via_landed_cost_voucher)
@@ -214,7 +216,7 @@ def get_incoming_rate(args, raise_error_if_no_rate=True):
 			currency=erpnext.get_company_currency(args.get('company')), company=args.get('company'),
 			raise_error_if_no_rate=raise_error_if_no_rate)
 
-	return in_rate
+	return flt(in_rate)
 
 def get_avg_purchase_rate(serial_nos):
 	"""get average value of serial numbers"""
@@ -226,7 +228,7 @@ def get_avg_purchase_rate(serial_nos):
 
 def get_valuation_method(item_code):
 	"""get valuation method from item or default"""
-	val_method = frappe.db.get_value('Item', item_code, 'valuation_method')
+	val_method = frappe.db.get_value('Item', item_code, 'valuation_method', cache=True)
 	if not val_method:
 		val_method = frappe.db.get_value("Stock Settings", None, "valuation_method") or "FIFO"
 	return val_method
@@ -277,17 +279,17 @@ def get_valid_serial_nos(sr_nos, qty=0, item_code=''):
 	return valid_serial_nos
 
 def validate_warehouse_company(warehouse, company):
-	warehouse_company = frappe.db.get_value("Warehouse", warehouse, "company")
+	warehouse_company = frappe.db.get_value("Warehouse", warehouse, "company", cache=True)
 	if warehouse_company and warehouse_company != company:
 		frappe.throw(_("Warehouse {0} does not belong to company {1}").format(warehouse, company),
 			InvalidWarehouseCompany)
 
 def is_group_warehouse(warehouse):
-	if frappe.db.get_value("Warehouse", warehouse, "is_group"):
+	if frappe.db.get_value("Warehouse", warehouse, "is_group", cache=True):
 		frappe.throw(_("Group node warehouse is not allowed to select for transactions"))
 
 def validate_disabled_warehouse(warehouse):
-	if frappe.db.get_value("Warehouse", warehouse, "disabled"):
+	if frappe.db.get_value("Warehouse", warehouse, "disabled", cache=True):
 		frappe.throw(_("Disabled Warehouse {0} cannot be used for this transaction.").format(get_link_to_form('Warehouse', warehouse)))
 
 def update_included_uom_in_report(columns, result, include_uom, conversion_factors):
@@ -374,3 +376,21 @@ def add_additional_uom_columns(columns, result, include_uom, conversion_factors)
 				row[data.converted_col] = flt(value_before_conversion) / conversion_factor
 
 		result[row_idx] = row
+
+def get_incoming_outgoing_rate_for_cancel(item_code, voucher_type, voucher_no, voucher_detail_no):
+	outgoing_rate = frappe.db.sql("""SELECT abs(stock_value_difference / actual_qty)
+		FROM `tabStock Ledger Entry`
+		WHERE voucher_type = %s and voucher_no = %s
+			and item_code = %s and voucher_detail_no = %s
+			ORDER BY CREATION DESC limit 1""",
+		(voucher_type, voucher_no, item_code, voucher_detail_no))
+
+	outgoing_rate = outgoing_rate[0][0] if outgoing_rate else 0.0
+
+	return outgoing_rate
+
+def is_reposting_item_valuation_in_progress():
+	reposting_in_progress = frappe.db.exists("Repost Item Valuation",
+		{'docstatus': 1, 'status': ['in', ['Queued','In Progress']]})
+	if reposting_in_progress:
+		frappe.msgprint(_("Item valuation reposting in progress. Report might show incorrect item valuation."), alert=1)

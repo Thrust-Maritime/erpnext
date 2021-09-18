@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 from six import iteritems
 
+from six import iteritems
+
 states = [
  '',
  'Andaman and Nicobar Islands',

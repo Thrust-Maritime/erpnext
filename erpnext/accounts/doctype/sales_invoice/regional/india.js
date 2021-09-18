@@ -1,3 +1,4 @@
+
 {% include "erpnext/regional/india/taxes.js" %}
 {% include "erpnext/regional/india/e_invoice/einvoice.js" %}
 
@@ -58,7 +59,7 @@ frappe.ui.form.on("Sales Invoice", {
 
 			}, __("Create"));
 		}
-	},
+	}
 
 });
 

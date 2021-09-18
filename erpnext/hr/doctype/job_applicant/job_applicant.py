@@ -4,12 +4,12 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
-from frappe.model.document import Document
+
 import frappe
 from frappe import _
+from frappe.model.document import Document
 from frappe.utils import comma_and, validate_email_address
 
-sender_field = "email_id"
 
 class DuplicationError(frappe.ValidationError): pass
 
@@ -30,9 +30,20 @@ class JobApplicant(Document):
 		if self.email_id:
 			validate_email_address(self.email_id, True)
 
+		if self.employee_referral:
+			self.set_status_for_employee_referral()
+
 		if not self.applicant_name and self.email_id:
 			guess = self.email_id.split('@')[0]
 			self.applicant_name = ' '.join([p.capitalize() for p in guess.split('.')])
+
+	def set_status_for_employee_referral(self):
+		emp_ref = frappe.get_doc("Employee Referral", self.employee_referral)
+		if self.status in ["Open", "Replied", "Hold"]:
+			emp_ref.db_set("status", "In Process")
+		elif self.status in ["Accepted", "Rejected"]:
+			emp_ref.db_set("status", self.status)
+
 
 	def check_email_id_is_unique(self):
 		if self.email_id:
@@ -41,4 +52,3 @@ class JobApplicant(Document):
 
 			if names:
 				frappe.throw(_("Email Address must be unique, already exists for {0}").format(comma_and(names)), frappe.DuplicateEntryError)
-

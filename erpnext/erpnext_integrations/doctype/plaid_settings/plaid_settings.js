@@ -19,6 +19,22 @@ frappe.ui.form.on('Plaid Settings', {
 			frm.add_custom_button(__('Reset Plaid Link'), () => {
 				new erpnext.integrations.plaidLink(frm);
 			});
+
+			frm.add_custom_button(__("Sync Now"), () => {
+				frappe.call({
+					method: "erpnext.erpnext_integrations.doctype.plaid_settings.plaid_settings.enqueue_synchronization",
+					freeze: true,
+					callback: () => {
+						let bank_transaction_link = '<a href="#List/Bank Transaction">Bank Transaction</a>';
+
+						frappe.msgprint({
+							title: __("Sync Started"),
+							message: __("The sync has started in the background, please check the {0} list for new records.", [bank_transaction_link]),
+							alert: 1
+						});
+					}
+				});
+			}).addClass("btn-primary");
 		}
 	}
 });

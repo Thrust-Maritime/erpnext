@@ -3,12 +3,15 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
-import frappe
+
 import json
+
+import frappe
 from frappe import _
-from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt, cstr
 from frappe.email.doctype.email_group.email_group import add_subscribers
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import cstr, flt, getdate
+
 
 def get_course(program):
 	'''Return list of courses for a particular program
@@ -34,10 +37,14 @@ def enroll_student(source_name):
 			}
 		}}, ignore_permissions=True)
 	student.save()
+
+	student_applicant = frappe.db.get_value("Student Applicant", source_name,
+		["student_category", "program"], as_dict=True)
 	program_enrollment = frappe.new_doc("Program Enrollment")
 	program_enrollment.student = student.name
+	program_enrollment.student_category = student_applicant.student_category
 	program_enrollment.student_name = student.title
-	program_enrollment.program = frappe.db.get_value("Student Applicant", source_name, "program")
+	program_enrollment.program = student_applicant.program
 	frappe.publish_realtime('enroll_student_progress', {"progress": [2, 4]}, user=frappe.session.user)
 	return program_enrollment
 
@@ -66,6 +73,13 @@ def mark_attendance(students_present, students_absent, course_schedule=None, stu
 	:param student_group: Student Group.
 	:param date: Date.
 	"""
+
+	if student_group:
+		academic_year = frappe.db.get_value('Student Group', student_group, 'academic_year')
+		if academic_year:
+			year_start_date, year_end_date = frappe.db.get_value('Academic Year', academic_year, ['year_start_date', 'year_end_date'])
+			if getdate(date) < getdate(year_start_date) or getdate(date) > getdate(year_end_date):
+				frappe.throw(_('Attendance cannot be marked outside of Academic Year {0}').format(academic_year))
 
 	present = json.loads(students_present)
 	absent = json.loads(students_absent)
@@ -104,6 +118,7 @@ def make_attendance_records(student, student_name, status, course_schedule=None,
 	student_attendance.date = date
 	student_attendance.status = status
 	student_attendance.save()
+	student_attendance.submit()
 
 
 @frappe.whitelist()

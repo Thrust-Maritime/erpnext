@@ -3,11 +3,13 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+
 import frappe
-from frappe.model.document import Document
 from frappe import _
-from frappe.utils import getdate, nowdate, cint, flt
+from frappe.model.document import Document
+from frappe.utils import cint, flt, getdate, nowdate
 from frappe.utils.nestedset import get_descendants_of
+
 
 class SubsidiaryCompanyError(frappe.ValidationError): pass
 class ParentCompanyError(frappe.ValidationError): pass
@@ -39,6 +41,7 @@ class StaffingPlan(Document):
 			detail.current_count = designation_counts['employee_count']
 			detail.current_openings = designation_counts['job_openings']
 
+			detail.total_estimated_cost = 0
 			if detail.number_of_positions > 0:
 				if detail.vacancies and detail.estimated_cost_per_position:
 					detail.total_estimated_cost = cint(detail.vacancies) * flt(detail.estimated_cost_per_position)
@@ -57,7 +60,8 @@ class StaffingPlan(Document):
 			and sp.to_date >= %s and sp.from_date <= %s and sp.company = %s
 		""", (staffing_plan_detail.designation, self.from_date, self.to_date, self.company))
 		if overlap and overlap [0][0]:
-			frappe.throw(_("Staffing Plan {0} already exist for designation {1}").format(overlap[0][0], staffing_plan_detail.designation))
+			frappe.throw(_("Staffing Plan {0} already exist for designation {1}")
+				.format(overlap[0][0], staffing_plan_detail.designation))
 
 	def validate_with_parent_plan(self, staffing_plan_detail):
 		if not frappe.get_cached_value('Company',  self.company,  "parent_company"):

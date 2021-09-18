@@ -2,15 +2,19 @@
 # License: GNU General Public License v3. See license.txt
 
 from __future__ import unicode_literals
-import frappe, erpnext
-from frappe import _
-from frappe.utils import flt, getdate, cstr
-from frappe.model.meta import get_field_precision
-from frappe.utils.xlsxutils import handle_html
-from six import iteritems
+
 import json
+
+import frappe
+from frappe import _
+from frappe.model.meta import get_field_precision
+from frappe.utils import cstr, flt, getdate
+from six import iteritems
+
+import erpnext
 from erpnext.regional.india.utils import get_gst_accounts
 from erpnext.regional.report.gstr_1.gstr_1 import get_company_gstin_number
+
 
 def execute(filters=None):
 	return _execute(filters)
@@ -43,12 +47,6 @@ def _execute(filters=None):
 
 			data.append(row)
 			added_item.append((d.parent, d.item_code))
-		# gst is already added, just add qty and taxable value
-		else:
-			row = [d.gst_hsn_code, d.description, d.stock_uom, d.stock_qty, d.base_net_amount, d.base_net_amount]
-			for tax in tax_columns:
-				row += [0]
-			data.append(row)
 	if data:
 		data = get_merged_data(columns, data) # merge same hsn code data
 	return columns, data
@@ -291,5 +289,3 @@ def get_hsn_wise_json_data(filters, report_data):
 		count +=1
 
 	return data
-
-

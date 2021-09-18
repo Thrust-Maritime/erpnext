@@ -19,10 +19,6 @@ erpnext.setup_einvoice_actions = (doctype) => {
 				}
 			};
 
-			if (ewaybill && irn) {
-				frm.set_df_property('ewaybill', 'read_only', 1);
-			}
-
 			if (!irn && !__unsaved) {
 				const action = () => {
 					if (frm.doc.__unsaved) {
@@ -52,7 +48,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 						"default": "1-Duplicate",
 						"options": ["1-Duplicate", "2-Data Entry Error", "3-Order Cancelled", "4-Other"]
 					},
-					{ 
+					{
 						"label": "Remark",
 						"fieldname": "remark",
 						"fieldtype": "Data",
@@ -67,7 +63,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 							const data = d.get_values();
 							frappe.call({
 								method: 'erpnext.regional.india.e_invoice.utils.cancel_irn',
-								args: { 
+								args: {
 									doctype,
 									docname: name,
 									irn: irn,
@@ -90,7 +86,7 @@ erpnext.setup_einvoice_actions = (doctype) => {
 				const action = () => {
 					const d = new frappe.ui.Dialog({
 						title: __('Generate E-Way Bill'),
-						wide: 1,
+						size: "large",
 						fields: get_ewaybill_fields(frm),
 						primary_action: function() {
 							const data = d.get_values();
@@ -121,17 +117,19 @@ erpnext.setup_einvoice_actions = (doctype) => {
 					message += '<br><br>';
 					message += __('You must first use the portal to cancel the e-way bill and then update the cancelled status in the ERPNext system.');
 
-					frappe.msgprint({
+					const dialog = frappe.msgprint({
 						title: __('Update E-Way Bill Cancelled Status?'),
 						message: message,
 						indicator: 'orange',
-						primary_action: function() {
-							frappe.call({
-								method: 'erpnext.regional.india.e_invoice.utils.cancel_eway_bill',
-								args: { doctype, docname: name },
-								freeze: true,
-								callback: () => frm.reload_doc()
-							});
+						primary_action: {
+							action: function() {
+								frappe.call({
+									method: 'erpnext.regional.india.e_invoice.utils.cancel_eway_bill',
+									args: { doctype, docname: name },
+									freeze: true,
+									callback: () => frm.reload_doc() || dialog.hide()
+								});
+							}
 						},
 						primary_action_label: __('Yes')
 					});
@@ -175,7 +173,6 @@ const get_ewaybill_fields = (frm) => {
 			'fieldname': 'vehicle_no',
 			'label': 'Vehicle No',
 			'fieldtype': 'Data',
-			'depends_on': 'eval:(doc.mode_of_transport === "Road")',
 			'default': frm.doc.vehicle_no
 		},
 		{
@@ -240,9 +237,9 @@ const request_irn_generation = (frm) => {
 const get_preview_dialog = (frm, action) => {
 	const dialog = new frappe.ui.Dialog({
 		title: __("Preview"),
-		wide: 1,
+		size: "large",
 		fields: [
-			{ 
+			{
 				"label": "Preview",
 				"fieldname": "preview_html",
 				"fieldtype": "HTML"

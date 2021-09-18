@@ -3,11 +3,17 @@
 
 
 from __future__ import unicode_literals
+
 import unittest
+
 import frappe
 from erpnext.stock.doctype.item.test_item import create_item
 from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
 from erpnext.manufacturing.doctype.bom_update_tool.bom_update_tool import update_cost
+
+from erpnext.manufacturing.doctype.bom_update_tool.bom_update_tool import update_cost
+from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
+from erpnext.stock.doctype.item.test_item import create_item
 
 test_records = frappe.get_test_records('BOM')
 
@@ -45,16 +51,16 @@ class TestBOMUpdateTool(unittest.TestCase):
 		else:
 			doc = frappe.get_doc("BOM", bom_no)
 
-		self.assertEquals(doc.total_cost, 200)
+		self.assertEqual(doc.total_cost, 200)
 
 		frappe.db.set_value("Item", "BOM Cost Test Item 2", "valuation_rate", 200)
 		update_cost()
 
 		doc.load_from_db()
-		self.assertEquals(doc.total_cost, 300)
+		self.assertEqual(doc.total_cost, 300)
 
 		frappe.db.set_value("Item", "BOM Cost Test Item 2", "valuation_rate", 100)
 		update_cost()
 
 		doc.load_from_db()
-		self.assertEquals(doc.total_cost, 200)
+		self.assertEqual(doc.total_cost, 200)
