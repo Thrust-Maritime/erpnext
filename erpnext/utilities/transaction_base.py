@@ -182,11 +182,7 @@ def validate_uom_is_integer(doc, uom_field, qty_fields, child_dt=None):
 	if isinstance(qty_fields, string_types):
 		qty_fields = [qty_fields]
 
-<<<<<<< HEAD
-	distinct_uoms = list(set([d.get(uom_field) for d in doc.get_all_children()]))
-=======
 	distinct_uoms = list(set(d.get(uom_field) for d in doc.get_all_children()))
->>>>>>> version-13.11
 	integer_uoms = list(filter(lambda uom: frappe.db.get_value("UOM", uom,
 		"must_be_whole_number", cache=True) or None, distinct_uoms))
 
