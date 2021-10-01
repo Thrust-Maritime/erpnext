@@ -1676,7 +1676,7 @@ class StockEntry(StockController):
 				'source_field': 'qty',
 				'percent_join_field': 'against_stock_entry',
 				'no_allowance': 1
-			})
+			}
 
 			self.update_prevdoc_status()
 
