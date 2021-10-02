@@ -2119,8 +2119,6 @@ class TestSalesInvoice(unittest.TestCase):
 	def test_eway_bill_json(self):
 		si = make_sales_invoice_for_ewaybill()
 
-	gst_settings.save()
-
 		data = get_ewb_data("Sales Invoice", [si.name])
 
 		self.assertEqual(data['version'], '1.0.0421')
