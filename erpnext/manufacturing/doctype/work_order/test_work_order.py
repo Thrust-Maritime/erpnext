@@ -452,25 +452,25 @@ class TestWorkOrder(unittest.TestCase):
 		work_order = make_wo_order_test_record(item=bom_item, qty=1,
 			bom_no=bom, source_warehouse="_Test Warehouse - _TC")
 
-			planned_start_date = add_months(today(), months=-1)
-			work_order = make_wo_order_test_record(item=bom_item,
-				qty=10, bom_no=bom, planned_start_date=planned_start_date)
+		planned_start_date = add_months(today(), months=-1)
+		work_order = make_wo_order_test_record(item=bom_item,
+			qty=10, bom_no=bom, planned_start_date=planned_start_date)
 
-			work_order1 = make_wo_order_test_record(item=bom_item,
-				qty=30, bom_no=bom, planned_start_date=planned_start_date, do_not_submit=1)
+		work_order1 = make_wo_order_test_record(item=bom_item,
+			qty=30, bom_no=bom, planned_start_date=planned_start_date, do_not_submit=1)
 
-			self.assertRaises(CapacityError, work_order1.submit)
+		self.assertRaises(CapacityError, work_order1.submit)
 
-			frappe.db.set_value("Manufacturing Settings", None, {
-				"capacity_planning_for_days": 30
-			})
+		frappe.db.set_value("Manufacturing Settings", None, {
+			"capacity_planning_for_days": 30
+		})
 
-			work_order1.reload()
-			work_order1.submit()
-			self.assertTrue(work_order1.docstatus, 1)
+		work_order1.reload()
+		work_order1.submit()
+		self.assertTrue(work_order1.docstatus, 1)
 
-			work_order1.cancel()
-			work_order.cancel()
+		work_order1.cancel()
+		work_order.cancel()
 
 	def test_work_order_with_non_transfer_item(self):
 		items = {'Finished Good Transfer Item': 1, '_Test FG Item': 1, '_Test FG Item 1': 0}
