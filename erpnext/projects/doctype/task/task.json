@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_import": 1,
- "autoname": "TASK-.YYYY.-.#####",
+ "autoname": "TASK-.{project_num}.-.###",
  "creation": "2013-01-29 19:25:50",
  "doctype": "DocType",
  "document_type": "Setup",
@@ -397,7 +397,7 @@
  "is_tree": 1,
  "links": [],
  "max_attachments": 5,
- "modified": "2021-10-02 11:35:17.421383",
+ "modified": "2021-10-02 11:39:52.699790",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Task",
