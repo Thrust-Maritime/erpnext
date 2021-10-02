@@ -586,8 +586,6 @@ class calculate_taxes_and_totals(object):
 				change_amount = self.doc.change_amount \
 					if self.doc.party_account_currency == self.doc.currency else self.doc.base_change_amount
 
-			calculate_outstanding_amount(self.doc, change_amount)
-
 			if self.doc.doctype == 'Sales Invoice' and self.doc.get('is_pos') and self.doc.get('is_return'):
 				self.update_paid_amount_for_return(self.doc.total_amount_to_pay)
 

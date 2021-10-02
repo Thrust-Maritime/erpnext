@@ -249,12 +249,6 @@ class StockReconciliation(StockController):
 
 			self.make_sl_entries(sl_entries, allow_negative_stock=allow_negative_stock)
 
-			else:
-				serialized_items.append(row.item_code)
-
-		if serialized_items:
-			self.get_sle_for_serialized_items(sl_entries, serialized_items)
-
 		if sl_entries:
 			allow_negative_stock = frappe.get_cached_value("Stock Settings", None, "allow_negative_stock")
 			self.make_sl_entries(sl_entries, allow_negative_stock=allow_negative_stock)
