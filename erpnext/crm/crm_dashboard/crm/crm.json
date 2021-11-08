@@ -41,6 +41,14 @@
   {
    "chart": "Lead Source",
    "width": "Half"
+  },
+  {
+   "chart": "Opportunity Trends",
+   "width": "Half"
+  },
+  {
+   "chart": "opp test chart",
+   "width": "Half"
   }
  ],
  "creation": "2020-07-20 20:17:15.985657",
@@ -50,8 +58,8 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2020-07-21 18:56:47.230053",
- "modified_by": "Administrator",
+ "modified": "2021-10-12 17:36:13.510215",
+ "modified_by": "keeganparker@thrustm.com",
  "module": "CRM",
  "name": "CRM",
  "owner": "Administrator"
