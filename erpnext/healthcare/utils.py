@@ -611,7 +611,7 @@ def render_docs_as_html(docs):
 
 
 @frappe.whitelist()
-def render_doc_as_html(doctype, docname, exclude_fields = []):
+def render_doc_as_html(doctype, docname, exclude_fields = None):
 	"""
 		Render document as HTML
 	"""
@@ -621,6 +621,9 @@ def render_doc_as_html(doctype, docname, exclude_fields = []):
 	doc_html = section_html = section_label = html = ""
 	sec_on = has_data = False
 	col_on = 0
+
+	if exclude_fields is None:
+		exclude_fields = []
 
 	for df in meta.fields:
 		# on section break append previous section and html to doc html
@@ -776,7 +779,7 @@ def update_patient_email_and_phone_numbers(contact, method):
 	Hook validate Contact
 	Update linked Patients' primary mobile and phone numbers
 	'''
-	if 'Healthcare' not in frappe.get_active_domains():
+	if 'Healthcare' not in frappe.get_active_domains() or contact.flags.skip_patient_update:
 		return
 
 	if contact.is_primary_contact and (contact.email_id or contact.mobile_no or contact.phone):
@@ -784,9 +787,15 @@ def update_patient_email_and_phone_numbers(contact, method):
 
 		for link in patient_links:
 			contact_details = frappe.db.get_value('Patient', link.get('link_name'), ['email', 'mobile', 'phone'], as_dict=1)
+
+			new_contact_details = {}
+
 			if contact.email_id and contact.email_id != contact_details.get('email'):
-				frappe.db.set_value('Patient', link.get('link_name'), 'email', contact.email_id)
+				new_contact_details.update({'email': contact.email_id})
 			if contact.mobile_no and contact.mobile_no != contact_details.get('mobile'):
-				frappe.db.set_value('Patient', link.get('link_name'), 'mobile', contact.mobile_no)
+				new_contact_details.update({'mobile': contact.mobile_no})
 			if contact.phone and contact.phone != contact_details.get('phone'):
-				frappe.db.set_value('Patient', link.get('link_name'), 'phone', contact.phone)
+				new_contact_details.update({'phone': contact.phone})
+
+			if new_contact_details:
+				frappe.db.set_value('Patient', link.get('link_name'), new_contact_details)

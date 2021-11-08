@@ -33,6 +33,16 @@ class WebsiteItem(WebsiteGenerator):
 		no_cache=1
 	)
 
+	def autoname(self):
+		# use naming series to accomodate items with same name (different item code)
+		from frappe.model.naming import make_autoname
+
+		from erpnext.setup.doctype.naming_series.naming_series import get_default_naming_series
+
+		naming_series = get_default_naming_series("Website Item")
+		if not self.name and naming_series:
+			self.name = make_autoname(naming_series, doc=self)
+
 	def onload(self):
 		super(WebsiteItem, self).onload()
 
@@ -210,7 +220,7 @@ class WebsiteItem(WebsiteGenerator):
 
 		self.get_product_details_section(context)
 
-		if settings.enable_reviews:
+		if settings.get("enable_reviews"):
 			reviews_data = get_item_reviews(self.name)
 			context.update(reviews_data)
 			context.reviews = context.reviews[:4]
