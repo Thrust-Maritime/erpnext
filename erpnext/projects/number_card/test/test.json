@@ -1,0 +1,22 @@
+{
+ "creation": "2021-10-19 20:26:52.114432",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "filters_json": "{}",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "label": "test",
+ "modified": "2021-10-19 20:26:52.192668",
+ "modified_by": "benhealy@thrustm.com",
+ "module": "Projects",
+ "name": "test",
+ "owner": "benhealy@thrustm.com",
+ "report_field": "hours",
+ "report_function": "Sum",
+ "report_name": "Project hours by user last week",
+ "show_percentage_stats": 1,
+ "stats_time_interval": "Daily",
+ "type": "Report"
+}

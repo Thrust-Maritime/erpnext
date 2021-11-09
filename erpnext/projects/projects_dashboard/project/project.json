@@ -4,6 +4,10 @@
   {
    "chart": "Project Summary",
    "width": "Full"
+  },
+  {
+   "chart": "Last week Projects",
+   "width": "Half"
   }
  ],
  "creation": "2020-07-20 20:17:16.397373",
@@ -13,8 +17,8 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2020-07-22 17:17:03.780625",
- "modified_by": "Administrator",
+ "modified": "2021-10-19 20:45:32.879755",
+ "modified_by": "benhealy@thrustm.com",
  "module": "Projects",
  "name": "Project",
  "owner": "Administrator"
