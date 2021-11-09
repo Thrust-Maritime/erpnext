@@ -233,9 +233,6 @@ class SalesInvoice(SellingController):
 		if self.update_stock == 1:
 			self.repost_future_sle_and_gle()
 
-		if self.update_stock == 1:
-			self.repost_future_sle_and_gle()
-
 		if not self.is_return:
 			self.update_billing_status_for_zero_amount_refdoc("Delivery Note")
 			self.update_billing_status_for_zero_amount_refdoc("Sales Order")
@@ -501,7 +498,7 @@ class SalesInvoice(SellingController):
 			self.account_for_change_amount = frappe.get_cached_value('Company',  self.company,  'default_cash_account')
 
 		from erpnext.stock.get_item_details import get_pos_profile, get_pos_profile_item_details
-		if not self.pos_profile:
+		if not self.pos_profile and not self.flags.ignore_pos_profile:
 			pos_profile = get_pos_profile(self.company) or {}
 			if not pos_profile:
 				return
@@ -1302,12 +1299,20 @@ class SalesInvoice(SellingController):
 
 			serial_nos = item.serial_no or ""
 			si_serial_nos = set(get_serial_nos(serial_nos))
+			serial_no_diff = si_serial_nos - dn_serial_nos
 
-			if si_serial_nos - dn_serial_nos:
-				frappe.throw(_("Serial Numbers in row {0} does not match with Delivery Note").format(item.idx))
+			if serial_no_diff:
+				dn_link = frappe.utils.get_link_to_form("Delivery Note", item.delivery_note)
+				serial_no_msg = ", ".join(frappe.bold(d) for d in serial_no_diff)
+
+				msg = _("Row #{0}: The following Serial Nos are not present in Delivery Note {1}:").format(
+					item.idx, dn_link)
+				msg += " " + serial_no_msg
+
+				frappe.throw(msg=msg, title=_("Serial Nos Mismatch"))
 
 			if item.serial_no and cint(item.qty) != len(si_serial_nos):
-				frappe.throw(_("Row {0}: {1} Serial numbers required for Item {2}. You have provided {3}.").format(
+				frappe.throw(_("Row #{0}: {1} Serial numbers required for Item {2}. You have provided {3}.").format(
 					item.idx, item.qty, item.item_code, len(si_serial_nos)))
 
 	def update_project(self):
@@ -1475,14 +1480,8 @@ class SalesInvoice(SellingController):
 				self.status = 'Draft'
 			return
 
-		precision = self.precision("outstanding_amount")
-		outstanding_amount = flt(self.outstanding_amount, precision)
-		due_date = getdate(self.due_date)
-		nowdate = getdate()
-
-		discounting_status = None
-		if self.is_discounted:
-			discounting_status = get_discounting_status(self.name)
+		outstanding_amount = flt(self.outstanding_amount, self.precision("outstanding_amount"))
+		total = get_total_in_party_account_currency(self)
 
 		if not status:
 			if self.docstatus == 2:
@@ -1490,15 +1489,13 @@ class SalesInvoice(SellingController):
 			elif self.docstatus == 1:
 				if self.is_internal_transfer():
 					self.status = 'Internal Transfer'
-				elif outstanding_amount > 0 and due_date < nowdate and self.is_discounted and discounting_status=='Disbursed':
-					self.status = "Overdue and Discounted"
-				elif outstanding_amount > 0 and due_date < nowdate:
+				elif is_overdue(self, total):
 					self.status = "Overdue"
-				elif outstanding_amount > 0 and due_date >= nowdate and self.is_discounted and discounting_status=='Disbursed':
-					self.status = "Unpaid and Discounted"
-				elif outstanding_amount > 0 and due_date >= nowdate:
+				elif 0 < outstanding_amount < total:
+					self.status = "Partly Paid"
+				elif outstanding_amount > 0 and getdate(self.due_date) >= getdate():
 					self.status = "Unpaid"
-				#Check if outstanding amount is 0 due to credit note issued against invoice
+				# Check if outstanding amount is 0 due to credit note issued against invoice
 				elif outstanding_amount <= 0 and self.is_return == 0 and frappe.db.get_value('Sales Invoice', {'is_return': 1, 'return_against': self.name, 'docstatus': 1}):
 					self.status = "Credit Note Issued"
 				elif self.is_return == 1:
@@ -1507,11 +1504,56 @@ class SalesInvoice(SellingController):
 					self.status = "Paid"
 				else:
 					self.status = "Submitted"
+
+				if (
+					self.status in ("Unpaid", "Partly Paid", "Overdue")
+					and self.is_discounted
+					and get_discounting_status(self.name) == "Disbursed"
+				):
+					self.status += " and Discounted"
+
 			else:
 				self.status = "Draft"
 
 		if update:
 			self.db_set('status', self.status, update_modified = update_modified)
+
+
+def get_total_in_party_account_currency(doc):
+	total_fieldname = (
+		"grand_total"
+		if doc.disable_rounded_total
+		else "rounded_total"
+	)
+	if doc.party_account_currency != doc.currency:
+		total_fieldname = "base_" + total_fieldname
+
+	return flt(doc.get(total_fieldname), doc.precision(total_fieldname))
+
+def is_overdue(doc, total):
+	outstanding_amount = flt(doc.outstanding_amount, doc.precision("outstanding_amount"))
+	if outstanding_amount <= 0:
+		return
+
+	today = getdate()
+	if doc.get('is_pos') or not doc.get('payment_schedule'):
+		return getdate(doc.due_date) < today
+
+	# calculate payable amount till date
+	payment_amount_field = (
+		"base_payment_amount"
+		if doc.party_account_currency != doc.currency
+		else "payment_amount"
+	)
+
+	payable_amount = sum(
+		payment.get(payment_amount_field)
+		for payment in doc.payment_schedule
+		if getdate(payment.due_date) < today
+	)
+
+	return (total - outstanding_amount) < payable_amount
+
 
 def get_discounting_status(sales_invoice):
 	status = None
