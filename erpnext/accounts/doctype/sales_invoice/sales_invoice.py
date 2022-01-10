@@ -1,7 +1,6 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-from __future__ import unicode_literals
 
 import frappe
 from frappe import _, msgprint, throw
@@ -37,7 +36,7 @@ from erpnext.assets.doctype.asset.depreciation import (
 	get_disposal_account_and_cost_center,
 	get_gl_entries_on_asset_disposal,
 	get_gl_entries_on_asset_regain,
-	post_depreciation_entries,
+	make_depreciation_entry,
 )
 from erpnext.controllers.selling_controller import SellingController
 from erpnext.healthcare.utils import manage_invoice_submit_cancel
@@ -157,6 +156,8 @@ class SalesInvoice(SellingController):
 
 		if self.redeem_loyalty_points and self.loyalty_program and self.loyalty_points and not self.is_consolidated:
 			validate_loyalty_points(self, self.loyalty_points)
+
+		self.reset_default_field_value("set_warehouse", "items", "warehouse")
 
 	def validate_fixed_asset(self):
 		for d in self.get("items"):
@@ -863,8 +864,6 @@ class SalesInvoice(SellingController):
 		self.make_exchange_gain_loss_gl_entries(gl_entries)
 		self.make_internal_transfer_gl_entries(gl_entries)
 
-		self.allocate_advance_taxes(gl_entries)
-
 		self.make_item_gl_entries(gl_entries)
 		self.make_discount_gl_entries(gl_entries)
 
@@ -949,6 +948,7 @@ class SalesInvoice(SellingController):
 						asset.db_set("disposal_date", None)
 
 						if asset.calculate_depreciation:
+							self.reverse_depreciation_entry_made_after_sale(asset)
 							self.reset_depreciation_schedule(asset)
 
 					else:
@@ -1012,21 +1012,19 @@ class SalesInvoice(SellingController):
 
 	def depreciate_asset(self, asset):
 		asset.flags.ignore_validate_update_after_submit = True
-		asset.prepare_depreciation_data(self.posting_date)
+		asset.prepare_depreciation_data(date_of_sale=self.posting_date)
 		asset.save()
 
-		post_depreciation_entries(self.posting_date)
+		make_depreciation_entry(asset.name, self.posting_date)
 
 	def reset_depreciation_schedule(self, asset):
 		asset.flags.ignore_validate_update_after_submit = True
 
 		# recreate original depreciation schedule of the asset
-		asset.prepare_depreciation_data()
+		asset.prepare_depreciation_data(date_of_return=self.posting_date)
 
 		self.modify_depreciation_schedule_for_asset_repairs(asset)
 		asset.save()
-
-		self.delete_depreciation_entry_made_after_sale(asset)
 
 	def modify_depreciation_schedule_for_asset_repairs(self, asset):
 		asset_repairs = frappe.get_all(
@@ -1041,7 +1039,7 @@ class SalesInvoice(SellingController):
 				asset_repair.modify_depreciation_schedule()
 				asset.prepare_depreciation_data()
 
-	def delete_depreciation_entry_made_after_sale(self, asset):
+	def reverse_depreciation_entry_made_after_sale(self, asset):
 		from erpnext.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
 
 		posting_date_of_original_invoice = self.get_posting_date_of_sales_invoice()
@@ -1056,10 +1054,20 @@ class SalesInvoice(SellingController):
 				row += 1
 
 			if schedule.schedule_date == posting_date_of_original_invoice:
-				if not self.sale_was_made_on_original_schedule_date(asset, schedule, row, posting_date_of_original_invoice):
+				if not self.sale_was_made_on_original_schedule_date(asset, schedule, row, posting_date_of_original_invoice) \
+					or self.sale_happens_in_the_future(posting_date_of_original_invoice):
+
 					reverse_journal_entry = make_reverse_journal_entry(schedule.journal_entry)
 					reverse_journal_entry.posting_date = nowdate()
+					frappe.flags.is_reverse_depr_entry = True
 					reverse_journal_entry.submit()
+
+					frappe.flags.is_reverse_depr_entry = False
+					asset.flags.ignore_validate_update_after_submit = True
+					schedule.journal_entry = None
+					depreciation_amount = self.get_depreciation_amount_in_je(reverse_journal_entry)
+					asset.finance_books[0].value_after_depreciation += depreciation_amount
+					asset.save()
 
 	def get_posting_date_of_sales_invoice(self):
 		return frappe.db.get_value('Sales Invoice', self.return_against, 'posting_date')
@@ -1074,6 +1082,18 @@ class SalesInvoice(SellingController):
 				if orginal_schedule_date == posting_date_of_original_invoice:
 					return True
 		return False
+
+	def sale_happens_in_the_future(self, posting_date_of_original_invoice):
+		if posting_date_of_original_invoice > getdate():
+			return True
+
+		return False
+
+	def get_depreciation_amount_in_je(self, journal_entry):
+		if journal_entry.accounts[0].debit_in_account_currency:
+			return journal_entry.accounts[0].debit_in_account_currency
+		else:
+			return journal_entry.accounts[0].credit_in_account_currency
 
 	@property
 	def enable_discount_accounting(self):
@@ -2029,22 +2049,23 @@ def update_multi_mode_option(doc, pos_profile):
 	def append_payment(payment_mode):
 		payment = doc.append('payments', {})
 		payment.default = payment_mode.default
-		payment.mode_of_payment = payment_mode.parent
+		payment.mode_of_payment = payment_mode.mop
 		payment.account = payment_mode.default_account
 		payment.type = payment_mode.type
 
 	doc.set('payments', [])
 	invalid_modes = []
-	for pos_payment_method in pos_profile.get('payments'):
-		pos_payment_method = pos_payment_method.as_dict()
+	mode_of_payments = [d.mode_of_payment for d in pos_profile.get('payments')]
+	mode_of_payments_info = get_mode_of_payments_info(mode_of_payments, doc.company)
 
-		payment_mode = get_mode_of_payment_info(pos_payment_method.mode_of_payment, doc.company)
+	for row in pos_profile.get('payments'):
+		payment_mode = mode_of_payments_info.get(row.mode_of_payment)
 		if not payment_mode:
-			invalid_modes.append(get_link_to_form("Mode of Payment", pos_payment_method.mode_of_payment))
+			invalid_modes.append(get_link_to_form("Mode of Payment", row.mode_of_payment))
 			continue
 
-		payment_mode[0].default = pos_payment_method.default
-		append_payment(payment_mode[0])
+		payment_mode.default = row.default
+		append_payment(payment_mode)
 
 	if invalid_modes:
 		if invalid_modes == 1:
@@ -2059,6 +2080,24 @@ def get_all_mode_of_payments(doc):
 		from `tabMode of Payment Account` mpa,`tabMode of Payment` mp
 		where mpa.parent = mp.name and mpa.company = %(company)s and mp.enabled = 1""",
 	{'company': doc.company}, as_dict=1)
+
+def get_mode_of_payments_info(mode_of_payments, company):
+	data = frappe.db.sql(
+		"""
+		select
+			mpa.default_account, mpa.parent as mop, mp.type as type
+		from
+			`tabMode of Payment Account` mpa,`tabMode of Payment` mp
+		where
+			mpa.parent = mp.name and
+			mpa.company = %s and
+			mp.enabled = 1 and
+			mp.name in %s
+		group by
+			mp.name
+		""", (company, mode_of_payments), as_dict=1)
+
+	return {row.get('mop'): row for row in data}
 
 def get_mode_of_payment_info(mode_of_payment, company):
 	return frappe.db.sql("""

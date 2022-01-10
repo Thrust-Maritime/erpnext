@@ -2,7 +2,6 @@
 # License: GNU General Public License v3. See license.txt
 
 
-from __future__ import unicode_literals
 
 import unittest
 
@@ -67,8 +66,8 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 		company = create_company()
 		surplus_account = create_account()
 
-		cost_center1 = create_cost_center("Test Cost Center 1")
-		cost_center2 = create_cost_center("Test Cost Center 2")
+		cost_center1 = create_cost_center("Main")
+		cost_center2 = create_cost_center("Western Branch")
 
 		create_sales_invoice(
 			company=company,
@@ -87,7 +86,10 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			debit_to="Debtors - TPC"
 		)
 
-		pcv = self.make_period_closing_voucher()
+		pcv = self.make_period_closing_voucher(submit=False)
+		pcv.cost_center_wise_pnl = 1
+		pcv.save()
+		pcv.submit()
 		surplus_account = pcv.closing_account_head
 
 		expected_gle = (
@@ -150,59 +152,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 
 		self.assertEqual(pcv_gle, expected_gle)
 
-	def test_cost_center_wise_posting(self):
-		frappe.db.sql("delete from `tabGL Entry` where company='Test PCV Company'")
-
-		company = create_company()
-		surplus_account = create_account()
-
-		cost_center1 = create_cost_center("Test Cost Center 1")
-		cost_center2 = create_cost_center("Test Cost Center 2")
-
-		create_sales_invoice(
-			company=company,
-			cost_center=cost_center1,
-			income_account="Sales - TPC",
-			expense_account="Cost of Goods Sold - TPC",
-			rate=400,
-			debit_to="Debtors - TPC"
-		)
-		create_sales_invoice(
-			company=company,
-			cost_center=cost_center2,
-			income_account="Sales - TPC",
-			expense_account="Cost of Goods Sold - TPC",
-			rate=200,
-			debit_to="Debtors - TPC"
-		)
-
-		pcv = frappe.get_doc({
-			"transaction_date": today(),
-			"posting_date": today(),
-			"fiscal_year": get_fiscal_year(today())[0],
-			"company": "Test PCV Company",
-			"cost_center_wise_pnl": 1,
-			"closing_account_head": surplus_account,
-			"remarks": "Test",
-			"doctype": "Period Closing Voucher"
-		})
-		pcv.insert()
-		pcv.submit()
-
-		expected_gle = (
-			('Sales - TPC', 200.0, 0.0, cost_center2),
-			(surplus_account, 0.0, 200.0, cost_center2),
-			('Sales - TPC', 400.0, 0.0, cost_center1),
-			(surplus_account, 0.0, 400.0, cost_center1)
-		)
-
-		pcv_gle = frappe.db.sql("""
-			select account, debit, credit, cost_center from `tabGL Entry` where voucher_no=%s
-		""", (pcv.name))
-
-		self.assertTrue(pcv_gle, expected_gle)
-
-	def make_period_closing_voucher(self):
+	def make_period_closing_voucher(self, submit=True):
 		surplus_account = create_account()
 		cost_center = create_cost_center("Test Cost Center 1")
 		pcv = frappe.get_doc({
@@ -216,7 +166,8 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			"remarks": "test"
 		})
 		pcv.insert()
-		pcv.submit()
+		if submit:
+			pcv.submit()
 
 		return pcv
 
