@@ -1,7 +1,6 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-from __future__ import unicode_literals
 
 import frappe
 from frappe import _
@@ -13,8 +12,6 @@ from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
 )
 from erpnext.accounts.utils import get_account_currency
 from erpnext.controllers.accounts_controller import AccountsController
-from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (get_accounting_dimensions,
-	get_dimension_filters)
 
 
 class PeriodClosingVoucher(AccountsController):
@@ -91,9 +88,10 @@ class PeriodClosingVoucher(AccountsController):
 
 		for acc in pl_accounts:
 			if flt(acc.bal_in_company_currency):
+				cost_center = acc.cost_center if self.cost_center_wise_pnl else company_cost_center
 				gl_entry = self.get_gl_dict({
 					"account": self.closing_account_head,
-					"cost_center": acc.cost_center or company_cost_center,
+					"cost_center": cost_center,
 					"finance_book": acc.finance_book,
 					"account_currency": acc.account_currency,
 					"debit_in_account_currency": abs(flt(acc.bal_in_account_currency)) if flt(acc.bal_in_account_currency) > 0 else 0,
