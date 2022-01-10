@@ -2,7 +2,6 @@
 # License: GNU General Public License v3. See license.txt
 
 
-from __future__ import unicode_literals
 
 import unittest
 
@@ -18,6 +17,7 @@ from erpnext.stock.get_item_details import get_item_details
 class TestPricingRule(unittest.TestCase):
 	def setUp(self):
 		delete_existing_pricing_rules()
+		setup_pricing_rule_data()
 
 	def tearDown(self):
 		delete_existing_pricing_rules()
@@ -590,6 +590,75 @@ class TestPricingRule(unittest.TestCase):
 		frappe.get_doc("Item Price", {"item_code": "Water Flask"}).delete()
 		item.delete()
 
+	def test_pricing_rule_for_different_currency(self):
+		make_item("Test Sanitizer Item")
+
+		pricing_rule_record = {
+			"doctype": "Pricing Rule",
+			"title": "_Test Sanitizer Rule",
+			"apply_on": "Item Code",
+			"items": [{
+				"item_code": "Test Sanitizer Item",
+			}],
+			"selling": 1,
+			"currency": "INR",
+			"rate_or_discount": "Rate",
+			"rate": 0,
+			"priority": 2,
+			"margin_type": "Percentage",
+			"margin_rate_or_amount": 0.0,
+			"company": "_Test Company"
+		}
+
+		rule = frappe.get_doc(pricing_rule_record)
+		rule.rate_or_discount = 'Rate'
+		rule.rate = 100.0
+		rule.insert()
+
+		rule1 = frappe.get_doc(pricing_rule_record)
+		rule1.currency = 'USD'
+		rule1.rate_or_discount = 'Rate'
+		rule1.rate = 2.0
+		rule1.priority = 1
+		rule1.insert()
+
+		args = frappe._dict({
+			"item_code": "Test Sanitizer Item",
+			"company": "_Test Company",
+			"price_list": "_Test Price List",
+			"currency": "USD",
+			"doctype": "Sales Invoice",
+			"conversion_rate": 1,
+			"price_list_currency": "_Test Currency",
+			"plc_conversion_rate": 1,
+			"order_type": "Sales",
+			"customer": "_Test Customer",
+			"name": None,
+			"transaction_date": frappe.utils.nowdate()
+		})
+
+		details = get_item_details(args)
+		self.assertEqual(details.price_list_rate, 2.0)
+
+
+		args = frappe._dict({
+			"item_code": "Test Sanitizer Item",
+			"company": "_Test Company",
+			"price_list": "_Test Price List",
+			"currency": "INR",
+			"doctype": "Sales Invoice",
+			"conversion_rate": 1,
+			"price_list_currency": "_Test Currency",
+			"plc_conversion_rate": 1,
+			"order_type": "Sales",
+			"customer": "_Test Customer",
+			"name": None,
+			"transaction_date": frappe.utils.nowdate()
+		})
+
+		details = get_item_details(args)
+		self.assertEqual(details.price_list_rate, 100.0)
+
 	def test_pricing_rule_for_transaction(self):
 		make_item("Water Flask 1")
 		frappe.delete_doc_if_exists('Pricing Rule', '_Test Pricing Rule')
@@ -606,162 +675,7 @@ class TestPricingRule(unittest.TestCase):
 		for doc in [si, si1]:
 			doc.delete()
 
-	def test_pricing_rule_for_product_discount_on_same_item(self):
-		frappe.delete_doc_if_exists('Pricing Rule', '_Test Pricing Rule')
-		test_record = {
-			"doctype": "Pricing Rule",
-			"title": "_Test Pricing Rule",
-			"apply_on": "Item Code",
-			"currency": "USD",
-			"items": [{
-				"item_code": "_Test Item",
-			}],
-			"selling": 1,
-			"rate_or_discount": "Discount Percentage",
-			"rate": 0,
-			"min_qty": 0,
-			"max_qty": 7,
-			"discount_percentage": 17.5,
-			"price_or_product_discount": "Product",
-			"same_item": 1,
-			"free_qty": 1,
-			"company": "_Test Company"
-		}
-		frappe.get_doc(test_record.copy()).insert()
-
-		# With pricing rule
-		so = make_sales_order(item_code="_Test Item", qty=1)
-		so.load_from_db()
-		self.assertEqual(so.items[1].is_free_item, 1)
-		self.assertEqual(so.items[1].item_code, "_Test Item")
-
-
-	def test_pricing_rule_for_product_discount_on_different_item(self):
-		frappe.delete_doc_if_exists('Pricing Rule', '_Test Pricing Rule')
-		test_record = {
-			"doctype": "Pricing Rule",
-			"title": "_Test Pricing Rule",
-			"apply_on": "Item Code",
-			"currency": "USD",
-			"items": [{
-				"item_code": "_Test Item",
-			}],
-			"selling": 1,
-			"rate_or_discount": "Discount Percentage",
-			"rate": 0,
-			"min_qty": 0,
-			"max_qty": 7,
-			"discount_percentage": 17.5,
-			"price_or_product_discount": "Product",
-			"same_item": 0,
-			"free_item": "_Test Item 2",
-			"free_qty": 1,
-			"company": "_Test Company"
-		}
-		frappe.get_doc(test_record.copy()).insert()
-
-		# With pricing rule
-		so = make_sales_order(item_code="_Test Item", qty=1)
-		so.load_from_db()
-		self.assertEqual(so.items[1].is_free_item, 1)
-		self.assertEqual(so.items[1].item_code, "_Test Item 2")
-
-	def test_cumulative_pricing_rule(self):
-		frappe.delete_doc_if_exists('Pricing Rule', '_Test Cumulative Pricing Rule')
-		test_record = {
-			"doctype": "Pricing Rule",
-			"title": "_Test Cumulative Pricing Rule",
-			"apply_on": "Item Code",
-			"currency": "USD",
-			"items": [{
-				"item_code": "_Test Item",
-			}],
-			"is_cumulative": 1,
-			"selling": 1,
-			"applicable_for": "Customer",
-			"customer": "_Test Customer",
-			"rate_or_discount": "Discount Percentage",
-			"rate": 0,
-			"min_amt": 0,
-			"max_amt": 10000,
-			"discount_percentage": 17.5,
-			"price_or_product_discount": "Price",
-			"company": "_Test Company",
-			"valid_from": frappe.utils.nowdate(),
-			"valid_upto": frappe.utils.nowdate()
-		}
-		frappe.get_doc(test_record.copy()).insert()
-
-		args = frappe._dict({
-			"item_code": "_Test Item",
-			"company": "_Test Company",
-			"price_list": "_Test Price List",
-			"currency": "_Test Currency",
-			"doctype": "Sales Invoice",
-			"conversion_rate": 1,
-			"price_list_currency": "_Test Currency",
-			"plc_conversion_rate": 1,
-			"order_type": "Sales",
-			"customer": "_Test Customer",
-			"name": None,
-			"transaction_date": frappe.utils.nowdate()
-		})
-		details = get_item_details(args)
-
-		self.assertTrue(details)
-
-	def test_item_price_with_pricing_rule(self):
-		item = make_item("Water Flask")
-		make_item_price("Water Flask", "_Test Price List", 100)
-
-		pricing_rule_record = {
-			"doctype": "Pricing Rule",
-			"title": "_Test Water Flask Rule",
-			"apply_on": "Item Code",
-			"items": [{
-				"item_code": "Water Flask",
-			}],
-			"selling": 1,
-			"currency": "INR",
-			"rate_or_discount": "Rate",
-			"rate": 0,
-			"margin_type": "Percentage",
-			"margin_rate_or_amount": 2,
-			"company": "_Test Company"
-		}
-		rule = frappe.get_doc(pricing_rule_record)
-		rule.insert()
-
-		si = create_sales_invoice(do_not_save=True, item_code="Water Flask")
-		si.selling_price_list = "_Test Price List"
-		si.save()
-
-		# If rate in Rule is 0, give preference to Item Price if it exists
-		self.assertEqual(si.items[0].price_list_rate, 100)
-		self.assertEqual(si.items[0].margin_rate_or_amount, 2)
-		self.assertEqual(si.items[0].rate_with_margin, 102)
-		self.assertEqual(si.items[0].rate, 102)
-
-		si.delete()
-		rule.delete()
-		frappe.get_doc("Item Price", {"item_code": "Water Flask"}).delete()
-		item.delete()
-
-	def test_pricing_rule_for_transaction(self):
-		make_item("Water Flask 1")
-		frappe.delete_doc_if_exists('Pricing Rule', '_Test Pricing Rule')
-		make_pricing_rule(selling=1, min_qty=5, price_or_product_discount="Product",
-			apply_on="Transaction", free_item="Water Flask 1", free_qty=1, free_item_rate=10)
-
-		si = create_sales_invoice(qty=5, do_not_submit=True)
-		self.assertEquals(len(si.items), 2)
-		self.assertEquals(si.items[1].rate, 10)
-
-		si1 = create_sales_invoice(qty=2, do_not_submit=True)
-		self.assertEquals(len(si1.items), 1)
-
-		for doc in [si, si1]:
-			doc.delete()
+test_dependencies = ["Campaign"]
 
 def make_pricing_rule(**args):
 	args = frappe._dict(args)
@@ -809,6 +723,13 @@ def make_pricing_rule(**args):
 	if args.get(applicable_for):
 		doc.db_set(applicable_for, args.get(applicable_for))
 
+def setup_pricing_rule_data():
+	if not frappe.db.exists('Campaign', '_Test Campaign'):
+		frappe.get_doc({
+			'doctype': 'Campaign',
+			'campaign_name': '_Test Campaign',
+			'name': '_Test Campaign'
+		}).insert()
 
 def delete_existing_pricing_rules():
 	for doctype in ["Pricing Rule", "Pricing Rule Item Code",
