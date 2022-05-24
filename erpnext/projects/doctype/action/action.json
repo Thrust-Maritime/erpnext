@@ -1,30 +1,45 @@
 {
  "actions": [],
- "autoname": "Prompt",
- "creation": "2019-04-19 15:04:05.317138",
+ "allow_rename": 1,
+ "autoname": "format:ACT-{#######}",
+ "creation": "2022-01-11 17:02:04.498499",
  "doctype": "DocType",
+ "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "weight",
-  "description"
+  "description",
+  "start",
+  "due",
+  "test"
  ],
  "fields": [
   {
-   "fieldname": "weight",
-   "fieldtype": "Float",
-   "label": "Weight"
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Description"
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
+   "fieldname": "start",
+   "fieldtype": "Date",
+   "label": "Start"
+  },
+  {
+   "fieldname": "due",
+   "fieldtype": "Date",
+   "label": "Due"
+  },
+  {
+   "fieldname": "test",
+   "fieldtype": "Data",
+   "label": "test"
   }
  ],
+ "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-01-17 16:26:27.840951",
+ "modified": "2022-01-11 17:25:43.623006",
  "modified_by": "Administrator",
  "module": "Projects",
- "name": "Task Type",
+ "name": "Action",
  "owner": "Administrator",
  "permissions": [
   {
@@ -47,13 +62,12 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Projects Manager",
+   "role": "All",
+   "select": 1,
    "share": 1,
    "write": 1
   }
  ],
- "quick_entry": 1,
  "sort_field": "modified",
- "sort_order": "ASC",
- "track_changes": 1
+ "sort_order": "DESC"
 }
