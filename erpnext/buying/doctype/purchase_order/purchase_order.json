@@ -31,6 +31,8 @@
   "customer_contact_display",
   "customer_contact_mobile",
   "customer_contact_email",
+  "section_break_133",
+  "related_deliverables",
   "section_addresses",
   "supplier_address",
   "address_display",
@@ -1138,13 +1140,24 @@
    "fieldtype": "Link",
    "label": "Tax Withholding Category",
    "options": "Tax Withholding Category"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "related_deliverables",
+   "fieldtype": "Table",
+   "label": "Related Deliverables",
+   "options": "PO_Linker"
+  },
+  {
+   "fieldname": "section_break_133",
+   "fieldtype": "Section Break"
   }
  ],
  "icon": "fa fa-file-text",
  "idx": 105,
  "is_submittable": 1,
  "links": [],
- "modified": "2021-09-28 13:10:47.955401",
+ "modified": "2022-05-20 22:19:40.035514",
  "modified_by": "Administrator",
  "module": "Buying",
  "name": "Purchase Order",
