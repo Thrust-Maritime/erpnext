@@ -1,7 +1,6 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-from __future__ import unicode_literals
 
 import json
 
@@ -17,8 +16,14 @@ class TermsandConditions(Document):
 	def validate(self):
 		if self.terms:
 			validate_template(self.terms)
-		if not cint(self.buying) and not cint(self.selling) and not cint(self.hr) and not cint(self.disabled):
+		if (
+			not cint(self.buying)
+			and not cint(self.selling)
+			and not cint(self.hr)
+			and not cint(self.disabled)
+		):
 			throw(_("At least one of the Applicable Modules should be selected"))
+
 
 @frappe.whitelist()
 def get_terms_and_conditions(template_name, doc):

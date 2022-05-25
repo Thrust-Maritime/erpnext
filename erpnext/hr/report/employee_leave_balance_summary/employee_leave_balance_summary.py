@@ -1,7 +1,6 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
-from __future__ import unicode_literals
 
 import frappe
 from frappe import _
@@ -20,11 +19,12 @@ def execute(filters=None):
 
 	return columns, data
 
+
 def get_columns(leave_types):
 	columns = [
 		_("Employee") + ":Link.Employee:150",
 		_("Employee Name") + "::200",
-		_("Department") +"::150"
+		_("Department") + "::150",
 	]
 
 	for leave_type in leave_types:
@@ -32,11 +32,13 @@ def get_columns(leave_types):
 
 	return columns
 
+
 def get_conditions(filters):
 	conditions = {
-		"status": "Active",
 		"company": filters.company,
 	}
+	if filters.get("employee_status"):
+		conditions.update({"status": filters.get("employee_status")})
 	if filters.get("department"):
 		conditions.update({"department": filters.get("department")})
 	if filters.get("employee"):
@@ -44,15 +46,18 @@ def get_conditions(filters):
 
 	return conditions
 
+
 def get_data(filters, leave_types):
 	user = frappe.session.user
 	conditions = get_conditions(filters)
 
-	active_employees = frappe.get_all("Employee",
+	active_employees = frappe.get_all(
+		"Employee",
 		filters=conditions,
-		fields=["name", "employee_name", "department", "user_id", "leave_approver"])
+		fields=["name", "employee_name", "department", "user_id", "leave_approver"],
+	)
 
-	department_approver_map = get_department_leave_approver_map(filters.get('department'))
+	department_approver_map = get_department_leave_approver_map(filters.get("department"))
 
 	data = []
 	for employee in active_employees:
@@ -60,14 +65,18 @@ def get_data(filters, leave_types):
 		if employee.leave_approver:
 			leave_approvers.append(employee.leave_approver)
 
-		if (len(leave_approvers) and user in leave_approvers) or (user in ["Administrator", employee.user_id]) or ("HR Manager" in frappe.get_roles(user)):
+		if (
+			(len(leave_approvers) and user in leave_approvers)
+			or (user in ["Administrator", employee.user_id])
+			or ("HR Manager" in frappe.get_roles(user))
+		):
 			row = [employee.name, employee.employee_name, employee.department]
 			available_leave = get_leave_details(employee.name, filters.date)
 			for leave_type in leave_types:
 				remaining = 0
 				if leave_type in available_leave["leave_allocation"]:
 					# opening balance
-					remaining = available_leave["leave_allocation"][leave_type]['remaining_leaves']
+					remaining = available_leave["leave_allocation"][leave_type]["remaining_leaves"]
 
 				row += [remaining]
 

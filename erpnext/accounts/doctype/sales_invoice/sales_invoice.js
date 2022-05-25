@@ -10,14 +10,33 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 		this.setup_posting_date_time_check();
 		this._super(doc);
 	},
+
 	company: function() {
 		erpnext.accounts.dimensions.update_dimension(this.frm, this.frm.doctype);
+		let me = this;
+		if (this.frm.doc.company) {
+			frappe.call({
+				method:
+					"erpnext.accounts.party.get_party_account",
+				args: {
+					party_type: 'Customer',
+					party: this.frm.doc.customer,
+					company: this.frm.doc.company
+				},
+				callback: (response) => {
+					if (response) me.frm.set_value("debit_to", response.message);
+				},
+			});
+		}
 	},
+
 	onload: function() {
 		var me = this;
 		this._super();
 
-		this.frm.ignore_doctypes_on_cancel_all = ['POS Invoice', 'Timesheet', 'POS Invoice Merge Log', 'POS Closing Entry'];
+		this.frm.ignore_doctypes_on_cancel_all = ['POS Invoice', 'Timesheet', 'POS Invoice Merge Log',
+			'POS Closing Entry', 'Journal Entry', 'Payment Entry'];
+
 		if(!this.frm.doc.__islocal && !this.frm.doc.customer && this.frm.doc.debit_to) {
 			// show debit_to in print format
 			this.frm.set_df_property("debit_to", "print_hide", 0);
@@ -264,6 +283,9 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 		}
 		var me = this;
 		if(this.frm.updating_party_details) return;
+
+		if (this.frm.doc.__onload && this.frm.doc.__onload.load_after_mapping) return;
+
 		erpnext.utils.get_party_details(this.frm,
 			"erpnext.accounts.party.get_party_details", {
 				posting_date: this.frm.doc.posting_date,
@@ -497,15 +519,6 @@ cur_frm.fields_dict.write_off_cost_center.get_query = function(doc) {
 			'is_group': 0,
 			'company': doc.company
 		}
-	}
-}
-
-// project name
-//--------------------------
-cur_frm.fields_dict['project'].get_query = function(doc, cdt, cdn) {
-	return{
-		query: "erpnext.controllers.queries.get_project_name",
-		filters: {'customer': doc.customer}
 	}
 }
 
@@ -962,7 +975,7 @@ frappe.ui.form.on('Sales Invoice', {
 		}
 
 		if (frm.doc.is_debit_note) {
-			frm.set_df_property('return_against', 'label', 'Adjustment Against');
+			frm.set_df_property('return_against', 'label', __('Adjustment Against'));
 		}
 
 		if (frappe.boot.active_domains.includes("Healthcare")) {
@@ -972,10 +985,10 @@ frappe.ui.form.on('Sales Invoice', {
 			if (cint(frm.doc.docstatus==0) && cur_frm.page.current_view_name!=="pos" && !frm.doc.is_return) {
 				frm.add_custom_button(__('Healthcare Services'), function() {
 					get_healthcare_services_to_invoice(frm);
-				},"Get Items From");
+				},__("Get Items From"));
 				frm.add_custom_button(__('Prescriptions'), function() {
 					get_drugs_to_invoice(frm);
-				},"Get Items From");
+				},__("Get Items From"));
 			}
 		}
 		else {

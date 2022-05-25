@@ -30,6 +30,9 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 	onload: function() {
 		this._super();
 
+		// Ignore linked advances
+		this.frm.ignore_doctypes_on_cancel_all = ['Journal Entry', 'Payment Entry'];
+
 		if(!this.frm.doc.__islocal) {
 			// show credit_to in print format
 			if(!this.frm.doc.supplier && this.frm.doc.credit_to) {
@@ -275,6 +278,8 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 		// Do not update if inter company reference is there as the details will already be updated
 		if(this.frm.updating_party_details || this.frm.doc.inter_company_invoice_reference)
 			return;
+
+		if (this.frm.doc.__onload && this.frm.doc.__onload.load_after_mapping) return;
 
 		erpnext.utils.get_party_details(this.frm, "erpnext.accounts.party.get_party_details",
 			{
@@ -590,5 +595,20 @@ frappe.ui.form.on("Purchase Invoice", {
 
 	company: function(frm) {
 		erpnext.accounts.dimensions.update_dimension(frm, frm.doctype);
+
+		if (frm.doc.company) {
+			frappe.call({
+				method:
+					"erpnext.accounts.party.get_party_account",
+				args: {
+					party_type: 'Supplier',
+					party: frm.doc.supplier,
+					company: frm.doc.company
+				},
+				callback: (response) => {
+					if (response) frm.set_value("credit_to", response.message);
+				},
+			});
+		}
 	},
 })

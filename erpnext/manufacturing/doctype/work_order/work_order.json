@@ -99,7 +99,7 @@
    "no_copy": 1,
    "oldfieldname": "status",
    "oldfieldtype": "Select",
-   "options": "\nDraft\nSubmitted\nNot Started\nIn Process\nCompleted\nStopped\nCancelled",
+   "options": "\nDraft\nSubmitted\nNot Started\nIn Process\nCompleted\nStopped\nClosed\nCancelled",
    "read_only": 1,
    "reqd": 1,
    "search_index": 1
@@ -182,6 +182,7 @@
    "reqd": 1
   },
   {
+   "default": "1.0",
    "fieldname": "qty",
    "fieldtype": "Float",
    "label": "Qty To Manufacture",
@@ -325,14 +326,16 @@
    "label": "Expected Delivery Date"
   },
   {
+   "collapsible": 1,
    "fieldname": "operations_section",
    "fieldtype": "Section Break",
    "label": "Operations",
    "options": "fa fa-wrench"
   },
   {
-   "default": "Work Order",
    "depends_on": "operations",
+   "fetch_from": "bom_no.transfer_material_against",
+   "fetch_if_empty": 1,
    "fieldname": "transfer_material_against",
    "fieldtype": "Select",
    "label": "Transfer Material Against",
@@ -572,10 +575,11 @@
  "image_field": "image",
  "is_submittable": 1,
  "links": [],
- "modified": "2021-08-24 15:14:03.844937",
+ "modified": "2022-01-24 21:18:12.160114",
  "modified_by": "Administrator",
  "module": "Manufacturing",
  "name": "Work Order",
+ "naming_rule": "By \"Naming Series\" field",
  "nsm_parent_field": "parent_work_order",
  "owner": "Administrator",
  "permissions": [
@@ -604,6 +608,7 @@
  ],
  "sort_field": "modified",
  "sort_order": "ASC",
+ "states": [],
  "title_field": "production_item",
  "track_changes": 1,
  "track_seen": 1

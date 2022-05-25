@@ -88,7 +88,11 @@ frappe.ui.form.on('Stock Entry', {
 					}
 				}
 
-				filters["warehouse"] = item.s_warehouse || item.t_warehouse;
+				// User could want to select a manually created empty batch (no warehouse)
+				// or a pre-existing batch
+				if (frm.doc.purpose != "Material Receipt") {
+					filters["warehouse"] = item.s_warehouse || item.t_warehouse;
+				}
 
 				return {
 					query : "erpnext.controllers.queries.get_batch_no",
@@ -464,7 +468,9 @@ frappe.ui.form.on('Stock Entry', {
 				},
 				callback: function(r) {
 					if (!r.exc) {
-						$.extend(child, r.message);
+						["actual_qty", "basic_rate"].forEach((field) => {
+							frappe.model.set_value(cdt, cdn, field, (r.message[field] || 0.0));
+						});
 						frm.events.calculate_basic_amount(frm, child);
 					}
 				}
@@ -623,6 +629,12 @@ frappe.ui.form.on('Stock Entry Detail', {
 		frm.events.set_serial_no(frm, cdt, cdn, () => {
 			frm.events.get_warehouse_details(frm, cdt, cdn);
 		});
+
+		// set allow_zero_valuation_rate to 0 if s_warehouse is selected.
+		let item = frappe.get_doc(cdt, cdn);
+		if (item.s_warehouse) {
+			frappe.model.set_value(cdt, cdn, "allow_zero_valuation_rate", 0);
+		}
 	},
 
 	t_warehouse: function(frm, cdt, cdn) {
@@ -1059,8 +1071,8 @@ function attach_bom_items(bom_no) {
 
 function check_should_not_attach_bom_items(bom_no) {
   return (
-    bom_no === undefined ||
-    (erpnext.stock.bom && erpnext.stock.bom.name === bom_no)
+	bom_no === undefined ||
+	(erpnext.stock.bom && erpnext.stock.bom.name === bom_no)
   );
 }
 

@@ -93,7 +93,7 @@ frappe.ui.form.on("BOM", {
 			});
 		}
 
-		if(frm.doc.docstatus!=0) {
+		if(frm.doc.docstatus==1) {
 			frm.add_custom_button(__("Work Order"), function() {
 				frm.trigger("make_work_order");
 			}, __("Create"));
@@ -680,11 +680,6 @@ frappe.ui.form.on("BOM Item", "items_remove", function(frm) {
 	erpnext.bom.calculate_total(frm.doc);
 });
 
-frappe.ui.form.on("BOM", "with_operations", function(frm) {
-	if(!cint(frm.doc.with_operations)) {
-		frm.set_value("operations", []);
-	}
-});
 
 frappe.ui.form.on("BOM Scrap Item", {
 	item_code(frm, cdt, cdn) {

@@ -55,7 +55,7 @@ frappe.ui.form.on("Leave Application", {
 	make_dashboard: function(frm) {
 		var leave_details;
 		let lwps;
-		if (frm.doc.employee) {
+		if (frm.doc.employee && frm.doc.from_date) {
 			frappe.call({
 				method: "erpnext.hr.doctype.leave_application.leave_application.get_leave_details",
 				async: false,
@@ -149,6 +149,7 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	to_date: function(frm) {
+		frm.trigger("make_dashboard");
 		frm.trigger("half_day_datepicker");
 		frm.trigger("calculate_total_days");
 	},
