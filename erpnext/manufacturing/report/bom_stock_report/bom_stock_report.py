@@ -7,7 +7,8 @@ from frappe import _
 
 
 def execute(filters=None):
-	if not filters: filters = {}
+	if not filters:
+		filters = {}
 
 	columns = get_columns()
 
@@ -37,25 +38,30 @@ def get_bom_stock(filters):
 	qty_field = "stock_qty"
 
 	qty_to_produce = filters.get("qty_to_produce", 1)
-	if  int(qty_to_produce) <= 0:
+	if int(qty_to_produce) <= 0:
 		frappe.throw(_("Quantity to Produce can not be less than Zero"))
 
 	if filters.get("show_exploded_view"):
 		table = "`tabBOM Explosion Item`"
 
 	if filters.get("warehouse"):
-		warehouse_details = frappe.db.get_value("Warehouse", filters.get("warehouse"), ["lft", "rgt"], as_dict=1)
+		warehouse_details = frappe.db.get_value(
+			"Warehouse", filters.get("warehouse"), ["lft", "rgt"], as_dict=1
+		)
 		if warehouse_details:
-			conditions += " and exists (select name from `tabWarehouse` wh \
-				where wh.lft >= %s and wh.rgt <= %s and ledger.warehouse = wh.name)" % (warehouse_details.lft,
-				warehouse_details.rgt)
+			conditions += (
+				" and exists (select name from `tabWarehouse` wh \
+				where wh.lft >= %s and wh.rgt <= %s and ledger.warehouse = wh.name)"
+				% (warehouse_details.lft, warehouse_details.rgt)
+			)
 		else:
 			conditions += " and ledger.warehouse = %s" % frappe.db.escape(filters.get("warehouse"))
 
 	else:
 		conditions += ""
 
-	return frappe.db.sql("""
+	return frappe.db.sql(
+		"""
 			SELECT
 				bom_item.item_code,
 				bom_item.description ,
@@ -74,9 +80,10 @@ def get_bom_stock(filters):
 				bom_item.parent = {bom} and bom_item.parenttype='BOM'
 
 			GROUP BY bom_item.item_code""".format(
-				qty_field=qty_field,
-				table=table,
-				conditions=conditions,
-				bom=frappe.db.escape(bom),
-				qty_to_produce=qty_to_produce or 1)
-			)
+			qty_field=qty_field,
+			table=table,
+			conditions=conditions,
+			bom=frappe.db.escape(bom),
+			qty_to_produce=qty_to_produce or 1,
+		)
+	)

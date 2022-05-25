@@ -1,4 +1,3 @@
-
 import json
 
 import frappe
@@ -26,20 +25,18 @@ def get_default_dashboards():
 				"doctype": "Dashboard",
 				"dashboard_name": "Accounts",
 				"charts": [
-					{ "chart": "Outgoing Bills (Sales Invoice)" },
-					{ "chart": "Incoming Bills (Purchase Invoice)" },
-					{ "chart": "Bank Balance" },
-					{ "chart": "Income" },
-					{ "chart": "Expenses" },
-					{ "chart": "Patient Appointments" }
-				]
+					{"chart": "Outgoing Bills (Sales Invoice)"},
+					{"chart": "Incoming Bills (Purchase Invoice)"},
+					{"chart": "Bank Balance"},
+					{"chart": "Income"},
+					{"chart": "Expenses"},
+					{"chart": "Patient Appointments"},
+				],
 			},
 			{
 				"doctype": "Dashboard",
 				"dashboard_name": "Project",
-				"charts": [
-					{ "chart": "Project Summary", "width": "Full" }
-				]
+				"charts": [{"chart": "Project Summary", "width": "Full"}],
 			},
 		],
 		"Charts": [
@@ -55,7 +52,7 @@ def get_default_dashboards():
 				"timeseries": 1,
 				"owner": "Administrator",
 				"type": "Line",
-				"width": "Half"
+				"width": "Half",
 			},
 			{
 				"doctype": "Dashboard Chart",
@@ -69,7 +66,7 @@ def get_default_dashboards():
 				"timeseries": 1,
 				"owner": "Administrator",
 				"type": "Line",
-				"width": "Half"
+				"width": "Half",
 			},
 			{
 				"doctype": "Dashboard Chart",
@@ -83,7 +80,7 @@ def get_default_dashboards():
 				"timeseries": 1,
 				"owner": "Administrator",
 				"type": "Line",
-				"width": "Half"
+				"width": "Half",
 			},
 			{
 				"doctype": "Dashboard Chart",
@@ -99,7 +96,7 @@ def get_default_dashboards():
 				"owner": "Administrator",
 				"document_type": "Purchase Invoice",
 				"type": "Bar",
-				"width": "Half"
+				"width": "Half",
 			},
 			{
 				"doctype": "Dashboard Chart",
@@ -115,18 +112,18 @@ def get_default_dashboards():
 				"owner": "Administrator",
 				"document_type": "Sales Invoice",
 				"type": "Bar",
-				"width": "Half"
+				"width": "Half",
 			},
 			{
-				'doctype': 'Dashboard Chart',
-				'name': 'Project Summary',
-				'chart_name': 'Project Summary',
-				'chart_type': 'Report',
-				'report_name': 'Project Summary',
-				'is_public': 1,
-				'filters_json': json.dumps({"company": company.name, "status": "Open"}),
-				'type': 'Bar',
-				'custom_options': '{"type": "bar", "colors": ["#fc4f51", "#78d6ff", "#7575ff"], "axisOptions": { "shortenYAxisNumbers": 1}, "barOptions": { "stacked": 1 }}',
+				"doctype": "Dashboard Chart",
+				"name": "Project Summary",
+				"chart_name": "Project Summary",
+				"chart_type": "Report",
+				"report_name": "Project Summary",
+				"is_public": 1,
+				"filters_json": json.dumps({"company": company.name, "status": "Open"}),
+				"type": "Bar",
+				"custom_options": '{"type": "bar", "colors": ["#fc4f51", "#78d6ff", "#7575ff"], "axisOptions": { "shortenYAxisNumbers": 1}, "barOptions": { "stacked": 1 }}',
 			},
 			{
 				"doctype": "Dashboard Chart",
@@ -141,10 +138,11 @@ def get_default_dashboards():
 				"owner": "Administrator",
 				"document_type": "Patient Appointment",
 				"type": "Line",
-				"width": "Half"
-			}
-		]
+				"width": "Half",
+			},
+		],
 	}
+
 
 def get_account(account_type, company):
 	accounts = frappe.get_list("Account", filters={"account_type": account_type, "company": company})

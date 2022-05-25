@@ -64,7 +64,7 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 			this.frm.set_query("item_code", "items", function() {
 				return {
 					query: "erpnext.controllers.queries.item_query",
-					filters: {'is_sales_item': 1, 'customer': cur_frm.doc.customer}
+					filters: {'is_sales_item': 1, 'customer': cur_frm.doc.customer, 'has_variants': 0}
 				}
 			});
 		}
@@ -227,11 +227,11 @@ erpnext.selling.SellingController = erpnext.TransactionController.extend({
 					},
 					callback:function(r){
 						if (in_list(['Delivery Note', 'Sales Invoice'], doc.doctype)) {
-
 							if (doc.doctype === 'Sales Invoice' && (!doc.update_stock)) return;
-
-							me.set_batch_number(cdt, cdn);
-							me.batch_no(doc, cdt, cdn);
+							if (has_batch_no) {
+								me.set_batch_number(cdt, cdn);
+								me.batch_no(doc, cdt, cdn);
+							}
 						}
 					}
 				});

@@ -24,11 +24,10 @@ class TestStaffingPlan(unittest.TestCase):
 		staffing_plan.name = "Test"
 		staffing_plan.from_date = nowdate()
 		staffing_plan.to_date = add_days(nowdate(), 10)
-		staffing_plan.append("staffing_details", {
-			"designation": "Designer",
-			"vacancies": 6,
-			"estimated_cost_per_position": 50000
-		})
+		staffing_plan.append(
+			"staffing_details",
+			{"designation": "Designer", "vacancies": 6, "estimated_cost_per_position": 50000},
+		)
 		staffing_plan.insert()
 		staffing_plan.submit()
 		self.assertEqual(staffing_plan.total_estimated_budget, 300000.00)
@@ -42,11 +41,10 @@ class TestStaffingPlan(unittest.TestCase):
 		staffing_plan.name = "Test 1"
 		staffing_plan.from_date = nowdate()
 		staffing_plan.to_date = add_days(nowdate(), 10)
-		staffing_plan.append("staffing_details", {
-			"designation": "Designer",
-			"vacancies": 3,
-			"estimated_cost_per_position": 45000
-		})
+		staffing_plan.append(
+			"staffing_details",
+			{"designation": "Designer", "vacancies": 3, "estimated_cost_per_position": 45000},
+		)
 		self.assertRaises(SubsidiaryCompanyError, staffing_plan.insert)
 
 	def test_staffing_plan_parent_company(self):
@@ -58,11 +56,10 @@ class TestStaffingPlan(unittest.TestCase):
 		staffing_plan.name = "Test"
 		staffing_plan.from_date = nowdate()
 		staffing_plan.to_date = add_days(nowdate(), 10)
-		staffing_plan.append("staffing_details", {
-			"designation": "Designer",
-			"vacancies": 7,
-			"estimated_cost_per_position": 50000
-		})
+		staffing_plan.append(
+			"staffing_details",
+			{"designation": "Designer", "vacancies": 7, "estimated_cost_per_position": 50000},
+		)
 		staffing_plan.insert()
 		staffing_plan.submit()
 		self.assertEqual(staffing_plan.total_estimated_budget, 350000.00)
@@ -73,13 +70,13 @@ class TestStaffingPlan(unittest.TestCase):
 		staffing_plan.name = "Test 1"
 		staffing_plan.from_date = nowdate()
 		staffing_plan.to_date = add_days(nowdate(), 10)
-		staffing_plan.append("staffing_details", {
-			"designation": "Designer",
-			"vacancies": 7,
-			"estimated_cost_per_position": 60000
-		})
+		staffing_plan.append(
+			"staffing_details",
+			{"designation": "Designer", "vacancies": 7, "estimated_cost_per_position": 60000},
+		)
 		staffing_plan.insert()
 		self.assertRaises(ParentCompanyError, staffing_plan.submit)
+
 
 def _set_up():
 	for doctype in ["Staffing Plan", "Staffing Plan Detail"]:

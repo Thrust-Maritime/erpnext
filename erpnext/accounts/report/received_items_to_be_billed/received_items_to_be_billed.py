@@ -20,90 +20,76 @@ def get_column():
 			"fieldname": "name",
 			"fieldtype": "Link",
 			"options": "Purchase Receipt",
-			"width": 160
+			"width": 160,
 		},
-		{
-			"label": _("Date"),
-			"fieldname": "date",
-			"fieldtype": "Date",
-			"width": 100
-		},
+		{"label": _("Date"), "fieldname": "date", "fieldtype": "Date", "width": 100},
 		{
 			"label": _("Supplier"),
 			"fieldname": "supplier",
 			"fieldtype": "Link",
 			"options": "Supplier",
-			"width": 120
+			"width": 120,
 		},
-		{
-			"label": _("Supplier Name"),
-			"fieldname": "supplier_name",
-			"fieldtype": "Data",
-			"width": 120
-		},
+		{"label": _("Supplier Name"), "fieldname": "supplier_name", "fieldtype": "Data", "width": 120},
 		{
 			"label": _("Item Code"),
 			"fieldname": "item_code",
 			"fieldtype": "Link",
 			"options": "Item",
-			"width": 120
+			"width": 120,
 		},
 		{
 			"label": _("Amount"),
 			"fieldname": "amount",
 			"fieldtype": "Currency",
 			"width": 100,
-			"options": "Company:company:default_currency"
+			"options": "Company:company:default_currency",
 		},
 		{
 			"label": _("Billed Amount"),
 			"fieldname": "billed_amount",
 			"fieldtype": "Currency",
 			"width": 100,
-			"options": "Company:company:default_currency"
+			"options": "Company:company:default_currency",
 		},
 		{
 			"label": _("Returned Amount"),
 			"fieldname": "returned_amount",
 			"fieldtype": "Currency",
 			"width": 120,
-			"options": "Company:company:default_currency"
+			"options": "Company:company:default_currency",
 		},
 		{
 			"label": _("Pending Amount"),
 			"fieldname": "pending_amount",
 			"fieldtype": "Currency",
 			"width": 120,
-			"options": "Company:company:default_currency"
+			"options": "Company:company:default_currency",
 		},
-		{
-			"label": _("Item Name"),
-			"fieldname": "item_name",
-			"fieldtype": "Data",
-			"width": 120
-		},
-		{
-			"label": _("Description"),
-			"fieldname": "description",
-			"fieldtype": "Data",
-			"width": 120
-		},
+		{"label": _("Item Name"), "fieldname": "item_name", "fieldtype": "Data", "width": 120},
+		{"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 120},
 		{
 			"label": _("Project"),
 			"fieldname": "project",
 			"fieldtype": "Link",
 			"options": "Project",
-			"width": 120
+			"width": 120,
 		},
 		{
 			"label": _("Company"),
 			"fieldname": "company",
 			"fieldtype": "Link",
 			"options": "Company",
-			"width": 120
-		}
+			"width": 120,
+		},
 	]
 
+
 def get_args():
-	return {'doctype': 'Purchase Receipt', 'party': 'supplier',
-		'date': 'posting_date', 'order': 'name', 'order_by': 'desc'}
+	return {
+		"doctype": "Purchase Receipt",
+		"party": "supplier",
+		"date": "posting_date",
+		"order": "name",
+		"order_by": "desc",
+	}

@@ -17,6 +17,8 @@ from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from six import string_types
 
+INVALID_VALUES = ("", None)
+
 
 class BankStatementImport(DataImport):
 	def __init__(self, *args, **kwargs):
@@ -49,16 +51,14 @@ class BankStatementImport(DataImport):
 			self.import_file, self.google_sheets_url
 		)
 
-		if 'Bank Account' not in json.dumps(preview['columns']):
+		if "Bank Account" not in json.dumps(preview["columns"]):
 			frappe.throw(_("Please add the Bank Account column"))
 
 		from frappe.core.page.background_jobs.background_jobs import get_info
 		from frappe.utils.scheduler import is_scheduler_inactive
 
 		if is_scheduler_inactive() and not frappe.flags.in_test:
-			frappe.throw(
-				_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive")
-			)
+			frappe.throw(_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive"))
 
 		enqueued_jobs = [d.get("job_name") for d in get_info()]
 
@@ -96,7 +96,23 @@ def download_errored_template(data_import_name):
 	data_import = frappe.get_doc("Bank Statement Import", data_import_name)
 	data_import.export_errored_rows()
 
-def start_import(data_import, bank_account, import_file_path, google_sheets_url, bank, template_options):
+
+def parse_data_from_template(raw_data):
+	data = []
+
+	for i, row in enumerate(raw_data):
+		if all(v in INVALID_VALUES for v in row):
+			# empty row
+			continue
+
+		data.append(row)
+
+	return data
+
+
+def start_import(
+	data_import, bank_account, import_file_path, google_sheets_url, bank, template_options
+):
 	"""This method runs in background job"""
 
 	update_mapping_db(bank, template_options)
@@ -104,8 +120,9 @@ def start_import(data_import, bank_account, import_file_path, google_sheets_url,
 	data_import = frappe.get_doc("Bank Statement Import", data_import)
 	file = import_file_path if import_file_path else google_sheets_url
 
-	import_file = ImportFile("Bank Transaction", file = file, import_type="Insert New Records")
-	data = import_file.raw_data
+	import_file = ImportFile("Bank Transaction", file=file, import_type="Insert New Records")
+
+	data = parse_data_from_template(import_file.raw_data)
 
 	if import_file_path:
 		add_bank_account(data, bank_account)
@@ -129,9 +146,10 @@ def update_mapping_db(bank, template_options):
 		d.delete()
 
 	for d in json.loads(template_options)["column_to_field_map"].items():
-		bank.append("bank_transaction_mapping", {"bank_transaction_field":  d[1] ,"file_field": d[0]} )
+		bank.append("bank_transaction_mapping", {"bank_transaction_field": d[1], "file_field": d[0]})
 
 	bank.save()
+
 
 def add_bank_account(data, bank_account):
 	bank_account_loc = None
@@ -155,11 +173,12 @@ def write_files(import_file, data):
 	extension = extension.lstrip(".")
 
 	if extension == "csv":
-		with open(full_file_path, 'w', newline='') as file:
+		with open(full_file_path, "w", newline="") as file:
 			writer = csv.writer(file)
 			writer.writerows(data)
 	elif extension == "xlsx" or "xls":
-		write_xlsx(data, "trans", file_path = full_file_path)
+		write_xlsx(data, "trans", file_path=full_file_path)
+
 
 def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 	# from xlsx utils with changes
@@ -174,19 +193,21 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 			ws.column_dimensions[get_column_letter(i + 1)].width = column_width
 
 	row1 = ws.row_dimensions[1]
-	row1.font = Font(name='Calibri', bold=True)
+	row1.font = Font(name="Calibri", bold=True)
 
 	for row in data:
 		clean_row = []
 		for item in row:
-			if isinstance(item, string_types) and (sheet_name not in ['Data Import Template', 'Data Export']):
+			if isinstance(item, string_types) and (
+				sheet_name not in ["Data Import Template", "Data Export"]
+			):
 				value = handle_html(item)
 			else:
 				value = item
 
 			if isinstance(item, string_types) and next(ILLEGAL_CHARACTERS_RE.finditer(value), None):
 				# Remove illegal characters from the string
-				value = re.sub(ILLEGAL_CHARACTERS_RE, '', value)
+				value = re.sub(ILLEGAL_CHARACTERS_RE, "", value)
 
 			clean_row.append(value)
 
@@ -201,13 +222,13 @@ def upload_bank_statement(**args):
 	bsi = frappe.new_doc("Bank Statement Import")
 
 	if args.company:
-		bsi.update({
-			"company": args.company,
-		})
+		bsi.update(
+			{
+				"company": args.company,
+			}
+		)
 
 	if args.bank_account:
-		bsi.update({
-			"bank_account": args.bank_account
-		})
+		bsi.update({"bank_account": args.bank_account})
 
 	return bsi

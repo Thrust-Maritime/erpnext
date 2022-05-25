@@ -27,10 +27,10 @@ def create_employee_grievance():
 	grievance.grievance_against = emp_2
 	grievance.description = "test descrip"
 
-	#set cause
+	# set cause
 	grievance.cause_of_grievance = "test cause"
 
-	#resolution details
+	# resolution details
 	grievance.resolution_date = today()
 	grievance.resolution_detail = "test resolution detail"
 	grievance.resolved_by = "test_emp_grievance_@example.com"

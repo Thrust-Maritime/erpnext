@@ -21,7 +21,7 @@ def get_columns(filters):
 			"fieldtype": "Link",
 			"fieldname": "account",
 			"options": "Account",
-			"width": 100
+			"width": 100,
 		},
 		{
 			"label": _("Currency"),
@@ -29,15 +29,15 @@ def get_columns(filters):
 			"fieldname": "currency",
 			"options": "Currency",
 			"hidden": 1,
-			"width": 50
+			"width": 50,
 		},
 		{
 			"label": _("Balance"),
 			"fieldtype": "Currency",
 			"fieldname": "balance",
 			"options": "currency",
-			"width": 100
-		}
+			"width": 100,
+		},
 	]
 
 	return columns
@@ -61,8 +61,9 @@ def get_data(filters):
 
 	data = []
 	conditions = get_conditions(filters)
-	accounts = frappe.db.get_all("Account", fields=["name", "account_currency"],
-		filters=conditions, order_by='name')
+	accounts = frappe.db.get_all(
+		"Account", fields=["name", "account_currency"], filters=conditions, order_by="name"
+	)
 
 	for d in accounts:
 		balance = get_balance_on(d.name, date=filters.report_date)

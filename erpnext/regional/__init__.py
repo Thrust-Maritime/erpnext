@@ -24,10 +24,11 @@ def create_transaction_log(doc, method):
 
 	data = str(doc.as_dict())
 
-	frappe.get_doc({
-		"doctype": "Transaction Log",
-		"reference_doctype": doc.doctype,
-		"document_name": doc.name,
-		"data": data
-	}).insert(ignore_permissions=True)
-
+	frappe.get_doc(
+		{
+			"doctype": "Transaction Log",
+			"reference_doctype": doc.doctype,
+			"document_name": doc.name,
+			"data": data,
+		}
+	).insert(ignore_permissions=True)

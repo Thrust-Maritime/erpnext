@@ -23,6 +23,8 @@ def webhooks():
 		set_status(event)
 
 	return 200
+
+
 def set_status(event):
 	resource_type = event.get("resource_type", {})
 
@@ -37,7 +39,12 @@ def set_mandate_status(event):
 	else:
 		mandates.append(event["links"]["mandate"])
 
-	if event["action"] == "pending_customer_approval" or event["action"] == "pending_submission" or event["action"] == "submitted" or event["action"] == "active":
+	if (
+		event["action"] == "pending_customer_approval"
+		or event["action"] == "pending_submission"
+		or event["action"] == "submitted"
+		or event["action"] == "active"
+	):
 		disabled = 0
 	else:
 		disabled = 1
@@ -59,9 +66,17 @@ def authenticate_signature(r):
 
 	return False
 
+
 def get_webhook_keys():
 	def _get_webhook_keys():
-		webhook_keys = [d.webhooks_secret for d in frappe.get_all("GoCardless Settings", fields=["webhooks_secret"],) if d.webhooks_secret]
+		webhook_keys = [
+			d.webhooks_secret
+			for d in frappe.get_all(
+				"GoCardless Settings",
+				fields=["webhooks_secret"],
+			)
+			if d.webhooks_secret
+		]
 
 		return webhook_keys
 

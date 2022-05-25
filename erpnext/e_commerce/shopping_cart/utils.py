@@ -7,8 +7,10 @@ from erpnext.e_commerce.doctype.e_commerce_settings.e_commerce_settings import i
 
 
 def show_cart_count():
-	if (is_cart_enabled() and
-		frappe.db.get_value("User", frappe.session.user, "user_type") == "Website User"):
+	if (
+		is_cart_enabled()
+		and frappe.db.get_value("User", frappe.session.user, "user_type") == "Website User"
+	):
 		return True
 
 	return False
@@ -41,9 +43,9 @@ def is_customer():
 	if frappe.session.user and frappe.session.user != "Guest":
 		contact_name = frappe.get_value("Contact", {"email_id": frappe.session.user})
 		if contact_name:
-			contact = frappe.get_doc('Contact', contact_name)
+			contact = frappe.get_doc("Contact", contact_name)
 			for link in contact.links:
-				if link.link_doctype == 'Customer':
+				if link.link_doctype == "Customer":
 					return True
 
 		return False

@@ -1,4 +1,4 @@
-# Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and contributors
+ Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
 
@@ -28,5 +28,10 @@ def get_vouchar_detials(column_list, doctype, docname):
 	column_list = json.loads(column_list)
 	for col in column_list:
 		sanitize_searchfield(col)
-	return frappe.db.sql(''' select {columns} from `tab{doctype}` where name=%s'''
-		.format(columns=", ".join(column_list), doctype=doctype), docname, as_dict=1)[0]
+	return frappe.db.sql(
+		""" select {columns} from `tab{doctype}` where name=%s""".format(
+			columns=", ".join(column_list), doctype=doctype
+		),
+		docname,
+		as_dict=1,
+	)[0]

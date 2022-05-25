@@ -16,12 +16,12 @@ def execute():
 	if not affected_purchase_receipts:
 		return
 
-	logger.info("purchase_receipt_status: begin patch, PR count: {}"
-				.format(len(affected_purchase_receipts)))
+	logger.info(
+		"purchase_receipt_status: begin patch, PR count: {}".format(len(affected_purchase_receipts))
+	)
 
 	frappe.reload_doc("stock", "doctype", "Purchase Receipt")
 	frappe.reload_doc("stock", "doctype", "Purchase Receipt Item")
-
 
 	for pr in affected_purchase_receipts:
 		pr_name = pr[0]

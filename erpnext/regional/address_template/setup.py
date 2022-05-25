@@ -47,9 +47,6 @@ def update_address_template(country, html, is_default=0):
 		frappe.db.set_value("Address Template", country, "template", html)
 		frappe.db.set_value("Address Template", country, "is_default", is_default)
 	else:
-		frappe.get_doc(dict(
-			doctype="Address Template",
-			country=country,
-			is_default=is_default,
-			template=html
-		)).insert()
+		frappe.get_doc(
+			dict(doctype="Address Template", country=country, is_default=is_default, template=html)
+		).insert()
