@@ -331,36 +331,36 @@ class StockReconciliation(StockController):
 				}
 			)
 
-				previous_sle = get_stock_ledger_entries({
-					"item_code": row.item_code,
-					"posting_date": self.posting_date,
-					"posting_time": self.posting_time,
-					"serial_no": serial_no
-				}, "<", "desc", "limit 1")
+			previous_sle = get_stock_ledger_entries({
+				"item_code": row.item_code,
+				"posting_date": self.posting_date,
+				"posting_time": self.posting_time,
+				"serial_no": serial_no
+			}, "<", "desc", "limit 1")
 
-				warehouse = previous_sle.get("warehouse", "") or row.warehouse
+			warehouse = previous_sle.get("warehouse", "") or row.warehouse
 
-				if not qty_after_transaction:
-					qty_after_transaction = get_stock_balance(
-						row.item_code, warehouse, self.posting_date, self.posting_time
-					)
-
-				qty_after_transaction -= 1
-
-				new_args = args.copy()
-				new_args.update(
-					{
-						"actual_qty": -1,
-						"qty_after_transaction": qty_after_transaction,
-						"warehouse": warehouse,
-						"valuation_rate": previous_sle.get("valuation_rate"),
-					}
+			if not qty_after_transaction:
+				qty_after_transaction = get_stock_balance(
+					row.item_code, warehouse, self.posting_date, self.posting_time
 				)
 
-				if previous_sle and row.warehouse != previous_sle.get("warehouse"):
-					# If serial no exists in different warehouse
+			qty_after_transaction -= 1
 
-					warehouse = previous_sle.get("warehouse", '') or row.warehouse
+			new_args = args.copy()
+			new_args.update(
+				{
+					"actual_qty": -1,
+					"qty_after_transaction": qty_after_transaction,
+					"warehouse": warehouse,
+					"valuation_rate": previous_sle.get("valuation_rate"),
+				}
+			)
+
+			if previous_sle and row.warehouse != previous_sle.get("warehouse"):
+				# If serial no exists in different warehouse
+
+				warehouse = previous_sle.get("warehouse", '') or row.warehouse
 
 			args.update(
 				{
