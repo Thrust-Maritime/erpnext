@@ -516,14 +516,14 @@ class TestWorkOrder(FrappeTestCase):
 
 		bom, bom_item = data
 
-			planned_start_date = add_months(today(), months=-1)
-			work_order = make_wo_order_test_record(
-				item=bom_item, qty=10, bom_no=bom, planned_start_date=planned_start_date
-			)
+		planned_start_date = add_months(today(), months=-1)
+		work_order = make_wo_order_test_record(
+			item=bom_item, qty=10, bom_no=bom, planned_start_date=planned_start_date
+		)
 
-			work_order1 = make_wo_order_test_record(
-				item=bom_item, qty=30, bom_no=bom, planned_start_date=planned_start_date, do_not_submit=1
-			)
+		work_order1 = make_wo_order_test_record(
+			item=bom_item, qty=30, bom_no=bom, planned_start_date=planned_start_date, do_not_submit=1
+		)
 
 		work_order1 = make_wo_order_test_record(item=bom_item,
 			qty=30, bom_no=bom, planned_start_date=planned_start_date, do_not_submit=1)
