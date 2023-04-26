@@ -5,7 +5,6 @@
 import frappe
 from frappe import _
 from frappe.utils import cstr, flt
-from six import itervalues
 
 import erpnext
 from erpnext.accounts.report.financial_statements import (
@@ -121,7 +120,7 @@ def set_gl_entries_by_account(dimension_list, filters, account, gl_entries_by_ac
 
 def format_gl_entries(gl_entries_by_account, accounts_by_name, dimension_list, dimension_type):
 
-	for entries in itervalues(gl_entries_by_account):
+	for entries in gl_entries_by_account.values():
 		for entry in entries:
 			d = accounts_by_name.get(entry.account)
 			if not d:
@@ -231,7 +230,7 @@ def get_columns(dimension_list):
 	columns.append(
 		{
 			"fieldname": "total",
-			"label": "Total",
+			"label": _("Total"),
 			"fieldtype": "Currency",
 			"options": "currency",
 			"width": 150,

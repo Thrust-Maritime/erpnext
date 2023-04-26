@@ -23,6 +23,7 @@ def execute(filters=None):
 
 	return columns, data
 
+
 def get_data(report_filters):
 	data = []
 
@@ -98,6 +99,7 @@ def get_gl_data(report_filters, filters):
 		voucher_wise_gl_data[key] = d
 
 	return voucher_wise_gl_data
+
 
 def get_columns(filters):
 	return [

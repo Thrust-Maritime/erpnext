@@ -91,7 +91,7 @@ def from_detailed_data(company_name, data):
 
 	if tax_categories:
 		for tax_category in tax_categories:
-			make_tax_catgory(tax_category)
+			make_tax_category(tax_category)
 
 	if sales_tax_templates:
 		for template in sales_tax_templates:
@@ -116,7 +116,7 @@ def update_regional_tax_settings(country, company):
 			frappe.get_attr(module_name)(country, company)
 		except Exception as e:
 			# Log error and ignore if failed to setup regional tax settings
-			frappe.log_error()
+			frappe.log_error("Unable to setup regional tax settings")
 			pass
 
 
@@ -158,8 +158,10 @@ def make_taxes_and_charges_template(company_name, doctype, template):
 	# Ingone validations to make doctypes faster
 	doc.flags.ignore_links = True
 	doc.flags.ignore_validate = True
+	doc.flags.ignore_mandatory = True
 	doc.insert(ignore_permissions=True)
 	return doc
+
 
 def make_item_tax_template(company_name, template):
 	"""Create an Item Tax Template.
@@ -193,16 +195,6 @@ def make_item_tax_template(company_name, template):
 	doc.insert(ignore_permissions=True)
 	return doc
 
-
-def make_tax_category(tax_category):
-	"""Make tax category based on title if not already created"""
-	doctype = "Tax Category"
-	if not frappe.db.exists(doctype, tax_category["title"]):
-		tax_category["doctype"] = doctype
-		doc = frappe.get_doc(tax_category)
-		doc.flags.ignore_links = True
-		doc.flags.ignore_validate = True
-		doc.insert(ignore_permissions=True)
 
 def get_or_create_account(company_name, account):
 	"""
@@ -297,7 +289,7 @@ def get_or_create_tax_group(company_name, root_type):
 	return tax_group_name
 
 
-def make_tax_catgory(tax_category):
+def make_tax_category(tax_category):
 	doctype = "Tax Category"
 	if isinstance(tax_category, str):
 		tax_category = {"title": tax_category}

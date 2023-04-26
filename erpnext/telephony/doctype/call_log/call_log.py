@@ -94,8 +94,7 @@ class CallLog(Document):
 				frappe.publish_realtime("show_call_popup", self, user=email)
 
 	def update_received_by(self):
-		employees = get_employees_with_number(self.get("to"))
-		if employees:
+		if employees := get_employees_with_number(self.get("to")):
 			self.call_received_by = employees[0].get("name")
 			self.employee_user_id = employees[0].get("user_id")
 
@@ -119,7 +118,7 @@ def get_employees_with_number(number):
 
 	employee_doc_name_and_emails = frappe.get_all(
 		"Employee",
-		filters={"cell_number": ["like", "%{}%".format(number)], "user_id": ["!=", ""]},
+		filters={"cell_number": ["like", f"%{number}%"], "user_id": ["!=", ""]},
 		fields=["name", "user_id"],
 	)
 

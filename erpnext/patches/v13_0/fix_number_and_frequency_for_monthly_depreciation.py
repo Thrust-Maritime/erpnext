@@ -2,10 +2,8 @@ import frappe
 
 
 def execute():
-	if not frappe.db.has_column("Asset", "allow_monthly_depreciation"):
-		return
-
 	assets = frappe.get_all("Asset", filters={"allow_monthly_depreciation": 1})
+
 	for d in assets:
 		print(d.name)
 		asset_doc = frappe.get_doc("Asset", d.name)

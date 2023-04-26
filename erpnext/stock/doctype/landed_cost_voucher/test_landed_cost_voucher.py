@@ -24,7 +24,7 @@ class TestLandedCostVoucher(FrappeTestCase):
 		pr = make_purchase_receipt(
 			company="_Test Company with perpetual inventory",
 			warehouse="Stores - TCP1",
-			supplier_warehouse="Work in Progress - TCP1",
+			supplier_warehouse="Work In Progress - TCP1",
 			get_multiple_items=True,
 			get_taxes_and_charges=True,
 		)
@@ -303,7 +303,7 @@ class TestLandedCostVoucher(FrappeTestCase):
 		pr = make_purchase_receipt(
 			company="_Test Company with perpetual inventory",
 			warehouse="Stores - TCP1",
-			supplier_warehouse="Work in Progress - TCP1",
+			supplier_warehouse="Work In Progress - TCP1",
 			get_multiple_items=True,
 			get_taxes_and_charges=True,
 			do_not_submit=True,
@@ -388,7 +388,7 @@ class TestLandedCostVoucher(FrappeTestCase):
 		pr = make_purchase_receipt(
 			company="_Test Company with perpetual inventory",
 			warehouse="Stores - TCP1",
-			supplier_warehouse="Work in Progress - TCP1",
+			supplier_warehouse="Work In Progress - TCP1",
 			do_not_save=True,
 		)
 		pr.items[0].cost_center = "Main - TCP1"
@@ -602,76 +602,6 @@ def make_landed_cost_voucher(**args):
 
 	return lcv
 
-	def test_multiple_landed_cost_voucher_against_pr(self):
-		pr = make_purchase_receipt(company="_Test Company with perpetual inventory", warehouse = "Stores - TCP1", 
-			supplier_warehouse = "Stores - TCP1", do_not_save=True)
-
-		pr.append("items", {
-			"item_code": "_Test Item",
-			"warehouse": "Stores - TCP1",
-			"cost_center": "Main - TCP1",
-			"qty": 5,
-			"rate": 100
-		})
-
-		pr.submit()
-
-		lcv1 = make_landed_cost_voucher(receipt_document_type = 'Purchase Receipt', 
-			receipt_document=pr.name, charges=100, do_not_save=True)
-
-		lcv1.insert()
-		lcv1.set('items', [
-			lcv1.get('items')[0]
-		])
-		distribute_landed_cost_on_items(lcv1)
-
-		lcv1.submit()
-
-		lcv2 = make_landed_cost_voucher(receipt_document_type = 'Purchase Receipt', 
-			receipt_document=pr.name, charges=100, do_not_save=True)
-
-		lcv2.insert()
-		lcv2.set('items', [
-			lcv2.get('items')[1]
-		])
-		distribute_landed_cost_on_items(lcv2)
-
-		lcv2.submit()
-
-		pr.load_from_db()
-
-		self.assertEqual(pr.items[0].landed_cost_voucher_amount, 100)
-		self.assertEqual(pr.items[1].landed_cost_voucher_amount, 100)
-
-def make_landed_cost_voucher(** args):
-	args = frappe._dict(args)
-	ref_doc = frappe.get_doc(args.receipt_document_type, args.receipt_document)
-
-	lcv = frappe.new_doc('Landed Cost Voucher')
-	lcv.company = '_Test Company'
-	lcv.distribute_charges_based_on = 'Amount'
-
-	lcv.set('purchase_receipts', [{
-		"receipt_document_type": args.receipt_document_type,
-		"receipt_document": args.receipt_document,
-		"supplier": ref_doc.supplier,
-		"posting_date": ref_doc.posting_date,
-		"grand_total": ref_doc.grand_total
-	}])
-
-	lcv.set("taxes", [{
-		"description": "Shipping Charges",
-		"expense_account": "Expenses Included In Valuation - TCP1",
-		"amount": args.charges
-	}])
-
-	if not args.do_not_save:
-		lcv.insert()
-		if not args.do_not_submit:
-			lcv.submit()
-
-	return lcv
-
 
 def create_landed_cost_voucher(receipt_document_type, receipt_document, company, charges=50):
 	ref_doc = frappe.get_doc(receipt_document_type, receipt_document)
@@ -711,6 +641,7 @@ def create_landed_cost_voucher(receipt_document_type, receipt_document, company,
 	lcv.submit()
 
 	return lcv
+
 
 def distribute_landed_cost_on_items(lcv):
 	based_on = lcv.distribute_charges_based_on.lower()

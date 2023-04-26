@@ -12,6 +12,7 @@ from erpnext.stock.utils import get_stock_balance, get_stock_value_on
 class QuickStockBalance(Document):
 	pass
 
+
 @frappe.whitelist()
 def get_stock_item_details(warehouse, date, item=None, barcode=None):
 	out = {}

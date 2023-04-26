@@ -203,4 +203,3 @@ frappe.ui.form.on("Customer", {
 		dialog.show();
 	}
 });
-

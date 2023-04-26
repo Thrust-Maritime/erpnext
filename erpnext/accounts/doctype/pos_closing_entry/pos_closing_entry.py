@@ -136,6 +136,7 @@ def get_pos_invoices(start, end, pos_profile, user):
 
 	return data
 
+
 def make_closing_entry_from_opening(opening_entry):
 	closing_entry = frappe.new_doc("POS Closing Entry")
 	closing_entry.pos_opening_entry = opening_entry.name

@@ -32,7 +32,7 @@ frappe.ui.form.on('Asset Repair', {
 
 	refresh: function(frm) {
 		if (frm.doc.docstatus) {
-			frm.add_custom_button("View General Ledger", function() {
+			frm.add_custom_button(__("View General Ledger"), function() {
 				frappe.route_options = {
 					"voucher_no": frm.doc.name
 				};
@@ -76,7 +76,7 @@ frappe.ui.form.on('Asset Repair Consumed Item', {
 			'warehouse': frm.doc.warehouse,
 			'qty': item.consumed_quantity,
 			'serial_no': item.serial_no,
-			'company': frm.doc.company
+			'company': frm.doc.company,
 		};
 
 		frappe.call({

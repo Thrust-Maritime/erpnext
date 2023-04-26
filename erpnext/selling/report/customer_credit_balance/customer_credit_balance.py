@@ -58,13 +58,14 @@ def execute(filters=None):
 
 	return columns, data
 
+
 def get_columns(customer_naming_type):
 	columns = [
 		_("Customer") + ":Link/Customer:120",
 		_("Credit Limit") + ":Currency:120",
 		_("Outstanding Amt") + ":Currency:100",
 		_("Credit Balance") + ":Currency:120",
-		_("Bypass credit check at Sales Order ") + ":Check:80",
+		_("Bypass credit check at Sales Order") + ":Check:80",
 		_("Is Frozen") + ":Check:80",
 		_("Disabled") + ":Check:80",
 	]
@@ -73,6 +74,7 @@ def get_columns(customer_naming_type):
 		columns.insert(1, _("Customer Name") + ":Data:120")
 
 	return columns
+
 
 def get_details(filters):
 

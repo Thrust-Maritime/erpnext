@@ -5,13 +5,14 @@
 import frappe
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.test_runner import make_test_records
-from frappe.tests.utils import FrappeTestCase
 
 from erpnext.accounts.party import get_due_date
 from erpnext.exceptions import PartyDisabled
 
 test_dependencies = ["Payment Term", "Payment Terms Template"]
 test_records = frappe.get_test_records("Supplier")
+
+from frappe.tests.utils import FrappeTestCase
 
 
 class TestSupplier(FrappeTestCase):
@@ -194,18 +195,17 @@ class TestSupplier(FrappeTestCase):
 def create_supplier(**args):
 	args = frappe._dict(args)
 
-	try:
-		doc = frappe.get_doc(
-			{
-				"doctype": "Supplier",
-				"supplier_name": args.supplier_name,
-				"supplier_group": args.supplier_group or "Services",
-				"supplier_type": args.supplier_type or "Company",
-				"tax_withholding_category": args.tax_withholding_category,
-			}
-		).insert()
-
-		return doc
-
-	except frappe.DuplicateEntryError:
+	if frappe.db.exists("Supplier", args.supplier_name):
 		return frappe.get_doc("Supplier", args.supplier_name)
+
+	doc = frappe.get_doc(
+		{
+			"doctype": "Supplier",
+			"supplier_name": args.supplier_name,
+			"supplier_group": args.supplier_group or "Services",
+			"supplier_type": args.supplier_type or "Company",
+			"tax_withholding_category": args.tax_withholding_category,
+		}
+	).insert()
+
+	return doc

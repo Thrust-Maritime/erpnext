@@ -4,11 +4,15 @@
 
 import frappe
 from frappe import _
-from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.desk.page.setup_wizard.setup_wizard import add_all_roles_to
-from frappe.installer import update_site_config
 from frappe.utils import cint
-from six import iteritems
+
+from erpnext.accounts.doctype.cash_flow_mapper.default_cash_flow_mapper import DEFAULT_MAPPERS
+from erpnext.setup.default_energy_point_rules import get_default_energy_point_rules
+from erpnext.setup.doctype.incoterm.incoterm import create_incoterms
+
+from .default_success_action import get_default_success_action
 
 from erpnext.accounts.doctype.cash_flow_mapper.default_cash_flow_mapper import DEFAULT_MAPPERS
 from erpnext.setup.default_energy_point_rules import get_default_energy_point_rules
@@ -22,17 +26,16 @@ default_mail_footer = """<div style="padding: 7px; text-align: right; color: #88
 def after_install():
 	frappe.get_doc({"doctype": "Role", "role_name": "Analytics"}).insert()
 	set_single_defaults()
-	create_compact_item_print_custom_field()
-	create_print_uom_after_qty_custom_field()
-	create_print_zero_amount_taxes_custom_field()
+	create_print_setting_custom_fields()
 	add_all_roles_to("Administrator")
 	create_default_cash_flow_mapper_templates()
 	create_default_success_action()
 	create_default_energy_point_rules()
+	create_incoterms()
 	add_company_to_session_defaults()
 	add_standard_navbar_items()
 	add_app_name()
-	add_non_standard_user_types()
+	setup_log_settings()
 	frappe.db.commit()
 
 
@@ -47,7 +50,6 @@ def set_single_defaults():
 	for dt in (
 		"Accounts Settings",
 		"Print Settings",
-		"HR Settings",
 		"Buying Settings",
 		"Selling Settings",
 		"Stock Settings",
@@ -59,54 +61,62 @@ def set_single_defaults():
 		)
 		if default_values:
 			try:
-				b = frappe.get_doc(dt, dt)
+				doc = frappe.get_doc(dt, dt)
 				for fieldname, value in default_values:
-					b.set(fieldname, value)
-				b.save()
-			except frappe.MandatoryError:
-				pass
+					doc.set(fieldname, value)
+				doc.flags.ignore_mandatory = True
+				doc.save()
 			except frappe.ValidationError:
 				pass
 
 	frappe.db.set_default("date_format", "dd-mm-yyyy")
 
+	setup_currency_exchange()
 
-def create_compact_item_print_custom_field():
-	create_custom_field(
-		"Print Settings",
+
+def setup_currency_exchange():
+	ces = frappe.get_single("Currency Exchange Settings")
+	try:
+		ces.set("result_key", [])
+		ces.set("req_params", [])
+
+		ces.api_endpoint = "https://frankfurter.app/{transaction_date}"
+		ces.append("result_key", {"key": "rates"})
+		ces.append("result_key", {"key": "{to_currency}"})
+		ces.append("req_params", {"key": "base", "value": "{from_currency}"})
+		ces.append("req_params", {"key": "symbols", "value": "{to_currency}"})
+		ces.save()
+	except frappe.ValidationError:
+		pass
+
+
+def create_print_setting_custom_fields():
+	create_custom_fields(
 		{
-			"label": _("Compact Item Print"),
-			"fieldname": "compact_item_print",
-			"fieldtype": "Check",
-			"default": 1,
-			"insert_after": "with_letterhead",
-		},
-	)
-
-
-def create_print_uom_after_qty_custom_field():
-	create_custom_field(
-		"Print Settings",
-		{
-			"label": _("Print UOM after Quantity"),
-			"fieldname": "print_uom_after_quantity",
-			"fieldtype": "Check",
-			"default": 0,
-			"insert_after": "compact_item_print",
-		},
-	)
-
-
-def create_print_zero_amount_taxes_custom_field():
-	create_custom_field(
-		"Print Settings",
-		{
-			"label": _("Print taxes with zero amount"),
-			"fieldname": "print_taxes_with_zero_amount",
-			"fieldtype": "Check",
-			"default": 0,
-			"insert_after": "allow_print_for_cancelled",
-		},
+			"Print Settings": [
+				{
+					"label": _("Compact Item Print"),
+					"fieldname": "compact_item_print",
+					"fieldtype": "Check",
+					"default": "1",
+					"insert_after": "with_letterhead",
+				},
+				{
+					"label": _("Print UOM after Quantity"),
+					"fieldname": "print_uom_after_quantity",
+					"fieldtype": "Check",
+					"default": "0",
+					"insert_after": "compact_item_print",
+				},
+				{
+					"label": _("Print taxes with zero amount"),
+					"fieldname": "print_taxes_with_zero_amount",
+					"fieldtype": "Check",
+					"default": "0",
+					"insert_after": "allow_print_for_cancelled",
+				},
+			]
+		}
 	)
 
 
@@ -150,7 +160,7 @@ def add_standard_navbar_items():
 		{
 			"item_label": "Documentation",
 			"item_type": "Route",
-			"route": "https://docs.erpnext.com/docs/v13/user/manual/en/introduction",
+			"route": "https://docs.erpnext.com/docs/v14/user/manual/en/introduction",
 			"is_standard": 1,
 		},
 		{
@@ -195,84 +205,8 @@ def add_app_name():
 	frappe.db.set_value("System Settings", None, "app_name", "ERPNext")
 
 
-def add_non_standard_user_types():
-	user_types = get_user_types_data()
+def setup_log_settings():
+	log_settings = frappe.get_single("Log Settings")
+	log_settings.append("logs_to_clear", {"ref_doctype": "Repost Item Valuation", "days": 60})
 
-	user_type_limit = {}
-	for user_type, data in iteritems(user_types):
-		user_type_limit.setdefault(frappe.scrub(user_type), 10)
-
-	update_site_config("user_type_doctype_limit", user_type_limit)
-
-	for user_type, data in iteritems(user_types):
-		create_custom_role(data)
-		create_user_type(user_type, data)
-
-
-def get_user_types_data():
-	return {
-		"Employee Self Service": {
-			"role": "Employee Self Service",
-			"apply_user_permission_on": "Employee",
-			"user_id_field": "user_id",
-			"doctypes": {
-				"Salary Slip": ["read"],
-				"Employee": ["read", "write"],
-				"Expense Claim": ["read", "write", "create", "delete"],
-				"Leave Application": ["read", "write", "create", "delete"],
-				"Attendance Request": ["read", "write", "create", "delete"],
-				"Compensatory Leave Request": ["read", "write", "create", "delete"],
-				"Employee Tax Exemption Declaration": ["read", "write", "create", "delete"],
-				"Employee Tax Exemption Proof Submission": ["read", "write", "create", "delete"],
-				"Timesheet": ["read", "write", "create", "delete", "submit", "cancel", "amend"],
-			},
-		}
-	}
-
-
-def create_custom_role(data):
-	if data.get("role") and not frappe.db.exists("Role", data.get("role")):
-		frappe.get_doc(
-			{"doctype": "Role", "role_name": data.get("role"), "desk_access": 1, "is_custom": 1}
-		).insert(ignore_permissions=True)
-
-
-def create_user_type(user_type, data):
-	if frappe.db.exists("User Type", user_type):
-		doc = frappe.get_cached_doc("User Type", user_type)
-		doc.user_doctypes = []
-	else:
-		doc = frappe.new_doc("User Type")
-		doc.update(
-			{
-				"name": user_type,
-				"role": data.get("role"),
-				"user_id_field": data.get("user_id_field"),
-				"apply_user_permission_on": data.get("apply_user_permission_on"),
-			}
-		)
-
-	create_role_permissions_for_doctype(doc, data)
-	doc.save(ignore_permissions=True)
-
-
-def create_role_permissions_for_doctype(doc, data):
-	for doctype, perms in iteritems(data.get("doctypes")):
-		args = {"document_type": doctype}
-		for perm in perms:
-			args[perm] = 1
-
-		doc.append("user_doctypes", args)
-
-
-def update_select_perm_after_install():
-	if not frappe.flags.update_select_perm_after_migrate:
-		return
-
-	frappe.flags.ignore_select_perm = False
-	for row in frappe.get_all("User Type", filters={"is_standard": 0}):
-		print("Updating user type :- ", row.name)
-		doc = frappe.get_doc("User Type", row.name)
-		doc.save()
-
-	frappe.flags.update_select_perm_after_migrate = False
+	log_settings.save(ignore_permissions=True)

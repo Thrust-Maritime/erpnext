@@ -24,6 +24,7 @@ def execute(filters: Filters = None) -> Tuple:
 
 	return columns, data, None, chart_data
 
+
 def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> List[Dict]:
 	"Returns ordered, formatted data with ranges."
 	_func = itemgetter(1)
@@ -195,11 +196,11 @@ def setup_ageing_columns(filters: Filters, range_columns: List):
 		f"0 - {filters['range1']}",
 		f"{cint(filters['range1']) + 1} - {cint(filters['range2'])}",
 		f"{cint(filters['range2']) + 1} - {cint(filters['range3'])}",
-		f"{cint(filters['range3']) + 1} - {_('Above')}",
+		_("{0} - Above").format(cint(filters["range3"]) + 1),
 	]
 	for i, label in enumerate(ranges):
 		fieldname = "range" + str(i + 1)
-		add_column(range_columns, label=f"Age ({label})", fieldname=fieldname)
+		add_column(range_columns, label=_("Age ({0})").format(label), fieldname=fieldname)
 
 
 def add_column(

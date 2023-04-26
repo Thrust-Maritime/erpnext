@@ -13,7 +13,7 @@ class BuyingSettings(Document):
 		for key in ["supplier_group", "supp_master_name", "maintain_same_rate", "buying_price_list"]:
 			frappe.db.set_default(key, self.get(key, ""))
 
-		from erpnext.setup.doctype.naming_series.naming_series import set_by_naming_series
+		from erpnext.utilities.naming import set_by_naming_series
 
 		set_by_naming_series(
 			"Supplier",
@@ -21,3 +21,10 @@ class BuyingSettings(Document):
 			self.get("supp_master_name") == "Naming Series",
 			hide_name_field=False,
 		)
+
+	def before_save(self):
+		self.check_maintain_same_rate()
+
+	def check_maintain_same_rate(self):
+		if self.maintain_same_rate:
+			self.set_landed_cost_based_on_purchase_invoice_rate = 0

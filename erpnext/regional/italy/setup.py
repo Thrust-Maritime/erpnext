@@ -7,11 +7,10 @@ import frappe
 from frappe import _
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission, update_permission_property
-
 from erpnext.regional.italy import (
 	fiscal_regimes,
-	mode_of_payment_codes,
 	tax_exemption_reasons,
+	mode_of_payment_codes,
 	vat_collectability_options,
 )
 

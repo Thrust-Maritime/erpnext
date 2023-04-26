@@ -1,10 +1,9 @@
+import functools
 import inspect
 
 import frappe
 
-from erpnext.hooks import regional_overrides
-
-__version__ = "13.49.14"
+__version__ = "14.23.0"
 
 
 def get_default_company(user=None):
@@ -74,6 +73,7 @@ def encode_company_abbr(name, company=None, abbr=None):
 
 	return " - ".join(parts)
 
+
 def is_perpetual_inventory_enabled(company):
 	if not company:
 		company = "_Test Company" if frappe.flags.in_test else get_default_company()
@@ -121,12 +121,14 @@ def get_region(company=None):
 
 	You can also set global company flag in `frappe.flags.company`
 	"""
-	if company or frappe.flags.company:
-		return frappe.get_cached_value("Company", company or frappe.flags.company, "country")
-	elif frappe.flags.country:
-		return frappe.flags.country
-	else:
-		return frappe.get_system_settings("country")
+
+	if not company:
+		company = frappe.local.flags.company
+
+	if company:
+		return frappe.get_cached_value("Company", company, "country")
+
+	return frappe.flags.country or frappe.get_system_settings("country")
 
 
 def allow_regional(fn):
@@ -137,27 +139,15 @@ def allow_regional(fn):
 	def myfunction():
 	  pass"""
 
+	@functools.wraps(fn)
 	def caller(*args, **kwargs):
-		region = get_region()
-		fn_name = inspect.getmodule(fn).__name__ + "." + fn.__name__
-		if region in regional_overrides and fn_name in regional_overrides[region]:
-			return frappe.get_attr(regional_overrides[region][fn_name])(*args, **kwargs)
-		else:
+		overrides = frappe.get_hooks("regional_overrides", {}).get(get_region())
+		function_path = f"{inspect.getmodule(fn).__name__}.{fn.__name__}"
+
+		if not overrides or function_path not in overrides:
 			return fn(*args, **kwargs)
 
+		# Priority given to last installed app
+		return frappe.get_attr(overrides[function_path][-1])(*args, **kwargs)
+
 	return caller
-
-
-@frappe.whitelist()
-def get_last_membership(member):
-	"""Returns last membership if exists"""
-	last_membership = frappe.get_all(
-		"Membership",
-		"name,to_date,membership_type",
-		dict(member=member, paid=1),
-		order_by="to_date desc",
-		limit=1,
-	)
-
-	if last_membership:
-		return last_membership[0]

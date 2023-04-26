@@ -3,7 +3,8 @@
 
 
 import frappe
-from six import iteritems
+from frappe import _
+
 
 
 def execute(filters=None):
@@ -22,9 +23,9 @@ def execute(filters=None):
 		for d in frappe.get_all(doctype, fields=["parent", "item_code"]):
 			all_boms.setdefault(d.parent, []).append(d.item_code)
 
-		for parent, items in iteritems(all_boms):
+		for parent, items in all_boms.items():
 			valid = True
-			for key, item in iteritems(filters):
+			for key, item in filters.items():
 				if key != "search_sub_assemblies":
 					if item and item not in items:
 						valid = False
@@ -35,10 +36,10 @@ def execute(filters=None):
 	return [
 		{
 			"fieldname": "parent",
-			"label": "BOM",
+			"label": _("BOM"),
 			"width": 200,
 			"fieldtype": "Dynamic Link",
 			"options": "doctype",
 		},
-		{"fieldname": "doctype", "label": "Type", "width": 200, "fieldtype": "Data"},
+		{"fieldname": "doctype", "label": _("Type"), "width": 200, "fieldtype": "Data"},
 	], data

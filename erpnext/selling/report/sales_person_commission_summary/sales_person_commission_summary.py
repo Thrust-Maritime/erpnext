@@ -36,6 +36,7 @@ def execute(filters=None):
 
 	return columns, data
 
+
 def get_columns(filters):
 	if not filters.get("doc_type"):
 		msgprint(_("Please select the document type first"), raise_exception=1)
@@ -93,6 +94,7 @@ def get_columns(filters):
 	]
 
 	return columns
+
 
 def get_entries(filters):
 	date_field = filters["doc_type"] == "Sales Order" and "transaction_date" or "posting_date"

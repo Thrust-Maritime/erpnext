@@ -193,8 +193,9 @@ class BOM(WebsiteGenerator):
 		self.calculate_cost()
 		self.update_exploded_items(save=False)
 		self.update_stock_qty()
-		self.validate_scrap_items()
 		self.update_cost(update_parent=False, from_child_bom=True, update_hour_rate=False, save=False)
+		self.set_process_loss_qty()
+		self.validate_scrap_items()
 
 	def get_context(self, context):
 		context.parents = [{"name": "boms", "title": _("All BOMs")}]
@@ -207,8 +208,8 @@ class BOM(WebsiteGenerator):
 		self.manage_default_bom()
 
 	def on_cancel(self):
-		frappe.db.set(self, "is_active", 0)
-		frappe.db.set(self, "is_default", 0)
+		self.db_set("is_active", 0)
+		self.db_set("is_default", 0)
 
 		# check if used in any other bom
 		self.validate_bom_links()
@@ -234,6 +235,7 @@ class BOM(WebsiteGenerator):
 				"sequence_id",
 				"operation",
 				"workstation",
+				"workstation_type",
 				"description",
 				"time_in_mins",
 				"batch_size",
@@ -241,6 +243,7 @@ class BOM(WebsiteGenerator):
 				"idx",
 				"hour_rate",
 				"set_cost_based_on_bom_qty",
+				"fixed_time",
 			]
 
 			for row in frappe.get_all(
@@ -449,10 +452,10 @@ class BOM(WebsiteGenerator):
 			not frappe.db.exists(dict(doctype="BOM", docstatus=1, item=self.item, is_default=1))
 			and self.is_active
 		):
-			frappe.db.set(self, "is_default", 1)
+			self.db_set("is_default", 1)
 			frappe.db.set_value("Item", self.item, "default_bom", self.name)
 		else:
-			frappe.db.set(self, "is_default", 0)
+			self.db_set("is_default", 0)
 			item = frappe.get_doc("Item", self.item)
 			if item.default_bom == self.name:
 				frappe.db.set_value("Item", self.item, "default_bom", None)
@@ -501,6 +504,7 @@ class BOM(WebsiteGenerator):
 
 	def validate_uom_is_interger(self):
 		from erpnext.utilities.transaction_base import validate_uom_is_integer
+
 		validate_uom_is_integer(self, "uom", "qty", "BOM Item")
 		validate_uom_is_integer(self, "stock_uom", "stock_qty", "BOM Item")
 
@@ -611,18 +615,26 @@ class BOM(WebsiteGenerator):
 		"""Update workstation rate and calculates totals"""
 		self.operating_cost = 0
 		self.base_operating_cost = 0
-		for d in self.get("operations"):
-			if d.workstation:
-				self.update_rate_and_time(d, update_hour_rate)
+		if self.get("with_operations"):
+			for d in self.get("operations"):
+				if d.workstation:
+					self.update_rate_and_time(d, update_hour_rate)
 
-			operating_cost = d.operating_cost
-			base_operating_cost = d.base_operating_cost
-			if d.set_cost_based_on_bom_qty:
-				operating_cost = flt(d.cost_per_unit) * flt(self.quantity)
-				base_operating_cost = flt(d.base_cost_per_unit) * flt(self.quantity)
+				operating_cost = d.operating_cost
+				base_operating_cost = d.base_operating_cost
+				if d.set_cost_based_on_bom_qty:
+					operating_cost = flt(d.cost_per_unit) * flt(self.quantity)
+					base_operating_cost = flt(d.base_cost_per_unit) * flt(self.quantity)
 
-			self.operating_cost += flt(operating_cost)
-			self.base_operating_cost += flt(base_operating_cost)
+				self.operating_cost += flt(operating_cost)
+				self.base_operating_cost += flt(base_operating_cost)
+
+		elif self.get("fg_based_operating_cost"):
+			total_operating_cost = flt(self.get("quantity")) * flt(
+				self.get("operating_cost_per_bom_quantity")
+			)
+			self.operating_cost = total_operating_cost
+			self.base_operating_cost = flt(total_operating_cost * self.conversion_rate, 2)
 
 	def update_rate_and_time(self, row, update_hour_rate=False):
 		if not row.hour_rate or update_hour_rate:
@@ -788,7 +800,7 @@ class BOM(WebsiteGenerator):
 				bom_item.include_item_in_manufacturing,
 				bom_item.sourced_by_supplier,
 				bom_item.stock_qty / ifnull(bom.quantity, 1) AS qty_consumed_per_unit
-			FROM `tabBOM Explosion Item` bom_item, tabBOM bom
+			FROM `tabBOM Explosion Item` bom_item, `tabBOM` bom
 			WHERE
 				bom_item.parent = bom.name
 				AND bom.name = %s
@@ -894,17 +906,19 @@ class BOM(WebsiteGenerator):
 					frappe.bold(item.item_code)
 				)
 
-			if item.is_process_loss and (item.rate > 0):
-				msg = _(
-					"Scrap/Loss Item: {0} should have Rate set to 0 because Is Process Loss is checked."
-				).format(frappe.bold(item.item_code))
+	def set_process_loss_qty(self):
+		if self.process_loss_percentage:
+			self.process_loss_qty = flt(self.quantity) * flt(self.process_loss_percentage) / 100
 
-			if msg:
-				frappe.throw(msg, title=_("Note"))
+	def validate_scrap_items(self):
+		must_be_whole_number = frappe.get_value("UOM", self.uom, "must_be_whole_number")
 
-	def get_tree_representation(self) -> BOMTree:
-		"""Get a complete tree representation preserving order of child items."""
-		return BOMTree(self.name)
+		if self.process_loss_percentage and self.process_loss_percentage > 100:
+			frappe.throw(_("Process Loss Percentage cannot be greater than 100"))
+
+		if self.process_loss_qty and must_be_whole_number and self.process_loss_qty % 1 != 0:
+			msg = f"Item: {frappe.bold(self.item)} with Stock UOM: {frappe.bold(self.uom)} can't have fractional process loss qty as UOM {frappe.bold(self.uom)} is a whole Number."
+			frappe.throw(msg, title=_("Invalid Process Loss Configuration"))
 
 
 def get_bom_item_rate(args, bom_doc):
@@ -1036,7 +1050,6 @@ def get_bom_items_as_dict(
 			where
 				bom_item.docstatus < 2
 				and bom.name = %(bom)s
-				and ifnull(item.has_variants, 0) = 0
 				and item.is_stock_item in (1, {is_stock_item})
 				{where_conditions}
 				group by item_code, stock_uom
@@ -1061,7 +1074,7 @@ def get_bom_items_as_dict(
 		query = query.format(
 			table="BOM Scrap Item",
 			where_conditions="",
-			select_columns=", item.description, is_process_loss",
+			select_columns=", item.description",
 			is_stock_item=is_stock_item,
 			qty_field="stock_qty",
 		)
@@ -1134,7 +1147,7 @@ def validate_bom_no(item, bom_no):
 
 
 @frappe.whitelist()
-def get_children(doctype, parent=None, is_root=False, **filters):
+def get_children(parent=None, is_root=False, **filters):
 	if not parent or parent == "BOM":
 		frappe.msgprint(_("Please select a BOM"))
 		return
@@ -1303,6 +1316,7 @@ def get_bom_diff(bom1, bom2):
 
 	return out
 
+
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def item_query(doctype, txt, searchfield, start, page_len, filters):
@@ -1322,7 +1336,7 @@ def item_query(doctype, txt, searchfield, start, page_len, filters):
 		if not field in searchfields
 	]
 
-	query_filters = {"disabled": 0, "ifnull(end_of_life, '5050-50-50')": (">", today())}
+	query_filters = {"disabled": 0, "ifnull(end_of_life, '3099-12-31')": (">", today())}
 
 	or_cond_filters = {}
 	if txt:

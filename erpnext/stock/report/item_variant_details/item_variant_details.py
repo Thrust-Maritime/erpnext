@@ -11,6 +11,7 @@ def execute(filters=None):
 	data = get_data(filters.item)
 	return columns, data
 
+
 def get_data(item):
 	if not item:
 		return []
@@ -70,7 +71,7 @@ def get_columns(item):
 	columns = [
 		{
 			"fieldname": "variant_name",
-			"label": "Variant",
+			"label": _("Variant"),
 			"fieldtype": "Link",
 			"options": "Item",
 			"width": 200,
@@ -137,6 +138,7 @@ def get_open_sales_orders_count(variants_list):
 
 	return order_count_map
 
+
 def get_stock_details_map(variant_list):
 	stock_details = frappe.db.get_all(
 		"Bin",
@@ -160,6 +162,7 @@ def get_stock_details_map(variant_list):
 
 	return stock_details_map
 
+
 def get_buying_price_map(variant_list):
 	buying = frappe.db.get_all(
 		"Item Price",
@@ -176,6 +179,7 @@ def get_buying_price_map(variant_list):
 		buying_price_map[row.get("item_code")] = row.get("avg_rate")
 
 	return buying_price_map
+
 
 def get_selling_price_map(variant_list):
 	selling = frappe.db.get_all(

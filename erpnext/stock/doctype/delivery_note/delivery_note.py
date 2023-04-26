@@ -178,6 +178,7 @@ class DeliveryNote(SellingController):
 		if (
 			cint(frappe.db.get_single_value("Selling Settings", "maintain_same_sales_rate"))
 			and not self.is_return
+			and not self.is_internal_customer
 		):
 			self.validate_rate_with_reference_doc(
 				[
@@ -227,6 +228,7 @@ class DeliveryNote(SellingController):
 
 	def on_submit(self):
 		self.validate_packed_qty()
+		self.update_pick_list_status()
 
 		# Check for Approving Authority
 		frappe.get_doc("Authorization Control").validate_approving_authority(
@@ -311,6 +313,11 @@ class DeliveryNote(SellingController):
 				has_error = True
 		if has_error:
 			raise frappe.ValidationError
+
+	def update_pick_list_status(self):
+		from erpnext.stock.doctype.pick_list.pick_list import update_pick_list_status
+
+		update_pick_list_status(self.pick_list)
 
 	def check_next_docstatus(self):
 		submit_rv = frappe.db.sql(
@@ -682,7 +689,16 @@ def make_packing_slip(source_name, target_doc=None):
 				"doctype": "Packing Slip",
 				"field_map": {"name": "delivery_note", "letter_head": "letter_head"},
 				"validation": {"docstatus": ["=", 0]},
-			}
+			},
+			"Delivery Note Item": {
+				"doctype": "Packing Slip Item",
+				"field_map": {
+					"item_code": "item_code",
+					"item_name": "item_name",
+					"description": "description",
+					"qty": "qty",
+				},
+			},
 		},
 		target_doc,
 	)
@@ -775,6 +791,7 @@ def make_sales_return(source_name, target_doc=None):
 def update_delivery_note_status(docname, status):
 	dn = frappe.get_doc("Delivery Note", docname)
 	dn.update_status(status)
+
 
 @frappe.whitelist()
 def make_inter_company_purchase_receipt(source_name, target_doc=None):
@@ -888,6 +905,10 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 					"name": "delivery_note_item",
 					"batch_no": "batch_no",
 					"serial_no": "serial_no",
+					"purchase_order": "purchase_order",
+					"purchase_order_item": "purchase_order_item",
+					"material_request": "material_request",
+					"Material_request_item": "material_request_item",
 				},
 				"field_no_map": ["warehouse"],
 			},

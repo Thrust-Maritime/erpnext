@@ -2,7 +2,6 @@ frappe.ready(async () => {
     initialise_select_date();
 })
 
-
 async function initialise_select_date() {
     navigate_to_page(1);
     await get_global_variables();

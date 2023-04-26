@@ -12,9 +12,7 @@ doctype_series_map = {
 	"Attendance": "HR-ATT-.YYYY.-",
 	"Auto Repeat": "SYS-ARP-.YYYY.-",
 	"Blanket Order": "MFG-BLR-.YYYY.-",
-	"C-Form": "ACC-CF-.YYYY.-",
 	"Campaign": "SAL-CAM-.YYYY.-",
-	"Clinical Procedure": "HLC-CPR-.YYYY.-",
 	"Course Schedule": "EDU-CSH-.YYYY.-",
 	"Customer": "CUST-.YYYY.-",
 	"Delivery Note": "MAT-DN-.YYYY.-",
@@ -26,12 +24,10 @@ doctype_series_map = {
 	"Fee Schedule": "EDU-FSH-.YYYY.-",
 	"Fee Structure": "EDU-FST-.YYYY.-",
 	"Fees": "EDU-FEE-.YYYY.-",
-	"Inpatient Record": "HLC-INP-.YYYY.-",
 	"Installation Note": "MAT-INS-.YYYY.-",
 	"Instructor": "EDU-INS-.YYYY.-",
 	"Issue": "ISS-.YYYY.-",
 	"Journal Entry": "ACC-JV-.YYYY.-",
-	"Lab Test": "HLC-LT-.YYYY.-",
 	"Landed Cost Voucher": "MAT-LCV-.YYYY.-",
 	"Lead": "CRM-LEAD-.YYYY.-",
 	"Leave Allocation": "HR-LAL-.YYYY.-",
@@ -42,9 +38,6 @@ doctype_series_map = {
 	"Member": "NPO-MEM-.YYYY.-",
 	"Opportunity": "CRM-OPP-.YYYY.-",
 	"Packing Slip": "MAT-PAC-.YYYY.-",
-	"Patient": "HLC-PAT-.YYYY.-",
-	"Patient Encounter": "HLC-ENC-.YYYY.-",
-	"Patient Medical Record": "HLC-PMR-.YYYY.-",
 	"Payment Entry": "ACC-PAY-.YYYY.-",
 	"Payment Request": "ACC-PRQ-.YYYY.-",
 	"Production Plan": "MFG-PP-.YYYY.-",
@@ -61,8 +54,6 @@ doctype_series_map = {
 	"Shareholder": "ACC-SH-.YYYY.-",
 	"Stock Entry": "MAT-STE-.YYYY.-",
 	"Stock Reconciliation": "MAT-RECO-.YYYY.-",
-	"Student": "EDU-STU-.YYYY.-",
-	"Student Applicant": "EDU-APP-.YYYY.-",
 	"Supplier": "SUP-.YYYY.-",
 	"Supplier Quotation": "PUR-SQTN-.YYYY.-",
 	"Supplier Scorecard Period": "PU-SSP-.YYYY.-",
@@ -100,6 +91,7 @@ def set_series(doctype, options, default):
 	_make_property_setter("options", options)
 	if default:
 		_make_property_setter("default", default)
+
 
 def get_series():
 	series_to_set = {}

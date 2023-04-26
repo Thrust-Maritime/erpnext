@@ -54,7 +54,7 @@ def get_data(
 		filters=filters,
 		order_by=sort_by + " " + sort_order,
 		limit_start=start,
-		limit_page_length="21",
+		limit_page_length=21,
 	)
 
 	precision = cint(frappe.db.get_single_value("System Settings", "float_precision"))

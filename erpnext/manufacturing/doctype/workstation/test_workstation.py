@@ -94,6 +94,7 @@ class TestWorkstation(FrappeTestCase):
 		self.assertEqual(bom_doc.operations[0].hour_rate, 250)
 		self.assertEqual(bom_doc.operations[1].hour_rate, 250)
 
+
 def make_workstation(*args, **kwargs):
 	args = args if args else kwargs
 	if isinstance(args, tuple):
@@ -106,6 +107,7 @@ def make_workstation(*args, **kwargs):
 		doc = frappe.get_doc({"doctype": "Workstation", "workstation_name": workstation_name})
 		doc.hour_rate_rent = args.get("hour_rate_rent")
 		doc.hour_rate_labour = args.get("hour_rate_labour")
+		doc.workstation_type = args.get("workstation_type")
 		doc.insert()
 
 		return doc

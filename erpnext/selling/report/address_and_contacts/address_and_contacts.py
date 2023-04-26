@@ -3,8 +3,6 @@
 
 
 import frappe
-from six import iteritems
-from six.moves import range
 
 field_map = {
 	"Contact": ["first_name", "last_name", "phone", "mobile_no", "email_id", "is_primary_contact"],
@@ -23,6 +21,7 @@ field_map = {
 def execute(filters=None):
 	columns, data = get_columns(filters), get_data(filters)
 	return columns, data
+
 
 def get_columns(filters):
 	party_type = filters.get("party_type")
@@ -53,6 +52,7 @@ def get_data(filters):
 
 	return get_party_addresses_and_contact(party_type, party, party_group)
 
+
 def get_party_addresses_and_contact(party_type, party, party_group):
 	data = []
 	filters = None
@@ -78,7 +78,7 @@ def get_party_addresses_and_contact(party_type, party, party_group):
 	party_details = get_party_details(party_type, party_list, "Address", party_details)
 	party_details = get_party_details(party_type, party_list, "Contact", party_details)
 
-	for party, details in iteritems(party_details):
+	for party, details in party_details.items():
 		addresses = details.get("address", [])
 		contacts = details.get("contact", [])
 		if not any([addresses, contacts]):

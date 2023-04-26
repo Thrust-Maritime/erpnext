@@ -41,6 +41,7 @@ class TestAccountingPeriod(unittest.TestCase):
 		for d in frappe.get_all("Accounting Period"):
 			frappe.delete_doc("Accounting Period", d.name)
 
+
 def create_accounting_period(**args):
 	args = frappe._dict(args)
 

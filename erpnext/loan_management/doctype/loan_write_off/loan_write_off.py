@@ -9,9 +9,6 @@ from frappe.utils import cint, flt, getdate
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
-from erpnext.loan_management.doctype.loan_repayment.loan_repayment import (
-	get_pending_principal_amount,
-)
 
 
 class LoanWriteOff(AccountsController):
@@ -25,26 +22,16 @@ class LoanWriteOff(AccountsController):
 
 	def validate_write_off_amount(self):
 		precision = cint(frappe.db.get_default("currency_precision")) or 2
-
-		loan_details = frappe.get_value(
+		total_payment, principal_paid, interest_payable, written_off_amount = frappe.get_value(
 			"Loan",
 			self.loan,
-			[
-				"total_payment",
-				"debit_adjustment_amount",
-				"credit_adjustment_amount",
-				"refund_amount",
-				"total_principal_paid",
-				"loan_amount",
-				"total_interest_payable",
-				"written_off_amount",
-				"disbursed_amount",
-				"status",
-			],
-			as_dict=1,
+			["total_payment", "total_principal_paid", "total_interest_payable", "written_off_amount"],
 		)
 
-		pending_principal_amount = flt(get_pending_principal_amount(loan_details), precision)
+		pending_principal_amount = flt(
+			flt(total_payment) - flt(interest_payable) - flt(principal_paid) - flt(written_off_amount),
+			precision,
+		)
 
 		if self.write_off_amount > pending_principal_amount:
 			frappe.throw(_("Write off amount cannot be greater than pending principal amount"))
@@ -55,7 +42,7 @@ class LoanWriteOff(AccountsController):
 
 	def on_cancel(self):
 		self.update_outstanding_amount(cancel=1)
-		self.ignore_linked_doctypes = ["GL Entry"]
+		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 		self.make_gl_entries(cancel=1)
 
 	def update_outstanding_amount(self, cancel=0):

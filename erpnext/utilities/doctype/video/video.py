@@ -9,8 +9,10 @@ import frappe
 import pytz
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 from pyyoutube import Api
 from six import string_types
+
 
 
 class Video(Document):
@@ -37,8 +39,7 @@ class Video(Document):
 			self.comment_count = video_stats.get("commentCount")
 
 		except Exception:
-			title = "Failed to Update YouTube Statistics for Video: {0}".format(self.name)
-			frappe.log_error(title + "\n\n" + frappe.get_traceback(), title=title)
+			self.log_error("Unable to update YouTube statistics")
 
 
 def is_tracking_enabled():
@@ -48,7 +49,7 @@ def is_tracking_enabled():
 def get_frequency(value):
 	# Return numeric value from frequency field, return 1 as fallback default value: 1 hour
 	if value != "Daily":
-		return frappe.utils.cint(value[:2].strip())
+		return cint(value[:2].strip())
 	elif value:
 		return 24
 	return 1
@@ -60,7 +61,7 @@ def update_youtube_data():
 		"Video Settings", "Video Settings", ["enable_youtube_tracking", "frequency"]
 	)
 
-	if not frappe.utils.cint(enable_youtube_tracking):
+	if not cint(enable_youtube_tracking):
 		return
 
 	frequency = get_frequency(frequency)
@@ -90,7 +91,7 @@ def get_id_from_url(url):
 	Returns video id from url
 	:param youtube url: String URL
 	"""
-	if not isinstance(url, string_types):
+	if not isinstance(url, str):
 		frappe.throw(_("URL can only be a string"), title=_("Invalid URL"))
 
 	pattern = re.compile(
@@ -110,8 +111,7 @@ def batch_update_youtube_data():
 			video_stats = video.items
 			return video_stats
 		except Exception:
-			title = "Failed to Update YouTube Statistics"
-			frappe.log_error(title + "\n\n" + frappe.get_traceback(), title=title)
+			frappe.log_error("Unable to update YouTube statistics")
 
 	def prepare_and_set_data(video_list):
 		video_ids = get_formatted_ids(video_list)
@@ -123,24 +123,12 @@ def batch_update_youtube_data():
 			video_stats = entry.to_dict().get("statistics")
 			video_id = entry.to_dict().get("id")
 			stats = {
-				"like_count": video_stats.get("likeCount"),
-				"view_count": video_stats.get("viewCount"),
-				"dislike_count": video_stats.get("dislikeCount"),
-				"comment_count": video_stats.get("commentCount"),
-				"video_id": video_id,
+				"like_count": cint(video_stats.get("likeCount")),
+				"view_count": cint(video_stats.get("viewCount")),
+				"dislike_count": cint(video_stats.get("dislikeCount")),
+				"comment_count": cint(video_stats.get("commentCount")),
 			}
-
-			frappe.db.sql(
-				"""
-				UPDATE `tabVideo`
-				SET
-					like_count  = %(like_count)s,
-					view_count = %(view_count)s,
-					dislike_count = %(dislike_count)s,
-					comment_count = %(comment_count)s
-				WHERE youtube_video_id = %(video_id)s""",
-				stats,
-			)
+			frappe.db.set_value("Video", video_id, stats)
 
 	video_list = frappe.get_all("Video", fields=["youtube_video_id"])
 	if len(video_list) > 50:

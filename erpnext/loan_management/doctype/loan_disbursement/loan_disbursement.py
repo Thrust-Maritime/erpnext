@@ -29,7 +29,7 @@ class LoanDisbursement(AccountsController):
 	def on_cancel(self):
 		self.set_status_and_amounts(cancel=1)
 		self.make_gl_entries(cancel=1)
-		self.ignore_linked_doctypes = ["GL Entry"]
+		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 
 	def set_missing_values(self):
 		if not self.disbursement_date:
@@ -211,9 +211,6 @@ def get_disbursal_amount(loan, on_current_security_price=0):
 			"loan_amount",
 			"disbursed_amount",
 			"total_payment",
-			"debit_adjustment_amount",
-			"credit_adjustment_amount",
-			"refund_amount",
 			"total_principal_paid",
 			"total_interest_payable",
 			"status",

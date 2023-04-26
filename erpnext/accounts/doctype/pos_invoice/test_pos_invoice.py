@@ -35,10 +35,12 @@ class TestPOSInvoice(unittest.TestCase):
 		w2 = frappe.get_doc(w.doctype, w.name)
 
 		import time
+
 		time.sleep(1)
 		w.save()
 
 		import time
+
 		time.sleep(1)
 		self.assertRaises(frappe.TimestampMismatchError, w2.save)
 

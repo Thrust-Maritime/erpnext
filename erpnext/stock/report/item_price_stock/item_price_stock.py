@@ -60,6 +60,7 @@ def get_data(filters, columns):
 	item_price_qty_data = get_item_price_qty_data(filters)
 	return item_price_qty_data
 
+
 def get_item_price_qty_data(filters):
 	item_price = frappe.qb.DocType("Item Price")
 	bin = frappe.qb.DocType("Bin")
@@ -114,6 +115,7 @@ def get_item_price_qty_data(filters):
 			result.append(data)
 
 	return result
+
 
 def get_price_map(price_list_names, buying=0, selling=0):
 	price_map = {}

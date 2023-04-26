@@ -95,7 +95,6 @@ class POSInvoiceMergeLog(Document):
 		if sales:
 			sales_invoice = self.process_merging_into_sales_invoice(sales)
 
-		self.flags.ignore_validate_update_after_submit = True
 		self.save()  # save consolidated_sales_invoice & consolidated_credit_note ref in merge log
 
 		self.update_pos_invoices(pos_invoice_docs, sales_invoice, credit_note)
@@ -215,6 +214,11 @@ class POSInvoiceMergeLog(Document):
 						found = True
 				if not found:
 					payments.append(payment)
+			rounding_adjustment += doc.rounding_adjustment
+			rounded_total += doc.rounded_total
+			base_rounding_adjustment += doc.base_rounding_adjustment
+			base_rounded_total += doc.base_rounded_total
+
 			rounding_adjustment += doc.rounding_adjustment
 			rounded_total += doc.rounded_total
 			base_rounding_adjustment += doc.base_rounding_adjustment
@@ -507,6 +511,7 @@ def enqueue_job(job, **kwargs):
 def check_scheduler_status():
 	if is_scheduler_inactive() and not frappe.flags.in_test:
 		frappe.throw(_("Scheduler is inactive. Cannot enqueue job."), title=_("Scheduler Inactive"))
+
 
 def job_already_enqueued(job_name):
 	enqueued_jobs = [d.get("job_name") for d in get_info()]

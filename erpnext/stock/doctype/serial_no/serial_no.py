@@ -260,31 +260,6 @@ class SerialNo(StockController):
 				_("Cannot delete Serial No {0}, as it is used in stock transactions").format(self.name)
 			)
 
-	def before_rename(self, old, new, merge=False):
-		if merge:
-			frappe.throw(_("Sorry, Serial Nos cannot be merged"))
-
-	def after_rename(self, old, new, merge=False):
-		"""rename serial_no text fields"""
-		for dt in frappe.db.sql(
-			"""select parent from tabDocField
-			where fieldname='serial_no' and fieldtype in ('Text', 'Small Text', 'Long Text')"""
-		):
-
-			for item in frappe.db.sql(
-				"""select name, serial_no from `tab%s`
-				where serial_no like %s"""
-				% (dt[0], frappe.db.escape("%" + old + "%"))
-			):
-
-				serial_nos = map(lambda i: new if i.upper() == old.upper() else i, item[1].split("\n"))
-				frappe.db.sql(
-					"""update `tab%s` set serial_no = %s
-					where name=%s"""
-					% (dt[0], "%s", "%s"),
-					("\n".join(list(serial_nos)), item[0]),
-				)
-
 	def update_serial_no_reference(self, serial_no=None):
 		last_sle = self.get_last_sle(serial_no)
 		self.set_purchase_details(last_sle.get("purchase_sle"))
@@ -292,10 +267,12 @@ class SerialNo(StockController):
 		self.set_maintenance_status()
 		self.set_status()
 
+
 def process_serial_no(sle):
 	item_det = get_item_details(sle.item_code)
 	validate_serial_no(sle, item_det)
 	update_serial_nos(sle, item_det)
+
 
 def validate_serial_no(sle, item_det):
 	serial_nos = get_serial_nos(sle.serial_no) if sle.serial_no else []
@@ -710,7 +687,10 @@ def update_serial_nos_after_submit(controller, parentfield):
 
 		update_rejected_serial_nos = (
 			True
-			if (controller.doctype in ("Purchase Receipt", "Purchase Invoice") and d.rejected_qty)
+			if (
+				controller.doctype in ("Purchase Receipt", "Purchase Invoice", "Subcontracting Receipt")
+				and d.rejected_qty
+			)
 			else False
 		)
 		accepted_serial_nos_updated = False
@@ -723,7 +703,11 @@ def update_serial_nos_after_submit(controller, parentfield):
 			qty = d.stock_qty
 		else:
 			warehouse = d.warehouse
-			qty = d.qty if controller.doctype == "Stock Reconciliation" else d.stock_qty
+			qty = (
+				d.qty
+				if controller.doctype in ["Stock Reconciliation", "Subcontracting Receipt"]
+				else d.stock_qty
+			)
 		for sle in stock_ledger_entries:
 			if sle.voucher_detail_no == d.name:
 				if (
@@ -782,13 +766,13 @@ def get_delivery_note_serial_no(item_code, qty, delivery_note):
 
 @frappe.whitelist()
 def auto_fetch_serial_number(
-	qty: float,
+	qty: int,
 	item_code: str,
 	warehouse: str,
 	posting_date: Optional[str] = None,
 	batch_nos: Optional[Union[str, List[str]]] = None,
 	for_doctype: Optional[str] = None,
-	exclude_sr_nos: Optional[List[str]] = None,
+	exclude_sr_nos=None,
 ) -> List[str]:
 
 	filters = frappe._dict({"item_code": item_code, "warehouse": warehouse})

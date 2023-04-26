@@ -50,6 +50,9 @@ class TestProductionPlan(FrappeTestCase):
 			if not frappe.db.get_value("BOM", {"item": item}):
 				make_bom(item=item, raw_materials=raw_materials)
 
+	def tearDown(self) -> None:
+		frappe.db.rollback()
+
 	def test_production_plan_mr_creation(self):
 		"Test if MRs are created for unavailable raw materials."
 		pln = create_production_plan(item_code="Test Production Item 1")
@@ -119,7 +122,7 @@ class TestProductionPlan(FrappeTestCase):
 		)
 
 		pln = create_production_plan(item_code="Test Production Item 1", ignore_existing_ordered_qty=1)
-		self.assertTrue(len(pln.mr_items), 1)
+		self.assertTrue(len(pln.mr_items))
 		self.assertTrue(flt(pln.mr_items[0].quantity), 1.0)
 
 		sr1.cancel()
@@ -154,7 +157,7 @@ class TestProductionPlan(FrappeTestCase):
 		pln = create_production_plan(
 			item_code="Test Production Item 1", use_multi_level_bom=0, ignore_existing_ordered_qty=0
 		)
-		self.assertTrue(len(pln.mr_items), 0)
+		self.assertFalse(len(pln.mr_items))
 
 		sr1.cancel()
 		sr2.cancel()
@@ -278,6 +281,75 @@ class TestProductionPlan(FrappeTestCase):
 
 		pln.reload()
 		pln.cancel()
+
+	def test_production_plan_subassembly_default_supplier(self):
+		from erpnext.manufacturing.doctype.bom.test_bom import create_nested_bom
+
+		bom_tree_1 = {"Test Laptop": {"Test Motherboard": {"Test Motherboard Wires": {}}}}
+		bom = create_nested_bom(bom_tree_1, prefix="")
+
+		item_doc = frappe.get_doc("Item", "Test Motherboard")
+		company = "_Test Company"
+
+		item_doc.is_sub_contracted_item = 1
+		for row in item_doc.item_defaults:
+			if row.company == company and not row.default_supplier:
+				row.default_supplier = "_Test Supplier"
+
+		if not item_doc.item_defaults:
+			item_doc.append("item_defaults", {"company": company, "default_supplier": "_Test Supplier"})
+
+		item_doc.save()
+
+		plan = create_production_plan(item_code="Test Laptop", use_multi_level_bom=1, do_not_submit=True)
+		plan.get_sub_assembly_items()
+		plan.set_default_supplier_for_subcontracting_order()
+
+		self.assertEqual(plan.sub_assembly_items[0].supplier, "_Test Supplier")
+
+	def test_production_plan_combine_subassembly(self):
+		"""
+		Test combining Sub assembly items belonging to the same BOM in Prod Plan.
+		1) Red-Car -> Wheel (sub assembly) > BOM-WHEEL-001
+		2) Green-Car -> Wheel (sub assembly) > BOM-WHEEL-001
+		"""
+		from erpnext.manufacturing.doctype.bom.test_bom import create_nested_bom
+
+		bom_tree_1 = {"Red-Car": {"Wheel": {"Rubber": {}}}}
+		bom_tree_2 = {"Green-Car": {"Wheel": {"Rubber": {}}}}
+
+		parent_bom_1 = create_nested_bom(bom_tree_1, prefix="")
+		parent_bom_2 = create_nested_bom(bom_tree_2, prefix="")
+
+		# make sure both boms use same subassembly bom
+		subassembly_bom = parent_bom_1.items[0].bom_no
+		frappe.db.set_value("BOM Item", parent_bom_2.items[0].name, "bom_no", subassembly_bom)
+
+		plan = create_production_plan(item_code="Red-Car", use_multi_level_bom=1, do_not_save=True)
+		plan.append(
+			"po_items",
+			{  # Add Green-Car to Prod Plan
+				"use_multi_level_bom": 1,
+				"item_code": "Green-Car",
+				"bom_no": frappe.db.get_value("Item", "Green-Car", "default_bom"),
+				"planned_qty": 1,
+				"planned_start_date": now_datetime(),
+			},
+		)
+		plan.get_sub_assembly_items()
+		self.assertTrue(len(plan.sub_assembly_items), 2)
+
+		plan.combine_sub_items = 1
+		plan.get_sub_assembly_items()
+
+		self.assertTrue(len(plan.sub_assembly_items), 1)  # check if sub-assembly items merged
+		self.assertEqual(plan.sub_assembly_items[0].qty, 2.0)
+		self.assertEqual(plan.sub_assembly_items[0].stock_qty, 2.0)
+
+		# change warehouse in one row, sub-assemblies should not merge
+		plan.po_items[0].warehouse = "Finished Goods - _TC"
+		plan.get_sub_assembly_items()
+		self.assertTrue(len(plan.sub_assembly_items), 2)
 
 	def test_pp_to_mr_customer_provided(self):
 		"Test Material Request from Production Plan for Customer Provided Item."
@@ -567,6 +639,7 @@ class TestProductionPlan(FrappeTestCase):
 			wip_warehouse="Work In Progress - _TC",
 			fg_warehouse="Finished Goods - _TC",
 			skip_transfer=1,
+			use_multi_level_bom=1,
 			do_not_submit=True,
 		)
 		wo.production_plan = pln.name
@@ -604,6 +677,7 @@ class TestProductionPlan(FrappeTestCase):
 			wip_warehouse="Work In Progress - _TC",
 			fg_warehouse="Finished Goods - _TC",
 			skip_transfer=1,
+			use_multi_level_bom=1,
 			do_not_submit=True,
 		)
 		wo.production_plan = pln.name
@@ -765,6 +839,34 @@ class TestProductionPlan(FrappeTestCase):
 			self.assertEqual(row.item_code, bom_item)
 			self.assertEqual(row.uom, "Nos")
 			self.assertEqual(row.qty, 1)
+
+	def test_material_request_for_sub_assembly_items(self):
+		from erpnext.manufacturing.doctype.bom.test_bom import create_nested_bom
+
+		bom_tree = {
+			"Fininshed Goods1 For MR": {
+				"SubAssembly1 For MR": {"SubAssembly1-1 For MR": {"ChildPart1 For MR": {}}}
+			}
+		}
+
+		parent_bom = create_nested_bom(bom_tree, prefix="")
+		plan = create_production_plan(
+			item_code=parent_bom.item, planned_qty=10, ignore_existing_ordered_qty=1, do_not_submit=1
+		)
+
+		plan.get_sub_assembly_items()
+
+		mr_items = []
+		for row in plan.sub_assembly_items:
+			mr_items.append(row.production_item)
+			row.type_of_manufacturing = "Material Request"
+
+		plan.save()
+		items = get_items_for_material_requests(plan.as_dict())
+
+		validate_mr_items = [d.get("item_code") for d in items]
+		for item_code in mr_items:
+			self.assertTrue(item_code in validate_mr_items)
 
 
 def create_production_plan(**args):

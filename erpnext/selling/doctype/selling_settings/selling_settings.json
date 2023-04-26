@@ -11,12 +11,6 @@
   "customer_group",
   "column_break_4",
   "territory",
-  "crm_settings_section",
-  "campaign_naming_by",
-  "contract_naming_by",
-  "default_valid_till",
-  "column_break_9",
-  "close_opportunity_after_days",
   "item_price_settings_section",
   "selling_price_list",
   "maintain_same_rate_action",
@@ -31,10 +25,12 @@
   "dn_required",
   "sales_update_frequency",
   "over_order_allowance",
+  "column_break_5",
   "allow_multiple_items",
   "allow_against_multiple_purchase_orders",
+  "allow_sales_order_creation_for_expired_quotation",
   "hide_tax_id",
-  "allow_sales_order_creation_for_expired_quotation"
+  "enable_discount_accounting"
  ],
  "fields": [
   {
@@ -96,42 +92,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "15",
-   "description": "Auto close Opportunity after the no. of days mentioned above",
-   "fieldname": "close_opportunity_after_days",
-   "fieldtype": "Int",
-   "label": "Close Opportunity After Days"
-  },
-  {
-   "fieldname": "item_price_settings_section",
-   "fieldtype": "Section Break",
-   "label": "Item Price Settings"
-  },
-  {
-   "fieldname": "selling_price_list",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Default Price List",
-   "options": "Price List"
-  },
-  {
-   "default": "Stop",
-   "depends_on": "maintain_same_sales_rate",
-   "fieldname": "maintain_same_rate_action",
-   "fieldtype": "Select",
-   "label": "Action if Same Rate is Not Maintained Throughout Sales Cycle",
-   "mandatory_depends_on": "maintain_same_sales_rate",
-   "options": "Stop\nWarn"
-  },
-  {
-   "depends_on": "eval: doc.maintain_same_sales_rate && doc.maintain_same_rate_action == 'Stop'",
-   "fieldname": "role_to_override_stop_action",
-   "fieldtype": "Link",
-   "label": "Role Allowed to Override Stop Action",
-   "options": "Role"
-  },
-  {
-   "fieldname": "column_break_15",
+   "fieldname": "column_break_5",
    "fieldtype": "Column Break"
   },
   {
@@ -180,7 +141,7 @@
    "description": "How often should Project and Company be updated based on Sales Transactions?",
    "fieldname": "sales_update_frequency",
    "fieldtype": "Select",
-   "label": "Sales Update Frequency",
+   "label": "Sales Update Frequency in Company and Project",
    "options": "Each Transaction\nDaily\nMonthly",
    "reqd": 1
   },
@@ -195,7 +156,7 @@
    "default": "0",
    "fieldname": "allow_multiple_items",
    "fieldtype": "Check",
-   "label": "Allow Item to Be Added Multiple Times in a Transaction"
+   "label": "Allow Item to be Added Multiple Times in a Transaction"
   },
   {
    "default": "0",
@@ -210,10 +171,68 @@
    "label": "Hide Customer's Tax ID from Sales Transactions"
   },
   {
+   "default": "Stop",
+   "depends_on": "maintain_same_sales_rate",
+   "fieldname": "maintain_same_rate_action",
+   "fieldtype": "Select",
+   "label": "Action if Same Rate is Not Maintained Throughout Sales Cycle",
+   "mandatory_depends_on": "maintain_same_sales_rate",
+   "options": "Stop\nWarn"
+  },
+  {
+   "depends_on": "eval: doc.maintain_same_sales_rate && doc.maintain_same_rate_action == 'Stop'",
+   "fieldname": "role_to_override_stop_action",
+   "fieldtype": "Link",
+   "label": "Role Allowed to Override Stop Action",
+   "options": "Role"
+  },
+  {
+   "fieldname": "customer_defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Customer Defaults"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_price_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Item Price Settings"
+  },
+  {
+   "fieldname": "column_break_15",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sales_transactions_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Transaction Settings"
+  },
+  {
+   "default": "0",
+   "fieldname": "editable_bundle_item_rates",
+   "fieldtype": "Check",
+   "label": "Calculate Product Bundle Price based on Child Items' Rates"
+  },
+  {
+   "default": "0",
+   "description": "If enabled, additional ledger entries will be made for discounts in a separate Discount Account",
+   "fieldname": "enable_discount_accounting",
+   "fieldtype": "Check",
+   "label": "Enable Discount Accounting for Selling"
+  },
+  {
    "default": "0",
    "fieldname": "allow_sales_order_creation_for_expired_quotation",
    "fieldtype": "Check",
    "label": "Allow Sales Order Creation For Expired Quotation"
+  },
+  {
+   "description": "Percentage you are allowed to order more against the Blanket Order Quantity. For example: If you have a Blanket Order of Quantity 100 units. and your Allowance is 10% then you are allowed to order 110 units.",
+   "fieldname": "over_order_allowance",
+   "fieldtype": "Float",
+   "label": "Over Order Allowance (%)"
   }
  ],
  "icon": "fa fa-cog",
@@ -221,7 +240,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-03-22 13:09:38.513317",
+ "modified": "2023-03-03 11:16:54.333615",
  "modified_by": "Administrator",
  "module": "Selling",
  "name": "Selling Settings",
@@ -235,9 +254,19 @@
    "role": "System Manager",
    "share": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

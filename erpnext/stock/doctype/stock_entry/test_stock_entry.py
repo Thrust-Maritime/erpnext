@@ -5,8 +5,31 @@
 import frappe
 from frappe.permissions import add_user_permission, remove_user_permission
 from frappe.tests.utils import FrappeTestCase, change_settings
-from frappe.utils import add_days, flt, now, nowdate, nowtime, today
-from six import iteritems
+from frappe.utils import add_days, flt, nowdate, nowtime, today
+
+from erpnext.accounts.doctype.account.test_account import get_inventory_account
+from erpnext.stock.doctype.item.test_item import (
+	create_item,
+	make_item,
+	make_item_variant,
+	set_item_variant_settings,
+)
+from erpnext.stock.doctype.serial_no.serial_no import *  # noqa
+from erpnext.stock.doctype.stock_entry.stock_entry import (
+	FinishedGoodError,
+	make_stock_in_entry,
+	move_sample_to_retention_warehouse,
+)
+from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+from erpnext.stock.doctype.stock_ledger_entry.stock_ledger_entry import StockFreezeError
+from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import (
+	OpeningEntryAccountError,
+)
+from erpnext.stock.doctype.stock_reconciliation.test_stock_reconciliation import (
+	create_stock_reconciliation,
+)
+from erpnext.stock.stock_ledger import NegativeStockError, get_previous_sle
+
 
 from erpnext.accounts.doctype.account.test_account import get_inventory_account
 from erpnext.stock.doctype.item.test_item import (
@@ -32,7 +55,7 @@ from erpnext.stock.stock_ledger import NegativeStockError, get_previous_sle
 
 def get_sle(**args):
 	condition, values = "", []
-	for key, value in iteritems(args):
+	for key, value in args.items():
 		condition += " and " if condition else " where "
 		condition += "`{0}`=%s".format(key)
 		values.append(value)
@@ -148,6 +171,7 @@ class TestStockEntry(FrappeTestCase):
 			variant.save()
 
 		from erpnext.stock.reorder_item import reorder_item
+
 		mr_list = reorder_item()
 
 		frappe.db.set_value("Stock Settings", None, "auto_indent", 0)
@@ -158,6 +182,56 @@ class TestStockEntry(FrappeTestCase):
 				items.append(d.item_code)
 
 		self.assertTrue(item_code in items)
+
+	def test_add_to_transit_entry(self):
+		from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
+
+		item_code = "_Test Transit Item"
+		company = "_Test Company"
+
+		create_warehouse("Test From Warehouse")
+		create_warehouse("Test Transit Warehouse")
+		create_warehouse("Test To Warehouse")
+
+		create_item(
+			item_code=item_code,
+			is_stock_item=1,
+			is_purchase_item=1,
+			company=company,
+		)
+
+		# create inward stock entry
+		make_stock_entry(
+			item_code=item_code,
+			target="Test From Warehouse - _TC",
+			qty=10,
+			basic_rate=100,
+			expense_account="Stock Adjustment - _TC",
+			cost_center="Main - _TC",
+		)
+
+		transit_entry = make_stock_entry(
+			item_code=item_code,
+			source="Test From Warehouse - _TC",
+			target="Test Transit Warehouse - _TC",
+			add_to_transit=1,
+			stock_entry_type="Material Transfer",
+			purpose="Material Transfer",
+			qty=10,
+			basic_rate=100,
+			expense_account="Stock Adjustment - _TC",
+			cost_center="Main - _TC",
+		)
+
+		end_transit_entry = make_stock_in_entry(transit_entry.name)
+
+		self.assertEqual(end_transit_entry.stock_entry_type, "Material Transfer")
+		self.assertEqual(end_transit_entry.purpose, "Material Transfer")
+		self.assertEqual(transit_entry.name, end_transit_entry.outgoing_stock_entry)
+		self.assertEqual(transit_entry.name, end_transit_entry.items[0].against_stock_entry)
+		self.assertEqual(transit_entry.items[0].name, end_transit_entry.items[0].ste_detail)
+
+		# create add to transit
 
 	def test_material_receipt_gl_entry(self):
 		company = frappe.db.get_value("Warehouse", "Stores - TCP1", "company")
@@ -1259,6 +1333,37 @@ class TestStockEntry(FrappeTestCase):
 		distributed_costs = [d.additional_cost for d in se.items]
 		self.assertEqual([40.0, 60.0], distributed_costs)
 
+	def test_independent_manufacture_entry(self):
+		"Test FG items and incoming rate calculation in Maniufacture Entry without WO or BOM linked."
+		se = frappe.get_doc(
+			doctype="Stock Entry",
+			purpose="Manufacture",
+			stock_entry_type="Manufacture",
+			company="_Test Company",
+			items=[
+				frappe._dict(
+					item_code="_Test Item", qty=1, basic_rate=200, s_warehouse="_Test Warehouse - _TC"
+				),
+				frappe._dict(item_code="_Test FG Item", qty=4, t_warehouse="_Test Warehouse 1 - _TC"),
+			],
+		)
+		# SE must have atleast one FG
+		self.assertRaises(FinishedGoodError, se.save)
+
+		se.items[0].is_finished_item = 1
+		se.items[1].is_finished_item = 1
+		# SE cannot have multiple FGs
+		self.assertRaises(FinishedGoodError, se.save)
+
+		se.items[0].is_finished_item = 0
+		se.save()
+
+		# Check if FG cost is calculated based on RM total cost
+		# RM total cost = 200, FG rate = 200/4(FG qty) =  50
+		self.assertEqual(se.items[1].basic_rate, flt(se.items[0].basic_rate / 4))
+		self.assertEqual(se.value_difference, 0.0)
+		self.assertEqual(se.total_incoming_value, se.total_outgoing_value)
+
 	@change_settings("Stock Settings", {"allow_negative_stock": 0})
 	def test_future_negative_sle(self):
 		# Initialize item, batch, warehouse, opening qty
@@ -1340,36 +1445,49 @@ class TestStockEntry(FrappeTestCase):
 				purpose="Material Issue",
 			)
 
-	def test_independent_manufacture_entry(self):
-		"Test FG items and incoming rate calculation in Maniufacture Entry without WO or BOM linked."
-		se = frappe.get_doc(
-			doctype="Stock Entry",
-			purpose="Manufacture",
-			stock_entry_type="Manufacture",
-			company="_Test Company",
-			items=[
-				frappe._dict(
-					item_code="_Test Item", qty=1, basic_rate=200, s_warehouse="_Test Warehouse - _TC"
-				),
-				frappe._dict(item_code="_Test FG Item", qty=4, t_warehouse="_Test Warehouse 1 - _TC"),
-			],
+	def test_multi_batch_value_diff(self):
+		"""Test value difference on stock entry in case of multi-batch.
+		| Stock entry | batch | qty | rate | value diff on SE             |
+		| ---         | ---   | --- | ---  | ---                          |
+		| receipt     | A     | 1   | 10   | 30                           |
+		| receipt     | B     | 1   | 20   |                              |
+		| issue       | A     | -1  | 10   | -30 (to assert after submit) |
+		| issue       | B     | -1  | 20   |                              |
+		"""
+		from erpnext.stock.doctype.batch.test_batch import TestBatch
+
+		batch_nos = []
+
+		item_code = "_TestMultibatchFifo"
+		TestBatch.make_batch_item(item_code)
+		warehouse = "_Test Warehouse - _TC"
+		receipt = make_stock_entry(
+			item_code=item_code,
+			qty=1,
+			rate=10,
+			to_warehouse=warehouse,
+			purpose="Material Receipt",
+			do_not_save=True,
 		)
-		# SE must have atleast one FG
-		self.assertRaises(FinishedGoodError, se.save)
+		receipt.append(
+			"items", frappe.copy_doc(receipt.items[0], ignore_no_copy=False).update({"basic_rate": 20})
+		)
+		receipt.save()
+		receipt.submit()
+		batch_nos.extend(row.batch_no for row in receipt.items)
+		self.assertEqual(receipt.value_difference, 30)
 
-		se.items[0].is_finished_item = 1
-		se.items[1].is_finished_item = 1
-		# SE cannot have multiple FGs
-		self.assertRaises(FinishedGoodError, se.save)
+		issue = make_stock_entry(
+			item_code=item_code, qty=1, from_warehouse=warehouse, purpose="Material Issue", do_not_save=True
+		)
+		issue.append("items", frappe.copy_doc(issue.items[0], ignore_no_copy=False))
+		for row, batch_no in zip(issue.items, batch_nos):
+			row.batch_no = batch_no
+		issue.save()
+		issue.submit()
 
-		se.items[0].is_finished_item = 0
-		se.save()
-
-		# Check if FG cost is calculated based on RM total cost
-		# RM total cost = 200, FG rate = 200/4(FG qty) =  50
-		self.assertEqual(se.items[1].basic_rate, flt(se.items[0].basic_rate / 4))
-		self.assertEqual(se.value_difference, 0.0)
-		self.assertEqual(se.total_incoming_value, se.total_outgoing_value)
+		issue.reload()  # reload because reposting current voucher updates rate
+		self.assertEqual(issue.value_difference, -30)
 
 	def test_transfer_qty_validation(self):
 		se = make_stock_entry(item_code="_Test Item", do_not_save=True, qty=0.001, rate=100)

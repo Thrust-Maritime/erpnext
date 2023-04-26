@@ -14,6 +14,7 @@ from erpnext.stock.doctype.warehouse.warehouse import get_child_warehouses
 def execute(filters=None):
 	return ForecastingReport(filters).execute_report()
 
+
 class ExponentialSmoothingForecast(object):
 	def forecast_future_data(self):
 		for key, value in self.period_wise_data.items():
@@ -33,6 +34,7 @@ class ExponentialSmoothingForecast(object):
 				if value.get(forecast_key):
 					# will be use to forecaset next period
 					forecast_data.append([value.get(period.key), value.get(forecast_key)])
+
 
 class ForecastingReport(ExponentialSmoothingForecast):
 	def __init__(self, filters=None):

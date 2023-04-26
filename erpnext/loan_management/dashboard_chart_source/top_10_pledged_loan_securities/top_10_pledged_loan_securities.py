@@ -4,7 +4,11 @@
 
 import frappe
 from frappe.utils.dashboard import cache_source
-from six import iteritems
+
+from erpnext.loan_management.report.applicant_wise_loan_security_exposure.applicant_wise_loan_security_exposure import (
+	get_loan_security_details,
+)
+
 
 from erpnext.loan_management.report.applicant_wise_loan_security_exposure.applicant_wise_loan_security_exposure import (
 	get_loan_security_details,
@@ -78,14 +82,14 @@ def get_data(
 		)
 	)
 
-	for security, qty in iteritems(pledges):
+	for security, qty in pledges.items():
 		current_pledges.setdefault(security, qty)
 		current_pledges[security] -= unpledges.get(security, 0.0)
 
 	sorted_pledges = dict(sorted(current_pledges.items(), key=lambda item: item[1], reverse=True))
 
 	count = 0
-	for security, qty in iteritems(sorted_pledges):
+	for security, qty in sorted_pledges.items():
 		values.append(qty * loan_security_details.get(security, {}).get("latest_price", 0))
 		labels.append(security)
 		count += 1

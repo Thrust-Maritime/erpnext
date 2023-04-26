@@ -4,7 +4,6 @@
 
 from frappe import _
 from frappe.utils import flt
-from six import iteritems
 
 import erpnext
 from erpnext.loan_management.report.applicant_wise_loan_security_exposure.applicant_wise_loan_security_exposure import (
@@ -103,7 +102,7 @@ def get_data(filters):
 	)
 	currency = erpnext.get_company_currency(filters.get("company"))
 
-	for security, value in iteritems(current_pledges):
+	for security, value in current_pledges.items():
 		if value.get("qty"):
 			row = {}
 			current_value = flt(
@@ -135,7 +134,7 @@ def get_company_wise_loan_security_details(filters, loan_security_details):
 
 	total_portfolio_value = 0
 	security_wise_map = {}
-	for key, qty in iteritems(pledge_values):
+	for key, qty in pledge_values.items():
 		security_wise_map.setdefault(key[1], {"qty": 0.0, "applicant_count": 0.0})
 
 		security_wise_map[key[1]]["qty"] += qty

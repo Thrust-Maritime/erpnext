@@ -23,7 +23,7 @@ class TestMpesaSettings(unittest.TestCase):
 
 	def tearDown(self):
 		frappe.db.sql("delete from `tabMpesa Settings`")
-		frappe.db.sql('delete from `tabIntegration Request` where integration_request_service = "Mpesa"')
+		frappe.db.sql("delete from `tabIntegration Request` where integration_request_service = 'Mpesa'")
 
 	def test_creation_of_payment_gateway(self):
 		mode_of_payment = create_mode_of_payment("Mpesa-_Test", payment_type="Phone")
@@ -237,6 +237,7 @@ class TestMpesaSettings(unittest.TestCase):
 		pr.cancel()
 		pr.delete()
 		pos_invoice.delete()
+
 
 def create_mpesa_settings(payment_gateway_name="Express"):
 	if frappe.db.exists("Mpesa Settings", payment_gateway_name):

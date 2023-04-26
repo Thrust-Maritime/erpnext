@@ -16,6 +16,7 @@ def validate_status(status, options):
 	if status not in options:
 		frappe.throw(_("Status must be one of {0}").format(comma_or(options)))
 
+
 status_map = {
 	"Lead": [
 		["Lost Quotation", "has_lost_quotation"],
@@ -306,6 +307,20 @@ class StatusUpdater(Document):
 
 	def limits_crossed_error(self, args, item, qty_or_amount):
 		"""Raise exception for limits crossed"""
+		if (
+			self.doctype in ["Sales Invoice", "Delivery Note"]
+			and qty_or_amount == "amount"
+			and self.is_internal_customer
+		):
+			return
+
+		elif (
+			self.doctype in ["Purchase Invoice", "Purchase Receipt"]
+			and qty_or_amount == "amount"
+			and self.is_internal_supplier
+		):
+			return
+
 		if qty_or_amount == "qty":
 			action_msg = _(
 				'To allow over receipt / delivery, update "Over Receipt/Delivery Allowance" in Stock Settings or the Item.'
@@ -356,9 +371,9 @@ class StatusUpdater(Document):
 		for args in self.status_updater:
 			# condition to include current record (if submit or no if cancel)
 			if self.docstatus == 1:
-				args["cond"] = ' or parent="%s"' % self.name.replace('"', '"')
+				args["cond"] = " or parent='%s'" % self.name.replace('"', '"')
 			else:
-				args["cond"] = ' and parent!="%s"' % self.name.replace('"', '"')
+				args["cond"] = " and parent!='%s'" % self.name.replace('"', '"')
 
 			self._update_children(args, update_modified)
 
@@ -388,7 +403,7 @@ class StatusUpdater(Document):
 				args["second_source_condition"] = frappe.db.sql(
 					""" select ifnull((select sum(%(second_source_field)s)
 					from `tab%(second_source_dt)s`
-					where `%(second_join_field)s`="%(detail_id)s"
+					where `%(second_join_field)s`='%(detail_id)s'
 					and (`tab%(second_source_dt)s`.docstatus=1)
 					%(second_source_extra_cond)s), 0) """
 					% args
@@ -402,7 +417,7 @@ class StatusUpdater(Document):
 					frappe.db.sql(
 						"""
 						(select ifnull(sum(%(source_field)s), 0)
-							from `tab%(source_dt)s` where `%(join_field)s`="%(detail_id)s"
+							from `tab%(source_dt)s` where `%(join_field)s`='%(detail_id)s'
 							and (docstatus=1 %(cond)s) %(extra_cond)s)
 				"""
 						% args
@@ -447,7 +462,7 @@ class StatusUpdater(Document):
 				"""update `tab%(target_parent_dt)s`
 				set %(target_parent_field)s = round(
 					ifnull((select
-						ifnull(sum(if(abs(%(target_ref_field)s) > abs(%(target_field)s), abs(%(target_field)s), abs(%(target_ref_field)s))), 0)
+						ifnull(sum(case when abs(%(target_ref_field)s) > abs(%(target_field)s) then abs(%(target_field)s) else abs(%(target_ref_field)s) end), 0)
 						/ sum(abs(%(target_ref_field)s)) * 100
 					from `tab%(target_dt)s` where parent='%(name)s' and parenttype='%(target_parent_dt)s' having sum(abs(%(target_ref_field)s)) > 0), 0), 6)
 					%(update_modified)s
@@ -459,9 +474,9 @@ class StatusUpdater(Document):
 			if args.get("status_field"):
 				frappe.db.sql(
 					"""update `tab%(target_parent_dt)s`
-					set %(status_field)s = if(%(target_parent_field)s<0.001,
-						'Not %(keyword)s', if(%(target_parent_field)s>=99.999999,
-						'Fully %(keyword)s', 'Partly %(keyword)s'))
+					set %(status_field)s = (case when %(target_parent_field)s<0.001 then 'Not %(keyword)s'
+					else case when %(target_parent_field)s>=99.999999 then 'Fully %(keyword)s'
+					else 'Partly %(keyword)s' end end)
 					where name='%(name)s'"""
 					% args
 				)

@@ -20,5 +20,3 @@ def execute():
 
 		for old_name, new_name in rename_fields_map.items():
 			rename_field("Non Profit Settings", old_name, new_name)
-
-		frappe.delete_doc_if_exists("DocType", "Membership Settings")

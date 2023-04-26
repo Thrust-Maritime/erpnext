@@ -4,7 +4,6 @@
 	--green-info: #38A160;
 	--product-bg-color: white;
 	--body-bg-color:  var(--gray-50);
-	--text-md: 13px; // variables are in desk folder in frappe for v13, this is a temporary fix
 }
 
 body.product-page {
@@ -245,7 +244,7 @@ body.product-page {
 }
 
 [data-doctype="Item Group"],
-#page-all-products {
+#page-index {
 	.page-header {
 		font-size: 20px;
 		font-weight: 700;
@@ -348,14 +347,14 @@ body.product-page {
 
 	.btn-add-to-wishlist {
 		svg use {
-			stroke: #F47A7A;
+			--icon-stroke: #F47A7A;
 		}
 	}
 
 	.btn-view-in-wishlist {
 		svg use {
 			fill: #F47A7A;
-			stroke: none;
+			--icon-stroke: none;
 		}
 	}
 
@@ -1029,7 +1028,7 @@ body.product-page {
 
 .not-wished {
 	cursor: pointer;
-	stroke: #F47A7A !important;
+	--icon-stroke: #F47A7A !important;
 
 	&:hover {
 		fill: #F47A7A;
@@ -1037,7 +1036,7 @@ body.product-page {
 }
 
 .wished {
-	stroke: none;
+	--icon-stroke: none;
 	fill: #F47A7A !important;
 }
 

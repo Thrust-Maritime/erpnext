@@ -134,31 +134,6 @@ frappe.ready(() => {
 					label: "Phone",
 					reqd: 1
 				},
-				{
-					fieldname: "column_break0",
-					fieldtype: "Column Break",
-					width: "50%"
-				},
-				{
-					label: __('Address Type'),
-					fieldname: 'address_type',
-					fieldtype: 'Select',
-					options: [
-						'Billing',
-						'Shipping'
-					],
-					reqd: 1
-				},
-				{
-					label: __('Postal Code'),
-					fieldname: 'pincode',
-					fieldtype: 'Data'
-				},
-				{
-					fieldname: "phone",
-					fieldtype: "Data",
-					label: "Phone"
-				},
 			],
 			primary_action_label: __('Save'),
 			primary_action: (values) => {

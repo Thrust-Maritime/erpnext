@@ -67,6 +67,7 @@ def execute(filters=None):
 
 	return columns, data, message, chart, report_summary
 
+
 def get_balance_sheet_data(fiscal_year, companies, columns, filters):
 	asset = get_data(companies, "Asset", "Debit", fiscal_year, filters=filters)
 
@@ -265,6 +266,7 @@ def get_cash_flow_data(fiscal_year, companies, filters):
 	report_summary = get_cash_flow_summary(summary_data, company_currency)
 
 	return data, report_summary
+
 
 def get_account_type_based_data(account_type, companies, fiscal_year, filters):
 	data = {}
@@ -735,6 +737,7 @@ def get_additional_conditions(from_date, ignore_closing_entries, filters):
 
 	return " and {}".format(" and ".join(additional_conditions)) if additional_conditions else ""
 
+
 def add_total_row(out, root_type, balance_must_be, companies, company_currency):
 	total_row = {
 		"account_name": "'" + _("Total {0} ({1})").format(_(root_type), _(balance_must_be)) + "'",
@@ -757,6 +760,7 @@ def add_total_row(out, root_type, balance_must_be, companies, company_currency):
 
 		# blank row after Total
 		out.append({})
+
 
 def filter_accounts(accounts, depth=10):
 	parent_children_map = {}

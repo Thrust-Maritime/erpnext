@@ -18,6 +18,7 @@ def execute(filters=None):
 
 	return conditions["columns"], data, None, chart_data
 
+
 def get_chart_data(data, conditions, filters):
 	if not (data and conditions):
 		return []
@@ -48,7 +49,7 @@ def get_chart_data(data, conditions, filters):
 		"data": {
 			"labels": labels,
 			"datasets": [
-				{"name": _("{0}").format(filters.get("period")) + _(" Quoted Amount"), "values": datapoints}
+				{"name": _(filters.get("period")) + " " + _("Quoted Amount"), "values": datapoints}
 			],
 		},
 		"type": "line",

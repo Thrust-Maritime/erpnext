@@ -20,6 +20,7 @@ def execute(filters=None):
 
 	return columns, data, None, chart_data
 
+
 def get_columns(filters):
 	return [
 		{
@@ -256,7 +257,7 @@ def get_chart_data(data):
 	return {
 		"data": {
 			"labels": labels[:30],  # show max of 30 items in chart
-			"datasets": [{"name": _(" Total Sales Amount"), "values": datapoints[:30]}],
+			"datasets": [{"name": _("Total Sales Amount"), "values": datapoints[:30]}],
 		},
 		"type": "bar",
 		"fieldtype": "Currency",

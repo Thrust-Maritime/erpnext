@@ -6,10 +6,16 @@ import json
 import frappe
 import frappe.permissions
 from frappe.core.doctype.user_permission.test_user_permission import create_user
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, flt, getdate, nowdate, today
 
 from erpnext.controllers.accounts_controller import update_child_qty_rate
+from erpnext.maintenance.doctype.maintenance_schedule.test_maintenance_schedule import (
+	make_maintenance_schedule,
+)
+from erpnext.maintenance.doctype.maintenance_visit.test_maintenance_visit import (
+	make_maintenance_visit,
+)
 from erpnext.manufacturing.doctype.blanket_order.test_blanket_order import make_blanket_order
 from erpnext.selling.doctype.product_bundle.test_product_bundle import make_product_bundle
 from erpnext.selling.doctype.sales_order.sales_order import (
@@ -89,6 +95,7 @@ class TestSalesOrder(FrappeTestCase):
 
 	def test_so_billed_amount_against_return_entry(self):
 		from erpnext.accounts.doctype.sales_invoice.sales_invoice import make_sales_return
+
 		so = make_sales_order(do_not_submit=True)
 		so.submit()
 
@@ -322,7 +329,7 @@ class TestSalesOrder(FrappeTestCase):
 
 	def test_sales_order_on_hold(self):
 		so = make_sales_order(item_code="_Test Product Bundle Item")
-		so.db_set("Status", "On Hold")
+		so.db_set("status", "On Hold")
 		si = make_sales_invoice(so.name)
 		self.assertRaises(frappe.ValidationError, create_dn_against_so, so.name)
 		self.assertRaises(frappe.ValidationError, si.submit)
@@ -673,7 +680,7 @@ class TestSalesOrder(FrappeTestCase):
 		else:
 			# update valid from
 			frappe.db.sql(
-				"""UPDATE `tabItem Tax` set valid_from = CURDATE()
+				"""UPDATE `tabItem Tax` set valid_from = CURRENT_DATE
 				where parent = %(item)s and item_tax_template = %(tax)s""",
 				{"item": item, "tax": tax_template},
 			)
@@ -1375,6 +1382,33 @@ class TestSalesOrder(FrappeTestCase):
 
 		self.assertRaises(frappe.LinkExistsError, so_doc.cancel)
 
+	@change_settings("Accounts Settings", {"unlink_advance_payment_on_cancelation_of_order": 1})
+	def test_advance_paid_upon_payment_cancellation(self):
+		from erpnext.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
+
+		so = make_sales_order()
+
+		pe = get_payment_entry("Sales Order", so.name, bank_account="_Test Bank - _TC")
+		pe.reference_no = "1"
+		pe.reference_date = nowdate()
+		pe.paid_from_account_currency = so.currency
+		pe.paid_to_account_currency = so.currency
+		pe.source_exchange_rate = 1
+		pe.target_exchange_rate = 1
+		pe.paid_amount = so.grand_total
+		pe.save(ignore_permissions=True)
+		pe.submit()
+		so.reload()
+
+		self.assertEqual(so.advance_paid, so.base_grand_total)
+
+		# cancel advance payment
+		pe.reload()
+		pe.cancel()
+
+		so.reload()
+		self.assertEqual(so.advance_paid, 0)
+
 	def test_cancel_sales_order_after_cancel_payment_entry(self):
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
 
@@ -1538,6 +1572,72 @@ class TestSalesOrder(FrappeTestCase):
 		si.save()
 
 		self.assertRaises(frappe.ValidationError, so.cancel)
+
+	def test_so_cancellation_after_si_submission(self):
+		"""
+		Test to check if Sales Order gets cancelled when linked Sales Invoice has been Submitted
+		Expected result: Sales Order should not get cancelled
+		"""
+		so = make_sales_order()
+		so.submit()
+		si = make_sales_invoice(so.name)
+		si.submit()
+
+		so.load_from_db()
+		self.assertRaises(frappe.LinkExistsError, so.cancel)
+
+	def test_so_cancellation_after_dn_submission(self):
+		"""
+		Test to check if Sales Order gets cancelled when linked Delivery Note has been Submitted
+		Expected result: Sales Order should not get cancelled
+		"""
+		so = make_sales_order()
+		so.submit()
+		dn = make_delivery_note(so.name)
+		dn.submit()
+
+		so.load_from_db()
+		self.assertRaises(frappe.LinkExistsError, so.cancel)
+
+	def test_so_cancellation_after_maintenance_schedule_submission(self):
+		"""
+		Expected result: Sales Order should not get cancelled
+		"""
+		so = make_sales_order()
+		so.submit()
+		ms = make_maintenance_schedule()
+		ms.items[0].sales_order = so.name
+		ms.submit()
+
+		so.load_from_db()
+		self.assertRaises(frappe.LinkExistsError, so.cancel)
+
+	def test_so_cancellation_after_maintenance_visit_submission(self):
+		"""
+		Expected result: Sales Order should not get cancelled
+		"""
+		so = make_sales_order()
+		so.submit()
+		mv = make_maintenance_visit()
+		mv.purposes[0].prevdoc_doctype = "Sales Order"
+		mv.purposes[0].prevdoc_docname = so.name
+		mv.submit()
+
+		so.load_from_db()
+		self.assertRaises(frappe.LinkExistsError, so.cancel)
+
+	def test_so_cancellation_after_work_order_submission(self):
+		"""
+		Expected result: Sales Order should not get cancelled
+		"""
+		from erpnext.manufacturing.doctype.work_order.test_work_order import make_wo_order_test_record
+
+		so = make_sales_order(item_code="_Test FG Item", qty=10)
+		so.submit()
+		make_wo_order_test_record(sales_order=so.name)
+
+		so.load_from_db()
+		self.assertRaises(frappe.LinkExistsError, so.cancel)
 
 	def test_payment_terms_are_fetched_when_creating_sales_invoice(self):
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
@@ -1713,6 +1813,69 @@ class TestSalesOrder(FrappeTestCase):
 		sales_order.save()
 		self.assertEqual(sales_order.taxes[0].tax_amount, 0)
 
+	def test_sales_order_partial_advance_payment(self):
+		from erpnext.accounts.doctype.payment_entry.test_payment_entry import (
+			create_payment_entry,
+			get_payment_entry,
+		)
+		from erpnext.selling.doctype.customer.test_customer import get_customer_dict
+
+		# Make a customer
+		customer = get_customer_dict("QA Logistics")
+		frappe.get_doc(customer).insert()
+
+		# Make a Sales Order
+		so = make_sales_order(
+			customer="QA Logistics",
+			item_list=[
+				{"item_code": "_Test Item", "qty": 1, "rate": 200},
+				{"item_code": "_Test Item 2", "qty": 1, "rate": 300},
+			],
+		)
+
+		# Create a advance payment against that Sales Order
+		pe = get_payment_entry("Sales Order", so.name, bank_account="_Test Bank - _TC")
+		pe.reference_no = "1"
+		pe.reference_date = nowdate()
+		pe.paid_from_account_currency = so.currency
+		pe.paid_to_account_currency = so.currency
+		pe.source_exchange_rate = 1
+		pe.target_exchange_rate = 1
+		pe.paid_amount = so.grand_total
+		pe.save(ignore_permissions=True)
+		pe.submit()
+
+		# Make standalone advance payment entry
+		create_payment_entry(
+			payment_type="Receive",
+			party_type="Customer",
+			party="QA Logistics",
+			paid_from="Debtors - _TC",
+			paid_to="_Test Bank - _TC",
+			save=1,
+			submit=1,
+		)
+
+		si = make_sales_invoice(so.name)
+
+		item = si.get("items")[1]
+		si.remove(item)
+
+		si.allocate_advances_automatically = 1
+		si.save()
+
+		self.assertEqual(len(si.get("advances")), 1)
+		self.assertEqual(si.get("advances")[0].allocated_amount, 200)
+		self.assertEqual(si.get("advances")[0].reference_name, pe.name)
+
+		si.submit()
+		pe.load_from_db()
+
+		self.assertEqual(pe.references[0].reference_name, si.name)
+		self.assertEqual(pe.references[0].allocated_amount, 200)
+		self.assertEqual(pe.references[1].reference_name, so.name)
+		self.assertEqual(pe.references[1].allocated_amount, 300)
+
 
 def automatically_fetch_payment_terms(enable=1):
 	accounts_settings = frappe.get_doc("Accounts Settings")
@@ -1726,6 +1889,7 @@ def compare_payment_schedules(doc, doc1, doc2):
 		doc.assertEqual(getdate(schedule.due_date), doc2.payment_schedule[index].due_date)
 		doc.assertEqual(schedule.invoice_portion, doc2.payment_schedule[index].invoice_portion)
 		doc.assertEqual(schedule.payment_amount, doc2.payment_schedule[index].payment_amount)
+
 
 def make_sales_order(**args):
 	so = frappe.new_doc("Sales Order")
@@ -1775,6 +1939,7 @@ def make_sales_order(**args):
 		so.payment_schedule = []
 
 	return so
+
 
 def create_dn_against_so(so, delivered_qty=0):
 	frappe.db.set_value("Stock Settings", None, "allow_negative_stock", 1)
