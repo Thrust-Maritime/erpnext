@@ -67,7 +67,6 @@ def stage_four(args):
 	company_setup.create_email_digest()
 	company_setup.create_logo(args)
 
-
 def fin(args):
 	frappe.local.message_log = []
 	login_as_first_user(args)
@@ -83,7 +82,6 @@ def make_sample_data(domains):
 		if frappe.message_log:
 			frappe.message_log.pop()
 		pass
-
 
 def login_as_first_user(args):
 	if args.get("email") and hasattr(frappe.local, "login_manager"):

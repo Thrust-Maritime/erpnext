@@ -12,7 +12,6 @@ from erpnext.regional.report.gstr_1.gstr_1 import Gstr1Report
 def execute(filters=None):
 	return Gstr2Report(filters).run()
 
-
 class Gstr2Report(Gstr1Report):
 	def __init__(self, filters=None):
 		self.filters = frappe._dict(filters or {})

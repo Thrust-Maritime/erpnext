@@ -221,7 +221,6 @@ def delete_events(ref_type, ref_name):
 	if events:
 		frappe.delete_doc("Event", events, for_reload=True)
 
-
 def validate_uom_is_integer(doc, uom_field, qty_fields, child_dt=None):
 	if isinstance(qty_fields, string_types):
 		qty_fields = [qty_fields]

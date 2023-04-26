@@ -26,7 +26,6 @@ def sync_item_from_shopify(shopify_settings, item):
 	except Exception as e:
 		raise e
 
-
 def make_item(warehouse, shopify_item):
 	add_item_weight(shopify_item)
 
@@ -237,7 +236,6 @@ def add_to_price_list(item, name):
 		item_rate = frappe.get_doc("Item Price", item_price_name)
 		item_rate.price_list_rate = item.get("item_price") or item.get("variants")[0].get("price")
 		item_rate.save()
-
 
 def get_item_image(shopify_item):
 	if shopify_item.get("image"):

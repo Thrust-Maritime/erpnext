@@ -17,7 +17,6 @@ from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sal
 
 test_dependencies = ["Item", "Cost Center"]
 
-
 class TestBankTransaction(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):

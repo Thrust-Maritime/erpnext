@@ -74,7 +74,6 @@ class WoocommerceSettings(Document):
 		delivery_url = server_url + endpoint
 		self.endpoint = delivery_url
 
-
 @frappe.whitelist()
 def generate_secret():
 	woocommerce_settings = frappe.get_doc("Woocommerce Settings")

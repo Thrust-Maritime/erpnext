@@ -26,7 +26,6 @@ def validate_webhooks_request(doctype, hmac_key, secret_key="secret"):
 
 	return innerfn
 
-
 def get_webhook_address(connector_name, method, exclude_uri=False, force_https=False):
 	endpoint = "erpnext.erpnext_integrations.connectors.{0}.{1}".format(connector_name, method)
 

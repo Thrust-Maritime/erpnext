@@ -11,7 +11,6 @@ from frappe.model.document import Document
 class Brand(Document):
 	pass
 
-
 def get_brand_defaults(item, company):
 	item = frappe.get_cached_doc("Item", item)
 	if item.brand:

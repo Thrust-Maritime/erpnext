@@ -101,7 +101,6 @@ def set_series(doctype, options, default):
 	if default:
 		_make_property_setter("default", default)
 
-
 def get_series():
 	series_to_set = {}
 

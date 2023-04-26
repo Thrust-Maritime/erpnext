@@ -10,7 +10,6 @@ from frappe.utils import format_date
 # Wether to proceed with frequency change
 PROCEED_WITH_FREQUENCY_CHANGE = False
 
-
 class HRSettings(Document):
 	def validate(self):
 		self.set_naming_series()

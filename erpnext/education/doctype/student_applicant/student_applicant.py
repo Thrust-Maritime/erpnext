@@ -12,7 +12,6 @@ from frappe.utils import add_years, date_diff, getdate, nowdate
 class StudentApplicant(Document):
 	def autoname(self):
 		from frappe.model.naming import set_name_by_naming_series
-
 		if self.student_admission:
 			naming_series = None
 			if self.program:

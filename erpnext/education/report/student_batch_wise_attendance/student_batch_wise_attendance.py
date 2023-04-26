@@ -49,7 +49,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_columns(filters):
 	columns = [
 		_("Student Group") + ":Link/Student Group:250",

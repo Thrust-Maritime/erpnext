@@ -515,7 +515,6 @@ def install(country=None):
 	set_more_defaults()
 	update_global_search_doctypes()
 
-
 def set_more_defaults():
 	# Do more setup stuff that can be done here with no dependencies
 	update_selling_defaults()
@@ -523,7 +522,6 @@ def set_more_defaults():
 	update_hr_defaults()
 	add_uom_data()
 	update_item_variant_settings()
-
 
 def update_selling_defaults():
 	selling_settings = frappe.get_doc("Selling Settings")
@@ -534,7 +532,6 @@ def update_selling_defaults():
 	selling_settings.sales_update_frequency = "Each Transaction"
 	selling_settings.save()
 
-
 def update_buying_defaults():
 	buying_settings = frappe.get_doc("Buying Settings")
 	buying_settings.supp_master_name = "Supplier Name"
@@ -543,7 +540,6 @@ def update_buying_defaults():
 	buying_settings.maintain_same_rate = 1
 	buying_settings.allow_multiple_items = 1
 	buying_settings.save()
-
 
 def update_hr_defaults():
 	hr_settings = frappe.get_doc("HR Settings")
@@ -619,7 +615,6 @@ def add_market_segments():
 
 	make_records(records)
 
-
 def add_sale_stages():
 	# Sale Stages
 	records = [
@@ -634,7 +629,6 @@ def add_sale_stages():
 	]
 	for sales_stage in records:
 		frappe.get_doc(sales_stage).db_insert()
-
 
 def install_company(args):
 	records = [
@@ -794,7 +788,6 @@ def install_defaults(args=None):
 
 	args.update({"set_default": 1})
 	create_bank_account(args)
-
 
 def set_global_defaults(args):
 	global_defaults = frappe.get_doc("Global Defaults", "Global Defaults")

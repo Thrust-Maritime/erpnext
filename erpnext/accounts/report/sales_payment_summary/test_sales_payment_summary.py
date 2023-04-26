@@ -15,7 +15,6 @@ from erpnext.accounts.report.sales_payment_summary.sales_payment_summary import 
 
 test_dependencies = ["Sales Invoice"]
 
-
 class TestSalesPaymentSummary(unittest.TestCase):
 	@classmethod
 	def setUpClass(self):

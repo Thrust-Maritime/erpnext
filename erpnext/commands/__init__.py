@@ -30,7 +30,6 @@ def make_demo(context, site, domain="Manufacturing", days=100, resume=False, rei
 		with frappe.init_site(site):
 			frappe.connect()
 			from erpnext.demo import demo
-
 			demo.simulate(days=days)
 	else:
 		if reinstall:

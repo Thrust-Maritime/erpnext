@@ -33,7 +33,6 @@ class LoanSecurityPrice(Document):
 		if existing_loan_security:
 			frappe.throw(_("Loan Security Price overlapping with {0}").format(existing_loan_security[0][0]))
 
-
 @frappe.whitelist()
 def get_loan_security_price(loan_security, valid_time=None):
 	if not valid_time:

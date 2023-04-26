@@ -17,7 +17,6 @@ class TestTopic(unittest.TestCase):
 		self.assertEqual(contents[0].name, "_Test Article 1")
 		frappe.db.rollback()
 
-
 def make_topic(name):
 	try:
 		topic = frappe.get_doc("Topic", name)

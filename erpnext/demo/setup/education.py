@@ -23,7 +23,6 @@ def setup_data():
 	frappe.db.commit()
 	frappe.clear_cache()
 
-
 def make_masters():
 	import_json("Room")
 	import_json("Department")
@@ -148,7 +147,6 @@ def make_fees_category():
 		fee_category.description = fee_desc[i]
 		fee_category.insert()
 		frappe.db.commit()
-
 
 def make_fees_structure():
 	for d in frappe.db.get_list("Program"):

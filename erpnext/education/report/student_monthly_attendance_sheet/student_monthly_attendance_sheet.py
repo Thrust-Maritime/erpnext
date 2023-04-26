@@ -141,7 +141,6 @@ def get_attendance_years():
 		year_list = [getdate().year]
 	return "\n".join(str(year) for year in year_list)
 
-
 def mark_holidays(att_map, from_date, to_date, students_list):
 	holiday_list = get_holiday_list()
 	holidays = get_holidays(holiday_list)

@@ -5,6 +5,5 @@ import unittest
 
 # test_records = frappe.get_test_records('Shopify Log')
 
-
 class TestShopifyLog(unittest.TestCase):
 	pass

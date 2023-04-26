@@ -29,7 +29,9 @@ class TestGratuity(FrappeTestCase):
 		frappe.db.delete("Salary Slip")
 		frappe.db.delete("Additional Salary", {"ref_doctype": "Gratuity"})
 
-		make_earning_salary_component(setup=True, test_tax=True, company_list=["_Test Company"])
+		make_earning_salary_component(
+			setup=True, test_tax=True, company_list=["_Test Company"], include_flexi_benefits=True
+		)
 		make_deduction_salary_component(setup=True, test_tax=True, company_list=["_Test Company"])
 		make_holiday_list()
 
@@ -163,7 +165,6 @@ def get_gratuity_rule(name):
 
 	return rule
 
-
 def create_gratuity(**args):
 	if args:
 		args = frappe._dict(args)
@@ -184,7 +185,6 @@ def create_gratuity(**args):
 	gratuity.submit()
 
 	return gratuity
-
 
 def set_mode_of_payment_account():
 	if not frappe.db.exists("Account", "Payment Account - _TC"):

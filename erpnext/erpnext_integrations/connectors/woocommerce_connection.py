@@ -63,7 +63,6 @@ def _order(*args, **kwargs):
 		link_items(order.get("line_items"), woocommerce_settings, sys_lang)
 		create_sales_order(order, woocommerce_settings, customer_name, sys_lang)
 
-
 def link_customer_and_address(raw_billing_data, raw_shipping_data, customer_name):
 	customer_woo_com_email = raw_billing_data.get("email")
 	customer_exists = frappe.get_value("Customer", {"woocommerce_email": customer_woo_com_email})
@@ -102,7 +101,6 @@ def link_customer_and_address(raw_billing_data, raw_shipping_data, customer_name
 		create_address(raw_shipping_data, customer, "Shipping")
 		create_contact(raw_billing_data, customer)
 
-
 def create_contact(data, customer):
 	email = data.get("email", None)
 	phone = data.get("phone", None)
@@ -127,7 +125,6 @@ def create_contact(data, customer):
 	contact.flags.ignore_mandatory = True
 	contact.save()
 
-
 def create_address(raw_data, customer, address_type):
 	address = frappe.new_doc("Address")
 
@@ -146,7 +143,6 @@ def create_address(raw_data, customer, address_type):
 	address.flags.ignore_mandatory = True
 	address.save()
 
-
 def rename_address(address, customer):
 	old_address_title = address.name
 	new_address_title = customer.name + "-" + address.address_type
@@ -154,7 +150,6 @@ def rename_address(address, customer):
 	address.save()
 
 	frappe.rename_doc("Address", old_address_title, new_address_title)
-
 
 def link_items(items_list, woocommerce_settings, sys_lang):
 	for item_data in items_list:
@@ -171,7 +166,6 @@ def link_items(items_list, woocommerce_settings, sys_lang):
 			item.woocommerce_id = item_woo_com_id
 			item.flags.ignore_mandatory = True
 			item.save()
-
 
 def create_sales_order(order, woocommerce_settings, customer_name, sys_lang):
 	new_sales_order = frappe.new_doc("Sales Order")

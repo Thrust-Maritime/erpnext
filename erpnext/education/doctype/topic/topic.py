@@ -33,7 +33,6 @@ def get_courses_without_topic(topic):
 			data.append(course.name)
 	return data
 
-
 @frappe.whitelist()
 def add_topic_to_courses(topic, courses, mandatory=False):
 	courses = json.loads(courses)

@@ -25,6 +25,7 @@ def get_data(filters):
 		["posting_date", "<=", filters.get("to_date")],
 		["against_voucher_type", "=", "Asset"],
 		["account", "in", depreciation_accounts],
+		["is_cancelled", "=", 0],
 	]
 
 	if filters.get("asset"):
@@ -97,7 +98,6 @@ def get_assets_details(assets):
 		assets_details.setdefault(d.asset, d)
 
 	return assets_details
-
 
 def get_columns():
 	return [

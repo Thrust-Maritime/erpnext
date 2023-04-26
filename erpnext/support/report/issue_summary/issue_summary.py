@@ -13,7 +13,6 @@ from six import iteritems
 def execute(filters=None):
 	return IssueSummary(filters).run()
 
-
 class IssueSummary(object):
 	def __init__(self, filters=None):
 		self.filters = frappe._dict(filters or {})

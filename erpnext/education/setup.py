@@ -14,7 +14,6 @@ def setup_education():
 		return
 	create_academic_sessions()
 
-
 def create_academic_sessions():
 	data = [
 		{"doctype": "Academic Year", "academic_year_name": "2015-16"},

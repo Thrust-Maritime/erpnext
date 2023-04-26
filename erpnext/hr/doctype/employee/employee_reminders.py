@@ -20,7 +20,6 @@ def send_reminders_in_advance_weekly():
 
 	send_advance_holiday_reminders("Weekly")
 
-
 def send_reminders_in_advance_monthly():
 	to_send_in_advance = int(frappe.db.get_single_value("HR Settings", "send_holiday_reminders"))
 	frequency = frappe.db.get_single_value("HR Settings", "frequency")
@@ -28,7 +27,6 @@ def send_reminders_in_advance_monthly():
 		return
 
 	send_advance_holiday_reminders("Monthly")
-
 
 def send_advance_holiday_reminders(frequency):
 	"""Send Holiday Reminders in Advance to Employees
@@ -122,7 +120,6 @@ def get_birthday_reminder_text_and_message(birthday_persons):
 
 	return reminder_text, message
 
-
 def send_birthday_reminder(recipients, reminder_text, birthday_persons, message):
 	frappe.sendmail(
 		recipients=recipients,
@@ -140,7 +137,6 @@ def send_birthday_reminder(recipients, reminder_text, birthday_persons, message)
 def get_employees_who_are_born_today():
 	"""Get all employee born today & group them based on their company"""
 	return get_employees_having_an_event_today("birthday")
-
 
 def get_employees_having_an_event_today(event_type):
 	"""Get all employee who have `event_type` today
@@ -230,7 +226,7 @@ def get_work_anniversary_reminder_text_and_message(anniversary_persons):
 		persons_name = anniversary_person
 		# Number of years completed at the company
 		completed_years = getdate().year - anniversary_persons[0]["date_of_joining"].year
-		anniversary_person += f" completed {completed_years} year(s)"
+		anniversary_person += f" completed {get_pluralized_years(completed_years)}"
 	else:
 		person_names_with_years = []
 		names = []
@@ -239,7 +235,7 @@ def get_work_anniversary_reminder_text_and_message(anniversary_persons):
 			names.append(person_text)
 			# Number of years completed at the company
 			completed_years = getdate().year - person["date_of_joining"].year
-			person_text += f" completed {completed_years} year(s)"
+			person_text += f" completed {get_pluralized_years(completed_years)}"
 			person_names_with_years.append(person_text)
 
 		# converts ["Jim", "Rim", "Dim"] to Jim, Rim & Dim
@@ -252,6 +248,12 @@ def get_work_anniversary_reminder_text_and_message(anniversary_persons):
 	message += _("Everyone, let’s congratulate {0} on their work anniversary!").format(persons_name)
 
 	return reminder_text, message
+
+
+def get_pluralized_years(years):
+	if years == 1:
+		return "1 year"
+	return f"{years} years"
 
 
 def send_work_anniversary_reminder(recipients, reminder_text, anniversary_persons, message):

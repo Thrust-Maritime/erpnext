@@ -13,7 +13,6 @@ from erpnext.hr.doctype.staffing_plan.staffing_plan import (
 
 test_dependencies = ["Designation"]
 
-
 class TestStaffingPlan(unittest.TestCase):
 	def test_staffing_plan(self):
 		_set_up()

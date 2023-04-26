@@ -152,7 +152,6 @@ def create_lab_test_sample():
 
 	return sample.name
 
-
 def create_sales_invoice():
 	patient = create_patient()
 	medical_department = create_medical_department()
@@ -188,7 +187,6 @@ def create_sales_invoice():
 
 	sales_invoice.submit()
 	return sales_invoice
-
 
 def create_patient_encounter():
 	patient = create_patient()

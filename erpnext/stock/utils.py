@@ -265,12 +265,10 @@ def update_bin(args, allow_negative_stock=False, via_landed_cost_voucher=False):
 	else:
 		frappe.msgprint(_("Item {0} ignored since it is not a stock item").format(args.get("item_code")))
 
-
 @frappe.whitelist()
 def get_incoming_rate(args, raise_error_if_no_rate=True):
 	"""Get Incoming Rate based on valuation method"""
 	from erpnext.stock.stock_ledger import get_previous_sle, get_valuation_rate
-
 	if isinstance(args, string_types):
 		args = json.loads(args)
 
@@ -325,7 +323,6 @@ def get_valuation_method(item_code):
 	if not val_method:
 		val_method = frappe.db.get_value("Stock Settings", None, "valuation_method") or "FIFO"
 	return val_method
-
 
 def get_fifo_rate(previous_stock_queue, qty):
 	"""get FIFO (average) Rate from Queue"""

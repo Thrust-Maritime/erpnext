@@ -30,7 +30,6 @@ def work():
 	# make_assessment_plan()
 	make_fees()
 
-
 def approve_random_student_applicant():
 	random_student = get_random("Student Applicant", {"application_status": "Applied"})
 	if random_student:

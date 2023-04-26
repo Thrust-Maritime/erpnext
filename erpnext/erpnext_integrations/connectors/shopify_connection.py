@@ -75,13 +75,11 @@ def prepare_delivery_note(order, request_id=None):
 	except Exception as e:
 		make_shopify_log(status="Error", exception=e, rollback=True)
 
-
 def get_sales_order(shopify_order_id):
 	sales_order = frappe.db.get_value("Sales Order", filters={"shopify_order_id": shopify_order_id})
 	if sales_order:
 		so = frappe.get_doc("Sales Order", sales_order)
 		return so
-
 
 def validate_customer(order, shopify_settings):
 	customer_id = order.get("customer", {}).get("id")
@@ -192,7 +190,6 @@ def create_sales_invoice(shopify_order, shopify_settings, so, old_order_sync=Fal
 		make_payament_entry_against_sales_invoice(si, shopify_settings, posting_date)
 		frappe.db.commit()
 
-
 def set_cost_center(items, cost_center):
 	for item in items:
 		item.cost_center = cost_center
@@ -210,7 +207,6 @@ def make_payament_entry_against_sales_invoice(doc, shopify_settings, posting_dat
 	payment_entry.reference_date = posting_date or nowdate()
 	payment_entry.insert(ignore_permissions=True)
 	payment_entry.submit()
-
 
 def create_delivery_note(shopify_order, shopify_settings, so):
 	if not cint(shopify_settings.sync_delivery_note):
@@ -252,7 +248,6 @@ def get_discounted_amount(order):
 	for discount in order.get("discount_codes"):
 		discounted_amount += flt(discount.get("amount"))
 	return discounted_amount
-
 
 def get_order_items(order_items, shopify_settings, delivery_date):
 	items = []

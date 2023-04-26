@@ -108,7 +108,6 @@ def check_if_within_operating_hours(workstation, operation, from_datetime, to_da
 		if not cint(frappe.db.get_value("Manufacturing Settings", None, "allow_overtime")):
 			is_within_operating_hours(workstation, operation, from_datetime, to_datetime)
 
-
 def is_within_operating_hours(workstation, operation, from_datetime, to_datetime):
 	operation_length = time_diff_in_seconds(to_datetime, from_datetime)
 	workstation = frappe.get_doc("Workstation", workstation)

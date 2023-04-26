@@ -80,7 +80,6 @@ def import_coa(file_name, company):
 	# trigger on_update for company to reset default accounts
 	set_default_accounts(company)
 
-
 def get_file(file_name):
 	file_doc = frappe.get_doc("File", {"file_url": file_name})
 	parts = file_doc.get_extension()
@@ -119,7 +118,6 @@ def generate_data_from_csv(file_doc, as_dict=False):
 
 	# convert csv data
 	return data
-
 
 def generate_data_from_excel(file_doc, extension, as_dict=False):
 	content = file_doc.get_content()
@@ -278,7 +276,6 @@ def build_response_as_excel(writer):
 	reader = csv.reader(f)
 
 	from frappe.utils.xlsxutils import make_xlsx
-
 	xlsx_file = make_xlsx(reader, "Chart of Accounts Importer Template")
 
 	f.close()
@@ -334,7 +331,6 @@ def get_template(template_type):
 		writer = get_sample_template(writer)
 
 	return writer
-
 
 def get_sample_template(writer):
 	template = [

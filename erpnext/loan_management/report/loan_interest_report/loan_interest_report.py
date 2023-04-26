@@ -17,7 +17,6 @@ def execute(filters=None):
 	data = get_active_loan_details(filters)
 	return columns, data
 
-
 def get_columns(filters):
 	columns = [
 		{"label": _("Loan"), "fieldname": "loan", "fieldtype": "Link", "options": "Loan", "width": 160},

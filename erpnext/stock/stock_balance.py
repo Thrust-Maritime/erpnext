@@ -122,7 +122,7 @@ def get_reserved_qty(item_code, warehouse):
 					and parenttype="Sales Order"
 					and item_code != parent_item
 					and exists (select * from `tabSales Order` so
-					where name = dnpi_in.parent and docstatus = 1 and status != 'Closed')
+					where name = dnpi_in.parent and docstatus = 1 and status not in ('On Hold', 'Closed'))
 				) dnpi)
 			union
 				(select stock_qty as dnpi_qty, qty as so_item_qty,
@@ -132,7 +132,7 @@ def get_reserved_qty(item_code, warehouse):
 				and (so_item.delivered_by_supplier is null or so_item.delivered_by_supplier = 0)
 				and exists(select * from `tabSales Order` so
 					where so.name = so_item.parent and so.docstatus = 1
-					and so.status != 'Closed'))
+					and so.status not in ('On Hold', 'Closed')))
 			) tab
 		where
 			so_item_qty >= so_item_delivered_qty
@@ -205,7 +205,6 @@ def get_planned_qty(item_code, warehouse):
 
 def update_bin_qty(item_code, warehouse, qty_dict=None):
 	from erpnext.stock.utils import get_bin
-
 	bin = get_bin(item_code, warehouse)
 	mismatch = False
 	for field, value in qty_dict.items():

@@ -38,7 +38,6 @@ class StockLedgerEntry(Document):
 	def validate(self):
 		self.flags.ignore_submit_comment = True
 		from erpnext.stock.utils import validate_disabled_warehouse, validate_warehouse_company
-
 		self.validate_mandatory()
 		self.validate_item()
 		self.validate_batch()
@@ -55,7 +54,6 @@ class StockLedgerEntry(Document):
 
 		if not self.get("via_landed_cost_voucher"):
 			from erpnext.stock.doctype.serial_no.serial_no import process_serial_no
-
 			process_serial_no(self)
 
 	def calculate_batch_qty(self):
@@ -153,6 +151,11 @@ class StockLedgerEntry(Document):
 
 	def validate_batch(self):
 		if self.batch_no and self.voucher_type != "Stock Entry":
+			if (self.voucher_type in ["Purchase Receipt", "Purchase Invoice"] and self.actual_qty < 0) or (
+				self.voucher_type in ["Delivery Note", "Sales Invoice"] and self.actual_qty > 0
+			):
+				return
+
 			expiry_date = frappe.db.get_value("Batch", self.batch_no, "expiry_date")
 			if expiry_date:
 				if getdate(self.posting_date) > getdate(expiry_date):

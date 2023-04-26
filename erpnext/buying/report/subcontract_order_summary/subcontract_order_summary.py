@@ -13,7 +13,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_data(report_filters):
 	data = []
 	orders = get_subcontracted_orders(report_filters)
@@ -87,7 +86,6 @@ def get_supplied_items(orders, report_filters):
 
 	return supplied_items
 
-
 def prepare_subcontracted_data(orders, supplied_items):
 	po_details = {}
 	for row in orders:
@@ -113,7 +111,6 @@ def get_subcontracted_data(po_details, data):
 
 			res.update(row)
 			data.append(res)
-
 
 def get_columns():
 	return [

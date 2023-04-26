@@ -11,7 +11,6 @@ from frappe.model.document import Document
 class InterviewRound(Document):
 	pass
 
-
 @frappe.whitelist()
 def create_interview(doc):
 	if isinstance(doc, str):

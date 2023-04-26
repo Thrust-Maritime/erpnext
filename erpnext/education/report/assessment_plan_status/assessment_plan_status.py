@@ -13,7 +13,6 @@ DOCSTATUS = {
 	1: "submitted",
 }
 
-
 def execute(filters=None):
 	columns, data = [], []
 

@@ -5,6 +5,5 @@ import unittest
 
 # test_records = frappe.get_test_records('Training Result')
 
-
 class TestTrainingResult(unittest.TestCase):
 	pass

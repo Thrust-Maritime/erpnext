@@ -5,6 +5,5 @@ import unittest
 
 # test_records = frappe.get_test_records('Student Batch Name')
 
-
 class TestStudentBatchName(unittest.TestCase):
 	pass

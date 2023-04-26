@@ -29,7 +29,6 @@ def execute(filters=None):
 	chart = get_chart_data(timeslot_wise_count)
 	return columns, data, None, chart
 
-
 def get_data(filters):
 	start_date = getdate(filters.from_date)
 	data = []

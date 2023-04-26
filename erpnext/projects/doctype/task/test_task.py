@@ -104,7 +104,6 @@ class TestTask(unittest.TestCase):
 		task = create_task("Testing Overdue", add_days(nowdate(), -10), add_days(nowdate(), -5))
 
 		from erpnext.projects.doctype.task.task import set_tasks_as_overdue
-
 		set_tasks_as_overdue()
 
 		self.assertEqual(frappe.db.get_value("Task", task.name, "status"), "Overdue")

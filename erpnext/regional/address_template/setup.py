@@ -9,14 +9,12 @@ def set_up_address_templates(default_country=None):
 		is_default = 1 if country == default_country else 0
 		update_address_template(country, html, is_default)
 
-
 def get_address_templates():
 	"""
 	Return country and path for all HTML files in this directory.
 
 	Returns a list of dicts.
 	"""
-
 	def country(file_name):
 		"""Convert 'united_states.html' to 'United States'."""
 		suffix_pos = file_name.find(".html")

@@ -430,7 +430,6 @@ def get_expected_time_for(parameter, service_level, start_date_time):
 
 	return current_date_time
 
-
 def set_service_level_agreement_variance(issue=None):
 	current_time = frappe.flags.current_time or now_datetime()
 
@@ -538,7 +537,6 @@ def set_multiple_status(names, status):
 	for name in names:
 		set_status(name, status)
 
-
 @frappe.whitelist()
 def set_status(name, status):
 	st = frappe.get_doc("Issue", name)
@@ -578,7 +576,6 @@ def has_website_permission(doc, ptype, user, verbose=False):
 def update_issue(contact, method):
 	"""Called when Contact is deleted"""
 	frappe.db.sql("""UPDATE `tabIssue` set contact='' where contact=%s""", contact.name)
-
 
 def get_holidays(holiday_list_name):
 	holiday_list = frappe.get_cached_doc("Holiday List", holiday_list_name)
@@ -639,7 +636,6 @@ def is_first_response(issue):
 	if len(responses) == 1:
 		return True
 	return False
-
 
 def calculate_first_response_time(issue, first_responded_on):
 	issue_creation_date = issue.creation
@@ -718,14 +714,12 @@ def get_working_hours(date, support_hours):
 			if day.workday == weekday:
 				return day.start_time, day.end_time
 
-
 def is_work_day(date, support_hours):
 	weekday = frappe.utils.get_weekday(date)
 	for day in support_hours:
 		if day.workday == weekday:
 			return True
 	return False
-
 
 def is_during_working_hours(date, support_hours):
 	start_time, end_time = get_working_hours(date, support_hours)
@@ -748,7 +742,6 @@ def calculate_initial_frt(issue_creation_date, days_in_between, support_hours):
 			initial_frt += get_elapsed_time(start_time, end_time)
 
 	return initial_frt
-
 
 def is_before_working_hours(date, support_hours):
 	start_time, end_time = get_working_hours(date, support_hours)

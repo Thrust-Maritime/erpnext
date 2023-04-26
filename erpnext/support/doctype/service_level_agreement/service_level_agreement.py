@@ -161,7 +161,6 @@ def check_agreement_status():
 		if doc.end_date and getdate(doc.end_date) < getdate(frappe.utils.getdate()):
 			frappe.db.set_value("Service Level Agreement", service_level_agreement.name, "active", 0)
 
-
 def get_active_service_level_agreement_for(doc):
 	if not frappe.db.get_single_value("Support Settings", "track_service_level_agreement"):
 		return
@@ -232,11 +231,9 @@ def get_customer_group(customer):
 	if customer:
 		return frappe.db.get_value("Customer", customer, "customer_group")
 
-
 def get_customer_territory(customer):
 	if customer:
 		return frappe.db.get_value("Customer", customer, "territory")
-
 
 @frappe.whitelist()
 def get_service_level_agreement_filters(name, customer=None):

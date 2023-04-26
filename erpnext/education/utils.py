@@ -71,7 +71,6 @@ def validate_duplicate_student(students):
 
 		return None
 
-
 # LMS Utils
 def get_current_student():
 	"""Returns current student from frappe.session.user
@@ -130,7 +129,6 @@ def allowed_program_access(program, student=None):
 	else:
 		return False
 
-
 def get_enrollment(master, document, student):
 	"""Gets enrollment for course or program
 
@@ -155,7 +153,6 @@ def get_enrollment(master, document, student):
 		return enrollments[0].name
 	else:
 		return None
-
 
 @frappe.whitelist()
 def enroll_in_program(program_name, student=None):
@@ -198,7 +195,6 @@ def enroll_in_program(program_name, student=None):
 	program_enrollment = student.enroll_in_program(program_name)
 	return program_enrollment.name
 
-
 def has_super_access():
 	"""Check if user has a role that allows full access to LMS
 
@@ -228,7 +224,6 @@ def add_activity(course, content_type, content, program):
 		return
 	else:
 		return enrollment.add_activity(content_type, content)
-
 
 @frappe.whitelist()
 def evaluate_quiz(quiz_response, quiz_name, course, program, time_taken):
@@ -400,7 +395,6 @@ def create_student_from_current_user():
 
 	student.save(ignore_permissions=True)
 	return student
-
 
 def get_or_create_course_enrollment(course, program):
 	student = get_current_student()

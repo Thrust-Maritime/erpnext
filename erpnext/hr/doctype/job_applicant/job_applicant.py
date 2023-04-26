@@ -48,7 +48,6 @@ class JobApplicant(Document):
 		elif self.status in ["Accepted", "Rejected"]:
 			emp_ref.db_set("status", self.status)
 
-
 @frappe.whitelist()
 def create_interview(doc, interview_round):
 	import json

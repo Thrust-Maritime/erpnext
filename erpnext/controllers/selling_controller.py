@@ -25,8 +25,8 @@ class SellingController(StockController):
 	def onload(self):
 		super(SellingController, self).onload()
 		if self.doctype in ("Sales Order", "Delivery Note", "Sales Invoice"):
-			for item in self.get("items"):
-				item.update(get_bin_details(item.item_code, item.warehouse))
+			for item in self.get("items") + (self.get("packed_items") or []):
+				item.update(get_bin_details(item.item_code, item.warehouse, include_child_warehouses=True))
 
 	def validate(self):
 		super(SellingController, self).validate()
@@ -439,11 +439,17 @@ class SellingController(StockController):
 				# For internal transfers use incoming rate as the valuation rate
 				if self.is_internal_transfer():
 					if d.doctype == "Packed Item":
-						incoming_rate = flt(d.incoming_rate * d.conversion_factor, d.precision("incoming_rate"))
+						incoming_rate = flt(
+							flt(d.incoming_rate, d.precision("incoming_rate")) * d.conversion_factor,
+							d.precision("incoming_rate"),
+						)
 						if d.incoming_rate != incoming_rate:
 							d.incoming_rate = incoming_rate
 					else:
-						rate = flt(d.incoming_rate * d.conversion_factor, d.precision("rate"))
+						rate = flt(
+							flt(d.incoming_rate, d.precision("incoming_rate")) * d.conversion_factor,
+							d.precision("rate"),
+						)
 						if d.rate != rate:
 							d.rate = rate
 							frappe.msgprint(
@@ -572,6 +578,7 @@ class SellingController(StockController):
 			"customer_address": "address_display",
 			"shipping_address_name": "shipping_address",
 			"company_address": "company_address_display",
+			"dispatch_address_name": "dispatch_address",
 		}
 
 		for address_field, address_display_field in address_dict.items():
@@ -614,13 +621,13 @@ class SellingController(StockController):
 				stock_items = [d.item_code, d.description, d.warehouse, ""]
 				non_stock_items = [d.item_code, d.description]
 
+			duplicate_items_msg = _("Item {0} entered multiple times.").format(frappe.bold(d.item_code))
+			duplicate_items_msg += "<br><br>"
+			duplicate_items_msg += _("Please enable {} in {} to allow same item in multiple rows").format(
+				frappe.bold("Allow Item to Be Added Multiple Times in a Transaction"),
+				get_link_to_form("Selling Settings", "Selling Settings"),
+			)
 			if frappe.db.get_value("Item", d.item_code, "is_stock_item") == 1:
-				duplicate_items_msg = _("Item {0} entered multiple times.").format(frappe.bold(d.item_code))
-				duplicate_items_msg += "<br><br>"
-				duplicate_items_msg += _("Please enable {} in {} to allow same item in multiple rows").format(
-					frappe.bold("Allow Item to Be Added Multiple Times in a Transaction"),
-					get_link_to_form("Selling Settings", "Selling Settings"),
-				)
 				if stock_items in check_list:
 					frappe.throw(duplicate_items_msg)
 				else:

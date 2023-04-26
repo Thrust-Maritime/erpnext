@@ -385,7 +385,6 @@ def get_users_for_project(doctype, txt, searchfield, start, page_len, filters):
 def get_cost_center_name(project):
 	return frappe.db.get_value("Project", project, "cost_center")
 
-
 def hourly_reminder():
 	fields = ["from_time", "to_time"]
 	projects = get_projects_for_collect_progress("Hourly", fields)
@@ -616,7 +615,6 @@ def update_project_sales_billing():
 
 	for project in project_map.values():
 		project.save()
-
 
 @frappe.whitelist()
 def create_kanban_board_if_not_exists(project):

@@ -68,7 +68,6 @@ def before_tests():
 
 	frappe.db.commit()
 
-
 @frappe.whitelist()
 def get_exchange_rate(from_currency, to_currency, transaction_date=None, args=None):
 	if not (from_currency and to_currency):
@@ -167,7 +166,6 @@ def insert_record(records):
 				pass
 			else:
 				raise
-
 
 def welcome_email():
 	site_name = get_default_company() or "ERPNext"

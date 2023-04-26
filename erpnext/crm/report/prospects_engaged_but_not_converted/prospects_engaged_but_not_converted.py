@@ -95,7 +95,6 @@ def get_data(filters):
 
 	return lead_details
 
-
 def get_lead_filters(filters):
 	lead_creation_date = get_creation_date_based_on_lead_age(filters)
 	lead_filters = [["status", "!=", "Converted"], ["creation", ">", lead_creation_date]]

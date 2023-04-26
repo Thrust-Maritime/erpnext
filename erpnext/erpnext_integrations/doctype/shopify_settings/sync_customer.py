@@ -39,7 +39,6 @@ def create_customer(shopify_customer, shopify_settings):
 	except Exception as e:
 		raise e
 
-
 def create_customer_address(customer, shopify_customer):
 	addresses = shopify_customer.get("addresses", [])
 
@@ -69,7 +68,6 @@ def create_customer_address(customer, shopify_customer):
 
 		except Exception as e:
 			raise e
-
 
 def get_address_title_and_type(customer_name, index):
 	address_type = _("Billing")

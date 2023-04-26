@@ -214,7 +214,6 @@ def get_advance_amount_advance_exchange_rate(advance_account_currency, doc):
 
 	return advance_amount, advance_exchange_rate
 
-
 def get_paying_amount_paying_exchange_rate(payment_account, doc):
 	if payment_account.account_currency != doc.currency:
 		paying_amount = flt(doc.advance_amount) * flt(doc.exchange_rate)
@@ -224,7 +223,6 @@ def get_paying_amount_paying_exchange_rate(payment_account, doc):
 		paying_exchange_rate = doc.exchange_rate
 
 	return paying_amount, paying_exchange_rate
-
 
 @frappe.whitelist()
 def create_return_through_additional_salary(doc):

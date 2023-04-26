@@ -308,7 +308,6 @@ def get_period_month_ranges(period, fiscal_year):
 
 	return period_month_ranges
 
-
 def based_wise_columns_query(based_on, trans):
 	based_on_details = {}
 

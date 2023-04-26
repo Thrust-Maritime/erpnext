@@ -49,7 +49,6 @@ def make_company(company_name, abbr):
 	company.save()
 	return company
 
-
 def setup_fiscal_year():
 	fiscal_year = None
 	year = cstr(now_datetime().year)

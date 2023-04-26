@@ -59,7 +59,6 @@ def get_columns(filters):
 
 	return columns
 
-
 def get_data(filters):
 
 	data = []
@@ -102,7 +101,6 @@ def get_data(filters):
 		data.append(row)
 
 	return data
-
 
 def get_conditions(filters):
 	conditions = []

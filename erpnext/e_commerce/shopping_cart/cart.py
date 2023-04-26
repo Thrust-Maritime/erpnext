@@ -20,7 +20,6 @@ from erpnext.utilities.product import get_web_item_qty_in_stock
 class WebsitePriceListMissingError(frappe.ValidationError):
 	pass
 
-
 def set_cart_count(quotation=None):
 	if cint(frappe.db.get_singles_value("E Commerce Settings", "enabled")):
 		if not quotation:
@@ -29,7 +28,6 @@ def set_cart_count(quotation=None):
 
 		if hasattr(frappe.local, "cookie_manager"):
 			frappe.local.cookie_manager.set_cookie("cart_count", cart_count)
-
 
 @frappe.whitelist()
 def get_cart_quotation(doc=None):
@@ -97,7 +95,6 @@ def place_order():
 		frappe.throw(_("Set Shipping Address or Billing Address"))
 
 	from erpnext.selling.doctype.quotation.quotation import _make_sales_order
-
 	sales_order = frappe.get_doc(_make_sales_order(quotation.name, ignore_permissions=True))
 	sales_order.payment_schedule = []
 
@@ -123,7 +120,6 @@ def place_order():
 		frappe.local.cookie_manager.delete_cookie("cart_count")
 
 	return sales_order.name
-
 
 @frappe.whitelist()
 def request_for_quotation():
@@ -367,7 +363,6 @@ def _get_cart_quotation(party=None):
 
 	return qdoc
 
-
 def update_party(fullname, company_name=None, mobile_no=None, phone=None):
 	party = get_party()
 
@@ -395,7 +390,6 @@ def update_party(fullname, company_name=None, mobile_no=None, phone=None):
 		qdoc.flags.ignore_permissions = True
 		qdoc.save()
 
-
 def apply_cart_settings(party=None, quotation=None):
 	if not party:
 		party = get_party()
@@ -411,7 +405,6 @@ def apply_cart_settings(party=None, quotation=None):
 	set_taxes(quotation, cart_settings)
 
 	_apply_shipping_rule(party, quotation, cart_settings)
-
 
 def set_price_list_and_rate(quotation, cart_settings):
 	"""set price list based on billing territory"""
@@ -452,7 +445,6 @@ def _set_price_list(cart_settings, quotation=None):
 		quotation.selling_price_list = selling_price_list
 
 	return selling_price_list
-
 
 def set_taxes(quotation, cart_settings):
 	"""set taxes based on billing territory"""
@@ -532,7 +524,6 @@ def get_party(user=None):
 
 		return customer
 
-
 def get_debtors_account(cart_settings):
 	if not cart_settings.payment_gateway_account:
 		frappe.throw(_("Payment Gateway Account not set"), _("Mandatory"))
@@ -596,7 +587,6 @@ def get_address_docs(
 
 	return out
 
-
 @frappe.whitelist()
 def apply_shipping_rule(shipping_rule):
 	quotation = _get_cart_quotation()
@@ -609,7 +599,6 @@ def apply_shipping_rule(shipping_rule):
 	quotation.save()
 
 	return get_cart_quotation(quotation)
-
 
 def _apply_shipping_rule(party=None, quotation=None, cart_settings=None):
 	if not quotation.shipping_rule:
@@ -625,7 +614,6 @@ def _apply_shipping_rule(party=None, quotation=None, cart_settings=None):
 		quotation.run_method("apply_shipping_rule")
 		quotation.run_method("calculate_taxes_and_totals")
 
-
 def get_applicable_shipping_rules(party=None, quotation=None):
 	shipping_rules = get_shipping_rules(quotation)
 
@@ -633,7 +621,6 @@ def get_applicable_shipping_rules(party=None, quotation=None):
 		rule_label_map = frappe.db.get_values("Shipping Rule", shipping_rules, "label")
 		# we need this in sorted order as per the position of the rule in the settings page
 		return [[rule, rule] for rule in shipping_rules]
-
 
 def get_shipping_rules(quotation=None, cart_settings=None):
 	if not quotation:
@@ -686,7 +673,6 @@ def apply_coupon_code(applied_code, applied_referral_sales_partner):
 	coupon_name = coupon_list[0].name
 
 	from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
-
 	validate_coupon_code(coupon_name)
 	quotation = _get_cart_quotation()
 	quotation.coupon_code = coupon_name

@@ -230,7 +230,6 @@ class PurchaseReceipt(BuyingController):
 		self.update_stock_ledger()
 
 		from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
-
 		update_serial_nos_after_submit(self, "items")
 
 		self.make_gl_entries()
@@ -367,6 +366,24 @@ class PurchaseReceipt(BuyingController):
 						if credit_currency == self.company_currency
 						else flt(d.net_amount, d.precision("net_amount"))
 					)
+
+					outgoing_amount = d.base_net_amount
+					if self.is_internal_supplier and d.valuation_rate:
+						outgoing_amount = abs(
+							frappe.db.get_value(
+								"Stock Ledger Entry",
+								{
+									"voucher_type": "Purchase Receipt",
+									"voucher_no": self.name,
+									"voucher_detail_no": d.name,
+									"warehouse": d.from_warehouse,
+									"is_cancelled": 0,
+								},
+								"stock_value_difference",
+							)
+						)
+						credit_amount = outgoing_amount
+
 					if credit_amount:
 						account = warehouse_account[d.from_warehouse]["account"] if d.from_warehouse else stock_rbnb
 
@@ -374,7 +391,7 @@ class PurchaseReceipt(BuyingController):
 							gl_entries=gl_entries,
 							account=account,
 							cost_center=d.cost_center,
-							debit=-1 * flt(d.base_net_amount, d.precision("base_net_amount")),
+							debit=-1 * flt(outgoing_amount, d.precision("base_net_amount")),
 							credit=0.0,
 							remarks=remarks,
 							against_account=warehouse_account_name,
@@ -423,14 +440,14 @@ class PurchaseReceipt(BuyingController):
 
 					# divisional loss adjustment
 					valuation_amount_as_per_doc = (
-						flt(d.base_net_amount, d.precision("base_net_amount"))
+						flt(outgoing_amount, d.precision("base_net_amount"))
 						+ flt(d.landed_cost_voucher_amount)
 						+ flt(d.rm_supp_cost)
 						+ flt(d.item_tax_amount)
 					)
 
 					divisional_loss = flt(
-						valuation_amount_as_per_doc - stock_value_diff, d.precision("base_net_amount")
+						valuation_amount_as_per_doc - flt(stock_value_diff), d.precision("base_net_amount")
 					)
 
 					if divisional_loss:
@@ -468,6 +485,7 @@ class PurchaseReceipt(BuyingController):
 				and not d.is_fixed_asset
 				and flt(d.qty)
 				and provisional_accounting_for_non_stock_items
+				and d.get("provisional_expense_account")
 			):
 				self.add_provisional_gl_entry(
 					d, gl_entries, self.posting_date, d.get("provisional_expense_account")
@@ -816,7 +834,6 @@ def update_billed_amount_based_on_po(po_detail, update_modified=True):
 
 	return updated_pr
 
-
 def update_billing_percentage(pr_doc, update_modified=True):
 	# Reload as billed amount was set in db directly
 	pr_doc.load_from_db()
@@ -824,7 +841,7 @@ def update_billing_percentage(pr_doc, update_modified=True):
 	# Update Billing % based on pending accepted qty
 	total_amount, total_billed_amount = 0, 0
 	for item in pr_doc.items:
-		return_data = frappe.db.get_list(
+		return_data = frappe.get_all(
 			"Purchase Receipt",
 			fields=["sum(abs(`tabPurchase Receipt Item`.qty)) as qty"],
 			filters=[
@@ -849,7 +866,6 @@ def update_billing_percentage(pr_doc, update_modified=True):
 	if update_modified:
 		pr_doc.set_status(update=True)
 		pr_doc.notify_update()
-
 
 @frappe.whitelist()
 def make_purchase_invoice(source_name, target_doc=None):
@@ -1057,13 +1073,25 @@ def get_item_account_wise_additional_cost(purchase_document):
 						account.expense_account, {"amount": 0.0, "base_amount": 0.0}
 					)
 
-					item_account_wise_cost[(item.item_code, item.purchase_receipt_item)][account.expense_account][
-						"amount"
-					] += (account.amount * item.get(based_on_field) / total_item_cost)
+					if total_item_cost > 0:
+						item_account_wise_cost[(item.item_code, item.purchase_receipt_item)][
+							account.expense_account
+						]["amount"] += (
+							account.amount * item.get(based_on_field) / total_item_cost
+						)
 
-					item_account_wise_cost[(item.item_code, item.purchase_receipt_item)][account.expense_account][
-						"base_amount"
-					] += (account.base_amount * item.get(based_on_field) / total_item_cost)
+						item_account_wise_cost[(item.item_code, item.purchase_receipt_item)][
+							account.expense_account
+						]["base_amount"] += (
+							account.base_amount * item.get(based_on_field) / total_item_cost
+						)
+					else:
+						item_account_wise_cost[(item.item_code, item.purchase_receipt_item)][
+							account.expense_account
+						]["amount"] += item.applicable_charges
+						item_account_wise_cost[(item.item_code, item.purchase_receipt_item)][
+							account.expense_account
+						]["base_amount"] += item.applicable_charges
 
 	return item_account_wise_cost
 

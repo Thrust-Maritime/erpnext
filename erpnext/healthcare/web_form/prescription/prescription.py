@@ -4,7 +4,6 @@ import frappe
 def get_context(context):
 	context.read_only = 1
 
-
 def get_list_context(context):
 	context.row_template = "erpnext/templates/includes/healthcare/prescription_row_template.html"
 	context.get_list = get_encounter_list

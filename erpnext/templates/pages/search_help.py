@@ -67,7 +67,6 @@ def get_topics_data(api, response_json):
 
 	return topics_data or []
 
-
 def prepare_api_results(api, topics_data):
 	if not topics_data:
 		topics_data = []

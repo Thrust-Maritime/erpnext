@@ -223,7 +223,6 @@ def post_process(doctype, data):
 
 	return result
 
-
 def get_customers_suppliers(doctype, user):
 	customers = []
 	suppliers = []

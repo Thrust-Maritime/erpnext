@@ -10,6 +10,34 @@ frappe.ui.form.on("Item", {
 		frm.add_fetch('attribute', 'to_range', 'to_range');
 		frm.add_fetch('attribute', 'increment', 'increment');
 		frm.add_fetch('tax_type', 'tax_rate', 'tax_rate');
+
+		frm.make_methods = {
+			'Sales Order': () => {
+				open_form(frm, "Sales Order", "Sales Order Item", "items");
+			},
+			'Delivery Note': () => {
+				open_form(frm, "Delivery Note", "Delivery Note Item", "items");
+			},
+			'Sales Invoice': () => {
+				open_form(frm, "Sales Invoice", "Sales Invoice Item", "items");
+			},
+			'Purchase Order': () => {
+				open_form(frm, "Purchase Order", "Purchase Order Item", "items");
+			},
+			'Purchase Receipt': () => {
+				open_form(frm, "Purchase Receipt", "Purchase Receipt Item", "items");
+			},
+			'Purchase Invoice': () => {
+				open_form(frm, "Purchase Invoice", "Purchase Invoice Item", "items");
+			},
+			'Material Request': () => {
+				open_form(frm, "Material Request", "Material Request Item", "items");
+			},
+			'Stock Entry': () => {
+				open_form(frm, "Stock Entry", "Stock Entry Detail", "items");
+			},
+		};
+
 	},
 	onload: function(frm) {
 		erpnext.item.setup_queries(frm);
@@ -55,7 +83,6 @@ frappe.ui.form.on("Item", {
 
 		if (frm.doc.has_variants) {
 			frm.set_intro(__("This Item is a Template and cannot be used in transactions. Item attributes will be copied over into the variants unless 'No Copy' is set"), true);
-
 			frm.add_custom_button(__("Show Variants"), function() {
 				frappe.set_route("List", "Item", {"variant_of": frm.doc.name});
 			}, __("View"));
@@ -827,3 +854,26 @@ frappe.ui.form.on("UOM Conversion Detail", {
 		}
 	}
 });
+
+function open_form(frm, doctype, child_doctype, parentfield) {
+	frappe.model.with_doctype(doctype, () => {
+		let new_doc = frappe.model.get_new_doc(doctype);
+
+		let new_child_doc = frappe.model.add_child(new_doc, child_doctype, parentfield);
+		new_child_doc.item_code = frm.doc.name;
+		new_child_doc.item_name = frm.doc.item_name;
+		new_child_doc.uom = frm.doc.stock_uom;
+		new_child_doc.description = frm.doc.description;
+		if (!new_child_doc.qty) {
+			new_child_doc.qty = 1.0;
+		}
+
+		frappe.run_serially([
+			() => frappe.ui.form.make_quick_entry(doctype, null, null, new_doc),
+			() => {
+				frappe.flags.ignore_company_party_validation = true;
+				frappe.model.trigger("item_code", frm.doc.name, new_child_doc);
+			}
+		])
+	});
+}

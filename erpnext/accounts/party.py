@@ -208,11 +208,11 @@ def set_address_details(
 			)
 
 	if company_address:
-		party_details.update({"company_address": company_address})
+		party_details.company_address = company_address
 	else:
 		party_details.update(get_company_address(company))
 
-	if doctype and doctype in ["Delivery Note", "Sales Invoice", "Sales Order"]:
+	if doctype and doctype in ["Delivery Note", "Sales Invoice", "Sales Order", "Quotation"]:
 		if party_details.company_address:
 			party_details.update(
 				get_fetch_values(doctype, "company_address", party_details.company_address)
@@ -220,21 +220,44 @@ def set_address_details(
 		get_regional_address_details(party_details, doctype, company)
 
 	elif doctype and doctype in ["Purchase Invoice", "Purchase Order", "Purchase Receipt"]:
-		if party_details.company_address:
-			party_details["shipping_address"] = shipping_address or party_details["company_address"]
-			party_details.shipping_address_display = get_address_display(party_details["shipping_address"])
+		if shipping_address:
 			party_details.update(
-				get_fetch_values(doctype, "shipping_address", party_details.shipping_address)
+				{
+					"shipping_address": shipping_address,
+					"shipping_address_display": get_address_display(shipping_address),
+					**get_fetch_values(doctype, "shipping_address", shipping_address),
+				}
 			)
+
+		if party_details.company_address:
+			# billing address
+			party_details.update(
+				{
+					"billing_address": party_details.company_address,
+					"billing_address_display": (
+						party_details.company_address_display or get_address_display(party_details.company_address)
+					),
+					**get_fetch_values(doctype, "billing_address", party_details.company_address),
+				}
+			)
+
+			# shipping address - if not already set
+			if not party_details.shipping_address:
+				party_details.update(
+					{
+						"shipping_address": party_details.billing_address,
+						"shipping_address_display": party_details.billing_address_display,
+						**get_fetch_values(doctype, "shipping_address", party_details.billing_address),
+					}
+				)
+
 		get_regional_address_details(party_details, doctype, company)
 
 	return party_details.get(billing_address_field), party_details.shipping_address_name
 
-
 @erpnext.allow_regional
 def get_regional_address_details(party_details, doctype, company):
 	pass
-
 
 def set_contact_details(party_details, party, party_type):
 	party_details.contact_person = get_default_contact(party_type, party.name)
@@ -507,7 +530,6 @@ def get_due_date(posting_date, party_type, party, company=None, bill_date=None):
 	if getdate(due_date) < getdate(posting_date):
 		due_date = posting_date
 	return due_date
-
 
 def get_due_date_from_template(template_name, posting_date, bill_date):
 	"""
@@ -813,7 +835,6 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 		company_wise_info.append(info)
 
 	return company_wise_info
-
 
 def get_party_shipping_address(doctype, name):
 	"""

@@ -43,7 +43,7 @@ class GLEntry(Document):
 		self.validate_and_set_fiscal_year()
 		self.pl_must_have_cost_center()
 
-		if not self.flags.from_repost:
+		if not self.flags.from_repost and self.voucher_type != "Period Closing Voucher":
 			self.check_mandatory()
 			self.validate_cost_center()
 			self.check_pl_account()
@@ -52,7 +52,7 @@ class GLEntry(Document):
 
 	def on_update(self):
 		adv_adj = self.flags.adv_adj
-		if not self.flags.from_repost:
+		if not self.flags.from_repost and self.voucher_type != "Period Closing Voucher":
 			self.validate_account_details(adv_adj)
 			self.validate_dimensions_for_pl_and_bs()
 			self.validate_allowed_dimensions()
@@ -270,7 +270,6 @@ class GLEntry(Document):
 		if not self.fiscal_year:
 			self.fiscal_year = get_fiscal_year(self.posting_date, company=self.company)[0]
 
-
 def validate_balance_type(account, adv_adj=False):
 	if not adv_adj and account:
 		balance_must_be = frappe.db.get_value("Account", account, "balance_must_be")
@@ -358,7 +357,7 @@ def update_outstanding_amt(
 	if against_voucher_type in ["Sales Invoice", "Purchase Invoice", "Fees"]:
 		ref_doc = frappe.get_doc(against_voucher_type, against_voucher)
 
-		# Didn't use db_set for optimisation purpose
+		# Didn't use db_set for optimization purpose
 		ref_doc.outstanding_amount = bal
 		frappe.db.set_value(against_voucher_type, against_voucher, "outstanding_amount", bal)
 
@@ -406,16 +405,13 @@ def update_against_account(voucher_type, voucher_no):
 		if d.against != new_against:
 			frappe.db.set_value("GL Entry", d.name, "against", new_against)
 
-
 def on_doctype_update():
 	frappe.db.add_index("GL Entry", ["against_voucher_type", "against_voucher"])
 	frappe.db.add_index("GL Entry", ["voucher_type", "voucher_no"])
 
-
 def rename_gle_sle_docs():
 	for doctype in ["GL Entry", "Stock Ledger Entry"]:
 		rename_temporarily_named_docs(doctype)
-
 
 def rename_temporarily_named_docs(doctype):
 	"""Rename temporarily named docs using autoname options"""

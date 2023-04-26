@@ -187,7 +187,6 @@ def make_subcontract():
 		stock_entry.to_warehouse = "Supplier - WPL"
 		stock_entry.insert()
 
-
 def get_rm_item(items, supplied_items):
 	return {
 		"item_code": items.get("item_code"),

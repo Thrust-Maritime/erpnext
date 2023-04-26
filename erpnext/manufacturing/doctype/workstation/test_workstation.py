@@ -94,7 +94,6 @@ class TestWorkstation(FrappeTestCase):
 		self.assertEqual(bom_doc.operations[0].hour_rate, 250)
 		self.assertEqual(bom_doc.operations[1].hour_rate, 250)
 
-
 def make_workstation(*args, **kwargs):
 	args = args if args else kwargs
 	if isinstance(args, tuple):

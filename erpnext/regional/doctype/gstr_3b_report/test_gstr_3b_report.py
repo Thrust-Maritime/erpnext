@@ -13,7 +13,6 @@ from erpnext.stock.doctype.item.test_item import make_item
 
 test_dependencies = ["Territory", "Customer Group", "Supplier Group", "Item"]
 
-
 class TestGSTR3BReport(unittest.TestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")

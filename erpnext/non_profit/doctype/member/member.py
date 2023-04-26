@@ -98,7 +98,6 @@ def create_member(user_details):
 
 	return member
 
-
 def create_customer(user_details, member=None):
 	customer = frappe.new_doc("Customer")
 	customer.customer_name = user_details.fullname
@@ -135,7 +134,6 @@ def create_customer(user_details, member=None):
 
 	return customer.name
 
-
 @frappe.whitelist(allow_guest=True)
 def create_member_subscription_order(user_details):
 	"""Create Member subscription and order for payment
@@ -164,7 +162,6 @@ def create_member_subscription_order(user_details):
 	member.save(ignore_permissions=True)
 
 	return subscription
-
 
 @frappe.whitelist()
 def register_member(fullname, email, rzpay_plan_id, subscription_id, pan=None, mobile=None):

@@ -13,7 +13,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_data(filters):
 	data = []
 
@@ -23,7 +22,6 @@ def get_data(filters):
 	get_production_plan_item_details(filters, data, order_details)
 
 	return data
-
 
 def get_production_plan_item_details(filters, data, order_details):
 	itemwise_indent = {}

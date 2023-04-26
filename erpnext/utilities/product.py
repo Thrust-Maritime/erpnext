@@ -77,7 +77,6 @@ def qty_from_all_warehouses(batch_info):
 
 	return qty
 
-
 def get_price(item_code, price_list, customer_group, company, qty=1):
 	from erpnext.e_commerce.shopping_cart.cart import get_party
 
@@ -176,7 +175,6 @@ def get_price(item_code, price_list, customer_group, company, qty=1):
 					price_obj["formatted_price"], price_obj["formatted_mrp"] = "", ""
 
 			return price_obj
-
 
 def get_non_stock_item_status(item_code, item_warehouse_field):
 	# if item is a product bundle, check if its bundle items are in stock

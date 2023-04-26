@@ -10,7 +10,6 @@ from frappe.model.document import Document
 class ChequePrintTemplate(Document):
 	pass
 
-
 @frappe.whitelist()
 def create_or_update_cheque_print_format(template_name):
 	if not frappe.db.exists("Print Format", template_name):

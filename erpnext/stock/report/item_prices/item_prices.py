@@ -140,7 +140,6 @@ def get_last_purchase_rate():
 
 	return item_last_purchase_rate_map
 
-
 def get_item_bom_rate():
 	"""Get BOM rate of an item from BOM"""
 

@@ -13,7 +13,6 @@ from erpnext.accounts.utils import get_fiscal_year
 def execute(filters=None):
 	return Analytics(filters).run()
 
-
 class Analytics(object):
 	def __init__(self, filters=None):
 		"""Patient Appointment Analytics Report."""

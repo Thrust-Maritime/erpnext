@@ -104,7 +104,6 @@ def make_membership(member, payload={}):
 	membership.insert(ignore_permissions=True, ignore_if_duplicate=True)
 	return membership
 
-
 def create_item(item_code):
 	if not frappe.db.exists("Item", item_code):
 		item = frappe.new_doc("Item")
@@ -118,7 +117,6 @@ def create_item(item_code):
 	else:
 		item = frappe.get_doc("Item", item_code)
 	return item
-
 
 def setup_membership():
 	# Get default company
@@ -152,7 +150,6 @@ def setup_membership():
 		plan = frappe.get_doc("Membership Type", "_rzpy_test_milythm")
 
 	return plan
-
 
 def get_subscription_payload():
 	return {

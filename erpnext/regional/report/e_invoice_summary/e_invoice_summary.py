@@ -14,7 +14,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def validate_filters(filters=None):
 	filters = frappe._dict(filters or {})
 

@@ -24,7 +24,6 @@ class SupplierScorecardVariable(Document):
 				from erpnext.buying.doctype.supplier_scorecard_period.supplier_scorecard_period import (
 					import_string_path,
 				)
-
 				import_string_path(self.path)
 			except AttributeError:
 				frappe.throw(_("Could not find path for " + self.path), VariablePathNotFound)

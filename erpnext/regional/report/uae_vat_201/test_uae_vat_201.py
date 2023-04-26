@@ -20,7 +20,6 @@ from erpnext.stock.doctype.warehouse.test_warehouse import get_warehouse_account
 
 test_dependencies = ["Territory", "Customer Group", "Supplier Group", "Item"]
 
-
 class TestUaeVat201(TestCase):
 	def setUp(self):
 		frappe.set_user("Administrator")
@@ -91,7 +90,6 @@ def make_company(company_name, abbr):
 	company.save()
 	return company
 
-
 def set_vat_accounts():
 	if not frappe.db.exists("UAE VAT Settings", "_Test Company UAE VAT"):
 		vat_accounts = frappe.get_all(
@@ -156,7 +154,6 @@ def create_warehouse(warehouse_name, properties=None, company=None):
 		return warehouse.name
 	else:
 		return warehouse_id
-
 
 def make_item(item_code, properties=None):
 	if frappe.db.exists("Item", item_code):

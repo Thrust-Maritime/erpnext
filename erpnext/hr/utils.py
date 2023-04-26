@@ -13,6 +13,7 @@ from frappe.utils import (
 	formatdate,
 	get_datetime,
 	get_link_to_form,
+	get_number_format_info,
 	getdate,
 	nowdate,
 	today,
@@ -185,13 +186,11 @@ def update_employee_work_history(employee, details, date=None, cancel=False):
 		field = frappe.get_meta("Employee").get_field(item.fieldname)
 		if not field:
 			continue
-		fieldtype = field.fieldtype
-		new_data = item.new if not cancel else item.current
-		if fieldtype == "Date" and new_data:
-			new_data = getdate(new_data)
-		elif fieldtype == "Datetime" and new_data:
-			new_data = get_datetime(new_data)
-		setattr(employee, item.fieldname, new_data)
+
+		new_value = item.new if not cancel else item.current
+		new_value = get_formatted_value(new_value, field.fieldtype)
+		setattr(employee, item.fieldname, new_value)
+
 		if item.fieldname in ["department", "designation", "branch"]:
 			internal_work_history[item.fieldname] = item.new
 
@@ -203,6 +202,34 @@ def update_employee_work_history(employee, details, date=None, cancel=False):
 		delete_employee_work_history(details, employee, date)
 
 	return employee
+
+
+def get_formatted_value(value, fieldtype):
+	"""
+	Since the fields in Internal Work History table are `Data` fields
+	format them as per relevant field types
+	"""
+	if not value:
+		return
+
+	if fieldtype == "Date":
+		value = getdate(value)
+	elif fieldtype == "Datetime":
+		value = get_datetime(value)
+	elif fieldtype in ["Currency", "Float"]:
+		# in case of currency/float, the value might be in user's prefered number format
+		# instead of machine readable format. Convert it into a machine readable format
+		number_format = frappe.db.get_default("number_format") or "#,###.##"
+		decimal_str, comma_str, _number_format_precision = get_number_format_info(number_format)
+
+		if comma_str == "." and decimal_str == ",":
+			value = value.replace(",", "#$")
+			value = value.replace(".", ",")
+			value = value.replace("#$", ".")
+
+		value = flt(value)
+
+	return value
 
 
 def delete_employee_work_history(details, employee, date):
@@ -222,6 +249,7 @@ def delete_employee_work_history(details, employee, date):
 				filters["from_date"] = date
 	if filters:
 		frappe.db.delete("Employee Internal Work History", filters)
+		employee.save()
 
 
 @frappe.whitelist()
@@ -307,7 +335,6 @@ def validate_overlap(doc, from_date, to_date, company=None):
 			exists_for = company
 		throw_overlap_error(doc, exists_for, overlap_doc[0].name, from_date, to_date)
 
-
 def get_doc_condition(doctype):
 	if doctype == "Compensatory Leave Request":
 		return "and employee = %(employee)s and docstatus < 2 \
@@ -367,7 +394,6 @@ def validate_tax_declaration(declarations):
 		if d.exemption_sub_category in subcategories:
 			frappe.throw(_("More than one selection for {0} not allowed").format(d.exemption_sub_category))
 		subcategories.append(d.exemption_sub_category)
-
 
 def get_total_exemption_amount(declarations):
 	exemptions = frappe._dict()
@@ -655,7 +681,6 @@ def get_sal_slip_total_benefit_given(employee, payroll_period, component=False):
 		total_given_benefit_amount = sum_of_given_benefit[0].total_amount
 	return total_given_benefit_amount
 
-
 def get_holiday_dates_for_employee(employee, start_date, end_date):
 	"""return a list of holiday dates for the given employee between start_date and end_date"""
 	# return only date
@@ -698,13 +723,11 @@ def calculate_annual_eligible_hra_exemption(doc):
 	# Indian HRA Exemption Calculation
 	return {}
 
-
 @erpnext.allow_regional
 def calculate_hra_exemption_for_period(doc):
 	# Don't delete this method, used for localization
 	# Indian HRA Exemption Calculation
 	return {}
-
 
 def get_previous_claimed_amount(employee, payroll_period, non_pro_rata=False, component=False):
 	total_claimed_amount = 0

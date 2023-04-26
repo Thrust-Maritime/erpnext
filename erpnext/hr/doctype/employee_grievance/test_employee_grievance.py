@@ -13,7 +13,6 @@ class TestEmployeeGrievance(unittest.TestCase):
 	def test_create_employee_grievance(self):
 		create_employee_grievance()
 
-
 def create_employee_grievance():
 	grievance_type = create_grievance_type()
 	emp_1 = make_employee("test_emp_grievance_@example.com", company="_Test Company")

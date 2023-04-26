@@ -40,7 +40,6 @@ class WarrantyClaim(TransactionBase):
 	def on_update(self):
 		pass
 
-
 @frappe.whitelist()
 def make_maintenance_visit(source_name, target_doc=None):
 	from frappe.model.mapper import get_mapped_doc, map_child_doc

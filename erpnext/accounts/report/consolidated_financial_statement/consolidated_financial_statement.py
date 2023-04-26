@@ -67,7 +67,6 @@ def execute(filters=None):
 
 	return columns, data, message, chart, report_summary
 
-
 def get_balance_sheet_data(fiscal_year, companies, columns, filters):
 	asset = get_data(companies, "Asset", "Debit", fiscal_year, filters=filters)
 
@@ -128,7 +127,6 @@ def get_balance_sheet_data(fiscal_year, companies, columns, filters):
 
 	return data, message, chart, report_summary
 
-
 def prepare_companywise_opening_balance(asset_data, liability_data, equity_data, companies):
 	opening_balance = {}
 	for company in companies:
@@ -138,7 +136,8 @@ def prepare_companywise_opening_balance(asset_data, liability_data, equity_data,
 		for data in [asset_data, liability_data, equity_data]:
 			if data:
 				account_name = get_root_account_name(data[0].root_type, company)
-				opening_value += get_opening_balance(account_name, data, company) or 0.0
+				if account_name:
+					opening_value += get_opening_balance(account_name, data, company) or 0.0
 
 		opening_balance[company] = opening_value
 
@@ -155,7 +154,7 @@ def get_opening_balance(account_name, data, company):
 
 
 def get_root_account_name(root_type, company):
-	return frappe.get_all(
+	root_account = frappe.get_all(
 		"Account",
 		fields=["account_name"],
 		filters={
@@ -165,7 +164,10 @@ def get_root_account_name(root_type, company):
 			"parent_account": ("is", "not set"),
 		},
 		as_list=1,
-	)[0][0]
+	)
+
+	if root_account:
+		return root_account[0][0]
 
 
 def get_profit_loss_data(fiscal_year, companies, columns, filters):
@@ -264,14 +266,15 @@ def get_cash_flow_data(fiscal_year, companies, filters):
 
 	return data, report_summary
 
-
 def get_account_type_based_data(account_type, companies, fiscal_year, filters):
 	data = {}
 	total = 0
+	filters.account_type = account_type
+	filters.start_date = fiscal_year.year_start_date
+	filters.end_date = fiscal_year.year_end_date
+
 	for company in companies:
-		amount = get_account_type_based_gl_data(
-			company, fiscal_year.year_start_date, fiscal_year.year_end_date, account_type, filters
-		)
+		amount = get_account_type_based_gl_data(company, filters)
 
 		if amount and account_type == "Depreciation":
 			amount *= -1
@@ -281,7 +284,6 @@ def get_account_type_based_data(account_type, companies, fiscal_year, filters):
 
 	data["total"] = total
 	return data
-
 
 def get_columns(companies, filters):
 	columns = [
@@ -431,7 +433,6 @@ def calculate_values(accounts_by_name, gl_entries_by_account, companies, filters
 				if entry.posting_date < getdate(start_date):
 					d["opening_balance"] = d.get("opening_balance", 0.0) + flt(debit) - flt(credit)
 
-
 def accumulate_values_into_parents(accounts, accounts_by_name, companies):
 	"""accumulate children's values in parent accounts"""
 	for d in reversed(accounts):
@@ -533,9 +534,14 @@ def get_accounts(root_type, companies):
 			],
 			filters={"company": company, "root_type": root_type},
 		):
-			if account.account_name not in added_accounts:
+			if account.account_number:
+				account_key = account.account_number + "-" + account.account_name
+			else:
+				account_key = account.account_name
+
+			if account_key not in added_accounts:
 				accounts.append(account)
-				added_accounts.append(account.account_name)
+				added_accounts.append(account_key)
 
 	return accounts
 
@@ -729,7 +735,6 @@ def get_additional_conditions(from_date, ignore_closing_entries, filters):
 
 	return " and {}".format(" and ".join(additional_conditions)) if additional_conditions else ""
 
-
 def add_total_row(out, root_type, balance_must_be, companies, company_currency):
 	total_row = {
 		"account_name": "'" + _("Total {0} ({1})").format(_(root_type), _(balance_must_be)) + "'",
@@ -752,7 +757,6 @@ def add_total_row(out, root_type, balance_must_be, companies, company_currency):
 
 		# blank row after Total
 		out.append({})
-
 
 def filter_accounts(accounts, depth=10):
 	parent_children_map = {}

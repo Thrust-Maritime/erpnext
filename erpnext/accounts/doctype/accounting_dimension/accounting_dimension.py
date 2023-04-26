@@ -78,7 +78,6 @@ class AccountingDimension(Document):
 	def on_update(self):
 		frappe.flags.accounting_dimensions = None
 
-
 def make_dimension_in_accounting_doctypes(doc, doclist=None):
 	if not doclist:
 		doclist = get_doctypes_with_dimensions()
@@ -181,7 +180,6 @@ def delete_accounting_dimension(doc):
 
 	for doctype in doclist:
 		frappe.clear_cache(doctype=doctype)
-
 
 @frappe.whitelist()
 def disable_dimension(doc):

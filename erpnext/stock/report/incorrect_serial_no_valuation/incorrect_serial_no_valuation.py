@@ -16,14 +16,12 @@ def execute(filters=None):
 	data = get_data(filters)
 	return columns, data
 
-
 def get_data(filters):
 	data = get_stock_ledger_entries(filters)
 	serial_nos_data = prepare_serial_nos(data)
 	data = get_incorrect_serial_nos(serial_nos_data)
 
 	return data
-
 
 def prepare_serial_nos(data):
 	serial_no_wise_data = {}
@@ -63,7 +61,6 @@ def get_incorrect_serial_nos(serial_nos_data):
 	result.append(total_value)
 
 	return result
-
 
 def check_incorrect_serial_data(data, total_dict):
 	incorrect_data = False

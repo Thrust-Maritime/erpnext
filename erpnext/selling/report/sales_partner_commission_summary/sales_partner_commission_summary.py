@@ -15,7 +15,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_columns(filters):
 	if not filters.get("doctype"):
 		msgprint(_("Please select the document type first"), raise_exception=1)

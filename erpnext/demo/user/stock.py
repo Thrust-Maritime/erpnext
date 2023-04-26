@@ -76,7 +76,6 @@ def make_delivery_note():
 			except (NegativeStockError, SerialNoRequiredError, SerialNoQtyError, UnableToSelectBatchError):
 				frappe.db.rollback()
 
-
 def make_stock_reconciliation():
 	# random set some items as damaged
 	from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import (
@@ -101,7 +100,6 @@ def make_stock_reconciliation():
 				frappe.db.rollback()
 			except EmptyStockReconciliationItemsError:
 				frappe.db.rollback()
-
 
 def submit_draft_stock_entries():
 	from erpnext.stock.doctype.stock_entry.stock_entry import (

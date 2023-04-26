@@ -5,6 +5,5 @@ import unittest
 
 # test_records = frappe.get_test_records('Expense Claim Type')
 
-
 class TestExpenseClaimType(unittest.TestCase):
 	pass

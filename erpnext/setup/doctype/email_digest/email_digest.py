@@ -176,7 +176,6 @@ class EmailDigest(Document):
 	def get_calendar_events(self):
 		"""Get calendar events for given user"""
 		from frappe.desk.doctype.event.event import get_events
-
 		from_date, to_date = get_future_date_for_calendaer_event(self.frequency)
 
 		events = get_events(from_date, to_date)
@@ -929,7 +928,6 @@ def get_count_for_period(account, fieldname, from_date, to_date):
 		count = count_on_to_date + (last_year_closing_count - count_before_from_date)
 
 	return count
-
 
 def get_future_date_for_calendaer_event(frequency):
 	from_date = to_date = today()

@@ -2,7 +2,7 @@
  "actions": [],
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "field:project_name",
+ "autoname": "naming_series:",
  "creation": "2013-03-07 11:55:07",
  "doctype": "DocType",
  "document_type": "Setup",

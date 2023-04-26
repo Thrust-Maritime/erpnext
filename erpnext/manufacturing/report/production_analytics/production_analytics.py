@@ -75,7 +75,6 @@ def get_periodic_data(filters, entry):
 
 	return periodic_data
 
-
 def update_periodic_data(periodic_data, status, period):
 	if periodic_data.get(status).get(period):
 		periodic_data[status][period] += 1

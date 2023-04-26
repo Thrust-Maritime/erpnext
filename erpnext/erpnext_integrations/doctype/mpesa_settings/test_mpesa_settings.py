@@ -238,7 +238,6 @@ class TestMpesaSettings(unittest.TestCase):
 		pr.delete()
 		pos_invoice.delete()
 
-
 def create_mpesa_settings(payment_gateway_name="Express"):
 	if frappe.db.exists("Mpesa Settings", payment_gateway_name):
 		return frappe.get_doc("Mpesa Settings", payment_gateway_name)

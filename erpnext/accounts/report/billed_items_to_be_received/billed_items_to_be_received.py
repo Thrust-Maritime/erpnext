@@ -12,7 +12,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_data(report_filters):
 	filters = get_report_filters(report_filters)
 	fields = get_report_fields()

@@ -261,7 +261,6 @@ class TestPatientAppointment(unittest.TestCase):
 
 	def test_overlap_appointment(self):
 		from erpnext.healthcare.doctype.patient_appointment.patient_appointment import OverlapError
-
 		patient, practitioner = create_healthcare_docs(id=1)
 		patient_1, practitioner_1 = create_healthcare_docs(id=2)
 		service_unit = create_service_unit(id=0)

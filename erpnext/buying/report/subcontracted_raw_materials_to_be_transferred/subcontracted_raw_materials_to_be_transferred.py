@@ -15,7 +15,6 @@ def execute(filters=None):
 
 	return columns, data or []
 
-
 def get_columns():
 	return [
 		{
@@ -57,7 +56,6 @@ def get_data(filters):
 			data.append(row)
 
 	return data
-
 
 def get_po_items_to_supply(filters):
 	return frappe.db.get_all(

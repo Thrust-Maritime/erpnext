@@ -134,7 +134,6 @@ def get_benefit_pro_rata_ratio_amount(employee, on_date, sal_struct):
 				benefit_amount_total += benefit_amount
 	return benefit_amount_total
 
-
 def get_benefit_claim_amount(employee, start_date, end_date, salary_component=None):
 	query = """
 		select sum(claimed_amount)

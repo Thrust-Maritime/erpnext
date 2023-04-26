@@ -6,7 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname, revert_series_if_last
-from frappe.utils import cint, flt, get_link_to_form
+from frappe.utils import cint, flt, get_link_to_form, nowtime
 from frappe.utils.data import add_days
 from frappe.utils.jinja import render_template
 from six import text_type
@@ -173,7 +173,11 @@ def get_batch_qty(
 	out = 0
 	if batch_no and warehouse:
 		cond = ""
-		if posting_date and posting_time:
+
+		if posting_date:
+			if posting_time is None:
+				posting_time = nowtime()
+
 			cond = " and timestamp(posting_date, posting_time) <= timestamp('{0}', '{1}')".format(
 				posting_date, posting_time
 			)
@@ -260,7 +264,9 @@ def set_batch_nos(doc, warehouse_field, throw=False, child_table="items"):
 		warehouse = d.get(warehouse_field, None)
 		if warehouse and qty > 0 and frappe.db.get_value("Item", d.item_code, "has_batch_no"):
 			if not d.batch_no:
-				d.batch_no = get_batch_no(d.item_code, warehouse, qty, throw, d.serial_no)
+				d.batch_no = get_batch_no(d.item_code, warehouse, qty, throw, d.serial_no).get(
+					"batch_no", None
+				)
 			else:
 				batch_qty = get_batch_qty(batch_no=d.batch_no, warehouse=warehouse)
 				if flt(batch_qty, d.precision("qty")) < flt(qty, d.precision("qty")):
@@ -282,23 +288,27 @@ def get_batch_no(item_code, warehouse, qty=1, throw=False, serial_no=None):
 	"""
 
 	batch_no = None
+	message = None
 	batches = get_batches(item_code, warehouse, qty, throw, serial_no)
 
 	for batch in batches:
-		if cint(qty) <= cint(batch.qty):
+		if flt(qty) <= flt(batch.qty):
 			batch_no = batch.batch_id
 			break
 
 	if not batch_no:
-		frappe.msgprint(
-			_(
-				"Please select a Batch for Item {0}. Unable to find a single batch that fulfills this requirement"
-			).format(frappe.bold(item_code))
-		)
+		message = _(
+			"Please select a Batch for Item {0}. Unable to find a single batch that fulfills this requirement"
+		).format(frappe.bold(item_code))
 		if throw:
+			frappe.msgprint(
+				_(
+					"Please select a Batch for Item {0}. Unable to find a single batch that fulfills this requirement"
+				).format(frappe.bold(item_code))
+			)
 			raise UnableToSelectBatchError
 
-	return batch_no
+	return {"batch_no": batch_no, "msg_print": message}
 
 
 def get_batches(item_code, warehouse, qty=1, throw=False, serial_no=None):

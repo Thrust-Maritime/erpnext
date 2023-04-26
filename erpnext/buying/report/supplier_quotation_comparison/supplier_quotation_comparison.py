@@ -24,7 +24,6 @@ def execute(filters=None):
 
 	return columns, data, message, chart_data
 
-
 def get_conditions(filters):
 	conditions = ""
 	if filters.get("item_code"):
@@ -151,7 +150,6 @@ def prepare_data(supplier_quotation_data, filters):
 		chart_data = prepare_chart_data(suppliers, qty_list, supplier_qty_price_map)
 
 	return out, chart_data
-
 
 def prepare_chart_data(suppliers, qty_list, supplier_qty_price_map):
 	data_points_map = {}

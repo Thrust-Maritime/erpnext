@@ -21,7 +21,6 @@ from erpnext.accounts.utils import get_account_currency
 # to cache translations
 TRANSLATIONS = frappe._dict()
 
-
 def execute(filters=None):
 	if not filters:
 		return [], []
@@ -144,7 +143,6 @@ def set_account_currency(filters):
 
 	return filters
 
-
 def get_result(filters, account_details):
 	accounting_dimensions = []
 	if filters.get("include_dimensions"):
@@ -157,7 +155,6 @@ def get_result(filters, account_details):
 	result = get_result_as_list(data, filters)
 
 	return result
-
 
 def get_gl_entries(filters, accounting_dimensions):
 	currency_map = get_currency(filters)
@@ -280,7 +277,7 @@ def get_conditions(filters):
 		or filters.get("party")
 		or filters.get("group_by") in ["Group by Account", "Group by Party"]
 	):
-		conditions.append("posting_date >=%(from_date)s")
+		conditions.append("(posting_date >=%(from_date)s or is_opening = 'Yes')")
 
 	conditions.append("(posting_date <=%(to_date)s or is_opening = 'Yes')")
 
@@ -299,7 +296,6 @@ def get_conditions(filters):
 		conditions.append("is_cancelled = 0")
 
 	from frappe.desk.reportview import build_match_conditions
-
 	match_conditions = build_match_conditions("GL Entry")
 
 	if match_conditions:
@@ -337,7 +333,6 @@ def get_accounts_with_children(accounts):
 			frappe.throw(_("Account: {0} does not exist").format(d))
 
 	return list(set(all_accounts))
-
 
 def get_data_with_opening_closing(filters, account_details, accounting_dimensions, gl_entries):
 	data = []
@@ -377,7 +372,6 @@ def get_data_with_opening_closing(filters, account_details, accounting_dimension
 	data.append(totals.closing)
 
 	return data
-
 
 def get_totals_dict():
 	def _get_debit_credit_dict(label):
@@ -468,7 +462,7 @@ def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map):
 			update_value_in_dict(totals, "opening", gle)
 			update_value_in_dict(totals, "closing", gle)
 
-		elif gle.posting_date <= to_date:
+		elif gle.posting_date <= to_date or (cstr(gle.is_opening) == "Yes" and show_opening_entries):
 			if not group_by_voucher_consolidated:
 				update_value_in_dict(gle_map[group_by_value].totals, "total", gle)
 				update_value_in_dict(gle_map[group_by_value].totals, "closing", gle)

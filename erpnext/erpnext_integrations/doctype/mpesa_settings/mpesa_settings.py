@@ -53,7 +53,6 @@ class MpesaSettings(Document):
 				from erpnext.erpnext_integrations.doctype.mpesa_settings.test_mpesa_settings import (
 					get_payment_request_response_payload,
 				)
-
 				response = frappe._dict(get_payment_request_response_payload(amount))
 			else:
 				response = frappe._dict(generate_stk_push(**args))
@@ -90,7 +89,6 @@ class MpesaSettings(Document):
 			from erpnext.erpnext_integrations.doctype.mpesa_settings.test_mpesa_settings import (
 				get_test_account_balance_response,
 			)
-
 			response = frappe._dict(get_test_account_balance_response())
 		else:
 			response = frappe._dict(get_account_balance(payload))
@@ -113,7 +111,6 @@ class MpesaSettings(Document):
 
 		if error:
 			frappe.throw(_(getattr(response, "errorMessage")), title=_("Transaction Error"))
-
 
 def generate_stk_push(**kwargs):
 	"""Generate stk push by making a API call to the stk push API."""
@@ -162,7 +159,6 @@ def generate_stk_push(**kwargs):
 def sanitize_mobile_number(number):
 	"""Add country code and strip leading zeroes from the phone number."""
 	return "254" + str(number).lstrip("0")
-
 
 @frappe.whitelist(allow_guest=True)
 def verify_transaction(**kwargs):
@@ -247,7 +243,6 @@ def get_completed_integration_requests_info(reference_doctype, reference_docname
 
 	return mpesa_receipts, completed_payments
 
-
 def get_account_balance(request_payload):
 	"""Call account balance API to send the request to the Mpesa Servers."""
 	try:
@@ -277,7 +272,6 @@ def get_account_balance(request_payload):
 	except Exception:
 		frappe.log_error(title=_("Account Balance Processing Error"))
 		frappe.throw(_("Please check your configuration and try again"), title=_("Error"))
-
 
 @frappe.whitelist(allow_guest=True)
 def process_balance_info(**kwargs):

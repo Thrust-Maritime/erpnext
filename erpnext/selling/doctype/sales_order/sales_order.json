@@ -544,7 +544,6 @@
    "hide_days": 1,
    "hide_seconds": 1,
    "label": "Ignore Pricing Rule",
-   "no_copy": 1,
    "permlevel": 1,
    "print_hide": 1
   },
@@ -1359,6 +1358,8 @@
    "width": "50%"
   },
   {
+   "fetch_from": "sales_partner.commission_rate",
+   "fetch_if_empty": 1,
    "fieldname": "commission_rate",
    "fieldtype": "Float",
    "hide_days": 1,
@@ -1547,7 +1548,7 @@
  "idx": 105,
  "is_submittable": 1,
  "links": [],
- "modified": "2022-04-26 14:38:18.350207",
+ "modified": "2022-09-16 17:43:57.007441",
  "modified_by": "Administrator",
  "module": "Selling",
  "name": "Sales Order",

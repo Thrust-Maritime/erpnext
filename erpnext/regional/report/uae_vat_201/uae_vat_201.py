@@ -91,7 +91,6 @@ def standard_rated_expenses_emiratewise(data, filters):
 	amounts_by_emirate = append_emiratewise_expenses(data, emirates, amounts_by_emirate)
 	return emirates, amounts_by_emirate
 
-
 def append_emiratewise_expenses(data, emirates, amounts_by_emirate):
 	"""Append emiratewise standard rated expenses and vat."""
 	for no, emirate in enumerate(emirates, 97):

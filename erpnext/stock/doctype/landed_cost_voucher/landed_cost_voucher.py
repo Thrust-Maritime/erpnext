@@ -56,7 +56,6 @@ class LandedCostVoucher(Document):
 			self.get_items_from_purchase_receipts()
 
 		self.set_applicable_charges_on_item()
-		self.validate_applicable_charges_for_item()
 
 	def check_mandatory(self):
 		if not self.get("purchase_receipts"):
@@ -124,6 +123,13 @@ class LandedCostVoucher(Document):
 				total_item_cost += item.get(based_on_field)
 
 			for item in self.get("items"):
+				if not total_item_cost and not item.get(based_on_field):
+					frappe.throw(
+						_(
+							"It's not possible to distribute charges equally when total amount is zero, please set 'Distribute Charges Based On' as 'Quantity'"
+						)
+					)
+
 				item.applicable_charges = flt(
 					flt(item.get(based_on_field)) * (flt(self.total_taxes_and_charges) / flt(total_item_cost)),
 					item.precision("applicable_charges"),
@@ -171,6 +177,7 @@ class LandedCostVoucher(Document):
 			)
 
 	def on_submit(self):
+		self.validate_applicable_charges_for_item()
 		self.update_landed_cost()
 
 	def on_cancel(self):

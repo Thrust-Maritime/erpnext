@@ -29,7 +29,6 @@ def setup_item():
 				item.item_defaults[0].default_warehouse = warehouse[0].name
 		item.insert()
 
-
 def setup_item_price():
 	frappe.db.sql("delete from `tabItem Price`")
 

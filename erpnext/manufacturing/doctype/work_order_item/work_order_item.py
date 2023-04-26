@@ -9,6 +9,5 @@ from frappe.model.document import Document
 class WorkOrderItem(Document):
 	pass
 
-
 def on_doctype_update():
 	frappe.db.add_index("Work Order Item", ["item_code", "source_warehouse"])

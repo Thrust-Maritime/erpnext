@@ -8,7 +8,6 @@ from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
 
 TODAY = getdate()
 
-
 def execute():
 	# This fix is not related to Party Specific Item,
 	# but it is needed for code introduced after Party Specific Item was
