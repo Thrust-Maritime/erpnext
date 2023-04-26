@@ -173,20 +173,20 @@ class PickList(Document):
 				frappe.throw("Row #{0}: Item Code is Mandatory".format(item.idx))
 			item_code = item.item_code
 			reference = item.sales_order_item or item.material_request_item
-			key = (item_code, item.uom, reference)
+			key = (item_code, item.uom, item.warehouse, item.batch_no, reference)
 
 			item.idx = None
 			item.name = None
 
 			if item_map.get(key):
 				item_map[key].qty += item.qty
-				item_map[key].stock_qty += flt(item.stock_qty)
+				item_map[key].stock_qty += flt(item.stock_qty, item.precision("stock_qty"))
 			else:
 				item_map[key] = item
 
 			# maintain count of each item (useful to limit get query)
 			self.item_count_map.setdefault(item_code, 0)
-			self.item_count_map[item_code] += flt(item.stock_qty)
+			self.item_count_map[item_code] += flt(item.stock_qty, item.precision("stock_qty"))
 
 		return item_map.values()
 
@@ -197,7 +197,8 @@ class PickList(Document):
 			frappe.throw(_("Qty of Finished Goods Item should be greater than 0."))
 
 	def before_print(self, settings=None):
-		self.group_similar_items()
+		if self.group_same_items:
+			self.group_similar_items()
 
 	def group_similar_items(self):
 		group_item_qty = defaultdict(float)

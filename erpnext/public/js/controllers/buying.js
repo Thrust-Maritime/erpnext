@@ -74,6 +74,7 @@ erpnext.buying.BuyingController = erpnext.TransactionController.extend({
 		me.frm.set_query('supplier_address', erpnext.queries.address_query);
 
 		me.frm.set_query('billing_address', erpnext.queries.company_address_query);
+		erpnext.accounts.dimensions.setup_dimension_filters(me.frm, me.frm.doctype);
 
 		if(this.frm.fields_dict.supplier) {
 			this.frm.set_query("supplier", function() {
@@ -216,7 +217,8 @@ erpnext.buying.BuyingController = erpnext.TransactionController.extend({
 				args: {
 					item_code: item.item_code,
 					warehouse: item.warehouse,
-					company: doc.company
+					company: doc.company,
+					include_child_warehouses: true
 				}
 			});
 		}

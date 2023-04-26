@@ -545,6 +545,42 @@ class TestSalesOrder(FrappeTestCase):
 		workflow.is_active = 0
 		workflow.save()
 
+	def test_bin_details_of_packed_item(self):
+		# test Update Items with product bundle
+		if not frappe.db.exists("Item", "_Test Product Bundle Item New"):
+			bundle_item = make_item("_Test Product Bundle Item New", {"is_stock_item": 0})
+			bundle_item.append(
+				"item_defaults", {"company": "_Test Company", "default_warehouse": "_Test Warehouse - _TC"}
+			)
+			bundle_item.save(ignore_permissions=True)
+
+		make_item("_Packed Item New 1", {"is_stock_item": 1})
+		make_product_bundle("_Test Product Bundle Item New", ["_Packed Item New 1"], 2)
+
+		so = make_sales_order(
+			item_code="_Test Product Bundle Item New",
+			warehouse="_Test Warehouse - _TC",
+			transaction_date=add_days(nowdate(), -1),
+			do_not_submit=1,
+		)
+
+		make_stock_entry(item="_Packed Item New 1", target="_Test Warehouse - _TC", qty=120, rate=100)
+
+		bin_details = frappe.db.get_value(
+			"Bin",
+			{"item_code": "_Packed Item New 1", "warehouse": "_Test Warehouse - _TC"},
+			["actual_qty", "projected_qty", "ordered_qty"],
+			as_dict=1,
+		)
+
+		so.transaction_date = nowdate()
+		so.save()
+
+		packed_item = so.packed_items[0]
+		self.assertEqual(flt(bin_details.actual_qty), flt(packed_item.actual_qty))
+		self.assertEqual(flt(bin_details.projected_qty), flt(packed_item.projected_qty))
+		self.assertEqual(flt(bin_details.ordered_qty), flt(packed_item.ordered_qty))
+
 	def test_update_child_product_bundle(self):
 		# test Update Items with product bundle
 		if not frappe.db.exists("Item", "_Product Bundle Item"):
@@ -776,6 +812,7 @@ class TestSalesOrder(FrappeTestCase):
 
 	def test_auto_insert_price(self):
 		make_item("_Test Item for Auto Price List", {"is_stock_item": 0})
+		make_item("_Test Item for Auto Price List with Discount Percentage", {"is_stock_item": 0})
 		frappe.db.set_value("Stock Settings", None, "auto_insert_price_list_rate_if_missing", 1)
 
 		item_price = frappe.db.get_value(
@@ -795,6 +832,25 @@ class TestSalesOrder(FrappeTestCase):
 				"price_list_rate",
 			),
 			100,
+		)
+
+		make_sales_order(
+			item_code="_Test Item for Auto Price List with Discount Percentage",
+			selling_price_list="_Test Price List",
+			price_list_rate=200,
+			discount_percentage=20,
+		)
+
+		self.assertEqual(
+			frappe.db.get_value(
+				"Item Price",
+				{
+					"price_list": "_Test Price List",
+					"item_code": "_Test Item for Auto Price List with Discount Percentage",
+				},
+				"price_list_rate",
+			),
+			200,
 		)
 
 		# do not update price list
@@ -1154,6 +1210,8 @@ class TestSalesOrder(FrappeTestCase):
 		self.assertTrue(si.get("payment_schedule"))
 
 	def test_make_work_order(self):
+		from erpnext.selling.doctype.sales_order.sales_order import get_work_order_items
+
 		# Make a new Sales Order
 		so = make_sales_order(
 			**{
@@ -1167,7 +1225,7 @@ class TestSalesOrder(FrappeTestCase):
 		# Raise Work Orders
 		po_items = []
 		so_item_name = {}
-		for item in so.get_work_order_items():
+		for item in get_work_order_items(so.name):
 			po_items.append(
 				{
 					"warehouse": item.get("warehouse"),
@@ -1351,7 +1409,63 @@ class TestSalesOrder(FrappeTestCase):
 		except Exception:
 			self.fail("Can not cancel sales order with linked cancelled payment entry")
 
+	def test_work_order_pop_up_from_sales_order(self):
+		"Test `get_work_order_items` in Sales Order picks the right BOM for items to manufacture."
+
+		from erpnext.controllers.item_variant import create_variant
+		from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
+		from erpnext.selling.doctype.sales_order.sales_order import get_work_order_items
+
+		make_item(  # template item
+			"Test-WO-Tshirt",
+			{
+				"has_variant": 1,
+				"variant_based_on": "Item Attribute",
+				"attributes": [{"attribute": "Test Colour"}],
+			},
+		)
+		make_item("Test-RM-Cotton")  # RM for BOM
+
+		for colour in (
+			"Red",
+			"Green",
+		):
+			variant = create_variant("Test-WO-Tshirt", {"Test Colour": colour})
+			variant.save()
+
+		template_bom = make_bom(item="Test-WO-Tshirt", rate=100, raw_materials=["Test-RM-Cotton"])
+		red_var_bom = make_bom(item="Test-WO-Tshirt-R", rate=100, raw_materials=["Test-RM-Cotton"])
+
+		so = make_sales_order(
+			**{
+				"item_list": [
+					{
+						"item_code": "Test-WO-Tshirt-R",
+						"qty": 1,
+						"rate": 1000,
+						"warehouse": "_Test Warehouse - _TC",
+					},
+					{
+						"item_code": "Test-WO-Tshirt-G",
+						"qty": 1,
+						"rate": 1000,
+						"warehouse": "_Test Warehouse - _TC",
+					},
+				]
+			}
+		)
+		wo_items = get_work_order_items(so.name)
+
+		self.assertEqual(wo_items[0].get("item_code"), "Test-WO-Tshirt-R")
+		self.assertEqual(wo_items[0].get("bom"), red_var_bom.name)
+
+		# Must pick Template Item BOM for Test-WO-Tshirt-G as it has no BOM
+		self.assertEqual(wo_items[1].get("item_code"), "Test-WO-Tshirt-G")
+		self.assertEqual(wo_items[1].get("bom"), template_bom.name)
+
 	def test_request_for_raw_materials(self):
+		from erpnext.selling.doctype.sales_order.sales_order import get_work_order_items
+
 		item = make_item(
 			"_Test Finished Item",
 			{
@@ -1384,7 +1498,7 @@ class TestSalesOrder(FrappeTestCase):
 		so = make_sales_order(**{"item_list": [{"item_code": item.item_code, "qty": 1, "rate": 1000}]})
 		so.submit()
 		mr_dict = frappe._dict()
-		items = so.get_work_order_items(1)
+		items = get_work_order_items(so.name, 1)
 		mr_dict["items"] = items
 		mr_dict["include_exploded_items"] = 0
 		mr_dict["ignore_existing_ordered_qty"] = 1
@@ -1471,6 +1585,65 @@ class TestSalesOrder(FrappeTestCase):
 		self.assertEqual(si.net_total, 0)
 		so.load_from_db()
 		self.assertEqual(so.billing_status, "Fully Billed")
+
+	def test_so_billing_status_with_crnote_against_sales_return(self):
+		"""
+		| Step | Document creation                    |                               |
+		|------+--------------------------------------+-------------------------------|
+		|    1 | SO -> DN -> SI                       | SO Fully Billed and Completed |
+		|    2 | DN -> Sales Return(Partial)          | SO 50% Delivered, 100% billed |
+		|    3 | Sales Return(Partial) -> Credit Note | SO 50% Delivered, 50% billed  |
+
+		"""
+		from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
+
+		so = make_sales_order(uom="Nos", do_not_save=1)
+		so.save()
+		so.submit()
+
+		self.assertEqual(so.billing_status, "Not Billed")
+
+		dn1 = make_delivery_note(so.name)
+		dn1.taxes_and_charges = ""
+		dn1.taxes.clear()
+		dn1.save().submit()
+
+		si = create_sales_invoice(qty=10, do_not_save=1)
+		si.items[0].sales_order = so.name
+		si.items[0].so_detail = so.items[0].name
+		si.items[0].delivery_note = dn1.name
+		si.items[0].dn_detail = dn1.items[0].name
+		si.save()
+		si.submit()
+
+		so.reload()
+		self.assertEqual(so.billing_status, "Fully Billed")
+		self.assertEqual(so.status, "Completed")
+
+		from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
+
+		dn1.reload()
+		dn_ret = create_delivery_note(is_return=1, return_against=dn1.name, qty=-5, do_not_submit=True)
+		dn_ret.items[0].against_sales_order = so.name
+		dn_ret.items[0].so_detail = so.items[0].name
+		dn_ret.submit()
+
+		so.reload()
+		self.assertEqual(so.per_billed, 100)
+		self.assertEqual(so.per_delivered, 50)
+
+		cr_note = create_sales_invoice(is_return=1, qty=-1, do_not_submit=True)
+		cr_note.items[0].qty = -5
+		cr_note.items[0].sales_order = so.name
+		cr_note.items[0].so_detail = so.items[0].name
+		cr_note.items[0].delivery_note = dn_ret.name
+		cr_note.items[0].dn_detail = dn_ret.items[0].name
+		cr_note.update_billed_amount_in_sales_order = True
+		cr_note.submit()
+
+		so.reload()
+		self.assertEqual(so.per_billed, 50)
+		self.assertEqual(so.per_delivered, 50)
 
 	def test_so_back_updated_from_wo_via_mr(self):
 		"SO -> MR (Manufacture) -> WO. Test if WO Qty is updated in SO."
@@ -1583,7 +1756,9 @@ def make_sales_order(**args):
 				"warehouse": args.warehouse,
 				"qty": args.qty or 10,
 				"uom": args.uom or None,
-				"rate": args.rate or 100,
+				"price_list_rate": args.price_list_rate or None,
+				"discount_percentage": args.discount_percentage or None,
+				"rate": args.rate or (None if args.price_list_rate else 100),
 				"against_blanket_order": args.against_blanket_order,
 			},
 		)

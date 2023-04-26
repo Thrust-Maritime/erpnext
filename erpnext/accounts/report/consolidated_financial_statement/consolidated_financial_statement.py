@@ -136,7 +136,8 @@ def prepare_companywise_opening_balance(asset_data, liability_data, equity_data,
 		for data in [asset_data, liability_data, equity_data]:
 			if data:
 				account_name = get_root_account_name(data[0].root_type, company)
-				opening_value += get_opening_balance(account_name, data, company) or 0.0
+				if account_name:
+					opening_value += get_opening_balance(account_name, data, company) or 0.0
 
 		opening_balance[company] = opening_value
 
@@ -153,7 +154,7 @@ def get_opening_balance(account_name, data, company):
 
 
 def get_root_account_name(root_type, company):
-	return frappe.get_all(
+	root_account = frappe.get_all(
 		"Account",
 		fields=["account_name"],
 		filters={
@@ -163,7 +164,10 @@ def get_root_account_name(root_type, company):
 			"parent_account": ("is", "not set"),
 		},
 		as_list=1,
-	)[0][0]
+	)
+
+	if root_account:
+		return root_account[0][0]
 
 
 def get_profit_loss_data(fiscal_year, companies, columns, filters):
@@ -265,10 +269,12 @@ def get_cash_flow_data(fiscal_year, companies, filters):
 def get_account_type_based_data(account_type, companies, fiscal_year, filters):
 	data = {}
 	total = 0
+	filters.account_type = account_type
+	filters.start_date = fiscal_year.year_start_date
+	filters.end_date = fiscal_year.year_end_date
+
 	for company in companies:
-		amount = get_account_type_based_gl_data(
-			company, fiscal_year.year_start_date, fiscal_year.year_end_date, account_type, filters
-		)
+		amount = get_account_type_based_gl_data(company, filters)
 
 		if amount and account_type == "Depreciation":
 			amount *= -1
@@ -528,9 +534,14 @@ def get_accounts(root_type, companies):
 			],
 			filters={"company": company, "root_type": root_type},
 		):
-			if account.account_name not in added_accounts:
+			if account.account_number:
+				account_key = account.account_number + "-" + account.account_name
+			else:
+				account_key = account.account_name
+
+			if account_key not in added_accounts:
 				accounts.append(account)
-				added_accounts.append(account.account_name)
+				added_accounts.append(account_key)
 
 	return accounts
 

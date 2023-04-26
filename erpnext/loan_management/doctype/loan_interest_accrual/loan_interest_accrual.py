@@ -6,7 +6,6 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, cint, date_diff, flt, get_datetime, getdate, nowdate
 
-import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
@@ -41,6 +40,8 @@ class LoanInterestAccrual(AccountsController):
 	def make_gl_entries(self, cancel=0, adv_adj=0):
 		gle_map = []
 
+		cost_center = frappe.db.get_value("Loan", self.loan, "cost_center")
+
 		if self.interest_amount:
 			gle_map.append(
 				self.get_gl_dict(
@@ -56,7 +57,7 @@ class LoanInterestAccrual(AccountsController):
 						"remarks": _("Interest accrued from {0} to {1} against loan: {2}").format(
 							self.last_accrual_date, self.posting_date, self.loan
 						),
-						"cost_center": erpnext.get_default_cost_center(self.company),
+						"cost_center": cost_center,
 						"posting_date": self.posting_date,
 					}
 				)
@@ -74,7 +75,7 @@ class LoanInterestAccrual(AccountsController):
 						"remarks": ("Interest accrued from {0} to {1} against loan: {2}").format(
 							self.last_accrual_date, self.posting_date, self.loan
 						),
-						"cost_center": erpnext.get_default_cost_center(self.company),
+						"cost_center": cost_center,
 						"posting_date": self.posting_date,
 					}
 				)
@@ -134,7 +135,11 @@ def calculate_accrual_amount_for_demand_loans(
 def make_accrual_interest_entry_for_demand_loans(
 	posting_date, process_loan_interest, open_loans=None, loan_type=None, accrual_type="Regular"
 ):
-	query_filters = {"status": ("in", ["Disbursed", "Partially Disbursed"]), "docstatus": 1}
+	query_filters = {
+		"status": ("in", ["Disbursed", "Partially Disbursed"]),
+		"docstatus": 1,
+		"is_term_loan": 0,
+	}
 
 	if loan_type:
 		query_filters.update({"loan_type": loan_type})
@@ -146,6 +151,9 @@ def make_accrual_interest_entry_for_demand_loans(
 				"name",
 				"total_payment",
 				"total_amount_paid",
+				"debit_adjustment_amount",
+				"credit_adjustment_amount",
+				"refund_amount",
 				"loan_account",
 				"interest_income_account",
 				"loan_amount",
@@ -228,6 +236,7 @@ def get_term_loans(date, term_loan=None, loan_type=None):
 			AND l.is_term_loan =1
 			AND rs.payment_date <= %s
 			AND rs.is_accrued=0 {0}
+			AND rs.principal_amount > 0
 			AND l.status = 'Disbursed'
 			ORDER BY rs.payment_date""".format(
 			condition

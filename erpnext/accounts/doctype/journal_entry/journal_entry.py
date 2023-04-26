@@ -25,7 +25,10 @@ from erpnext.accounts.utils import (
 	get_stock_and_account_balance,
 )
 from erpnext.controllers.accounts_controller import AccountsController
-from erpnext.hr.doctype.expense_claim.expense_claim import update_reimbursed_amount
+from erpnext.hr.doctype.expense_claim.expense_claim import (
+	get_outstanding_amount_for_claim,
+	update_reimbursed_amount,
+)
 
 
 class StockAccountInvalidTransaction(frappe.ValidationError):
@@ -72,6 +75,7 @@ class JournalEntry(AccountsController):
 		self.validate_empty_accounts_table()
 		self.set_account_and_party_balance()
 		self.validate_inter_company_accounts()
+		self.validate_depr_entry_voucher_type()
 
 		if self.docstatus == 0:
 			self.apply_tax_withholding()
@@ -84,6 +88,7 @@ class JournalEntry(AccountsController):
 		self.check_credit_limit()
 		self.make_gl_entries()
 		self.update_advance_paid()
+		self.update_asset_value()
 		self.update_expense_claim()
 		self.update_inter_company_jv()
 		self.update_invoice_discounting()
@@ -129,6 +134,13 @@ class JournalEntry(AccountsController):
 			if account_currency == previous_account_currency:
 				if self.total_credit != doc.total_debit or self.total_debit != doc.total_credit:
 					frappe.throw(_("Total Credit/ Debit Amount should be same as linked Journal Entry"))
+
+	def validate_depr_entry_voucher_type(self):
+		if (
+			any(d.account_type == "Depreciation" for d in self.get("accounts"))
+			and self.voucher_type != "Depreciation Entry"
+		):
+			frappe.throw(_("Journal Entry type should be set as Depreciation Entry for asset depreciation"))
 
 	def validate_stock_accounts(self):
 		stock_accounts = get_stock_accounts(self.company, self.doctype, self.name)
@@ -191,7 +203,9 @@ class JournalEntry(AccountsController):
 			}
 		)
 
-		tax_withholding_details = get_party_tax_withholding_details(inv, self.tax_withholding_category)
+		tax_withholding_details, advance_taxes, voucher_wise_amount = get_party_tax_withholding_details(
+			inv, self.tax_withholding_category
+		)
 
 		if not tax_withholding_details:
 			return
@@ -229,6 +243,34 @@ class JournalEntry(AccountsController):
 
 		for d in to_remove:
 			self.remove(d)
+
+	def update_asset_value(self):
+		if self.flags.planned_depr_entry or self.voucher_type != "Depreciation Entry":
+			return
+
+		for d in self.get("accounts"):
+			if (
+				d.reference_type == "Asset"
+				and d.reference_name
+				and d.account_type == "Depreciation"
+				and d.debit
+			):
+				asset = frappe.get_doc("Asset", d.reference_name)
+
+				if asset.calculate_depreciation:
+					fb_idx = 1
+					if self.finance_book:
+						for fb_row in asset.get("finance_books"):
+							if fb_row.finance_book == self.finance_book:
+								fb_idx = fb_row.idx
+								break
+					fb_row = asset.get("finance_books")[fb_idx - 1]
+					fb_row.value_after_depreciation -= d.debit
+					fb_row.db_update()
+				else:
+					asset.db_set("value_after_depreciation", asset.value_after_depreciation - d.debit)
+
+				asset.set_status()
 
 	def update_inter_company_jv(self):
 		if (
@@ -288,19 +330,38 @@ class JournalEntry(AccountsController):
 				d.db_update()
 
 	def unlink_asset_reference(self):
+		if self.voucher_type != "Depreciation Entry":
+			return
+
 		for d in self.get("accounts"):
-			if d.reference_type == "Asset" and d.reference_name:
+			if (
+				d.reference_type == "Asset"
+				and d.reference_name
+				and d.account_type == "Depreciation"
+				and d.debit
+			):
 				asset = frappe.get_doc("Asset", d.reference_name)
-				for s in asset.get("schedules"):
-					if s.journal_entry == self.name:
-						s.db_set("journal_entry", None)
 
-						idx = cint(s.finance_book_id) or 1
-						finance_books = asset.get("finance_books")[idx - 1]
-						finance_books.value_after_depreciation += s.depreciation_amount
-						finance_books.db_update()
-
-						asset.set_status()
+				if asset.calculate_depreciation:
+					fb_idx = None
+					for s in asset.get("schedules"):
+						if s.journal_entry == self.name:
+							s.db_set("journal_entry", None)
+							fb_idx = cint(s.finance_book_id) or 1
+							break
+					if not fb_idx:
+						fb_idx = 1
+						if self.finance_book:
+							for fb_row in asset.get("finance_books"):
+								if fb_row.finance_book == self.finance_book:
+									fb_idx = fb_row.idx
+									break
+					fb_row = asset.get("finance_books")[fb_idx - 1]
+					fb_row.value_after_depreciation += d.debit
+					fb_row.db_update()
+				else:
+					asset.db_set("value_after_depreciation", asset.value_after_depreciation + d.debit)
+				asset.set_status()
 
 	def unlink_inter_company_jv(self):
 		if (
@@ -934,15 +995,12 @@ class JournalEntry(AccountsController):
 	def validate_expense_claim(self):
 		for d in self.accounts:
 			if d.reference_type == "Expense Claim":
-				sanctioned_amount, reimbursed_amount = frappe.db.get_value(
-					"Expense Claim", d.reference_name, ("total_sanctioned_amount", "total_amount_reimbursed")
-				)
-				pending_amount = flt(sanctioned_amount) - flt(reimbursed_amount)
-				if d.debit > pending_amount:
+				outstanding_amt = get_outstanding_amount_for_claim(d.reference_name)
+				if d.debit > outstanding_amt:
 					frappe.throw(
 						_(
-							"Row No {0}: Amount cannot be greater than Pending Amount against Expense Claim {1}. Pending Amount is {2}"
-						).format(d.idx, d.reference_name, pending_amount)
+							"Row No {0}: Amount cannot be greater than the Outstanding Amount against Expense Claim {1}. Outstanding Amount is {2}"
+						).format(d.idx, d.reference_name, outstanding_amt)
 					)
 
 	def validate_credit_debit_note(self):
@@ -1189,24 +1247,6 @@ def get_payment_entry(ref_doc, args):
 	je.set_total_debit_credit()
 
 	return je if args.get("journal_entry") else je.as_dict()
-
-
-@frappe.whitelist()
-def get_opening_accounts(company):
-	"""get all balance sheet accounts for opening entry"""
-	accounts = frappe.db.sql_list(
-		"""select
-			name from tabAccount
-		where
-			is_group=0 and report_type='Balance Sheet' and company={0} and
-			name not in (select distinct account from tabWarehouse where
-			account is not null and account != '')
-		order by name asc""".format(
-			frappe.db.escape(company)
-		)
-	)
-
-	return [{"account": a, "balance": get_balance_on(a)} for a in accounts]
 
 
 @frappe.whitelist()

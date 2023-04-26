@@ -9,6 +9,7 @@ from six import iteritems
 
 from erpnext.accounts.report.financial_statements import (
 	get_columns,
+	get_cost_centers_with_children,
 	get_data,
 	get_filtered_list_for_consolidated_report,
 	get_period_list,
@@ -159,10 +160,11 @@ def get_account_type_based_data(company, account_type, period_list, accumulated_
 	total = 0
 	for period in period_list:
 		start_date = get_start_date(period, accumulated_values, company)
+		filters.start_date = start_date
+		filters.end_date = period["to_date"]
+		filters.account_type = account_type
 
-		amount = get_account_type_based_gl_data(
-			company, start_date, period["to_date"], account_type, filters
-		)
+		amount = get_account_type_based_gl_data(company, filters)
 
 		if amount and account_type == "Depreciation":
 			amount *= -1
@@ -173,7 +175,8 @@ def get_account_type_based_data(company, account_type, period_list, accumulated_
 	data["total"] = total
 	return data
 
-def get_account_type_based_gl_data(company, start_date, end_date, account_type, filters=None):
+
+def get_account_type_based_gl_data(company, filters=None):
 	cond = ""
 	filters = frappe._dict(filters or {})
 
@@ -189,17 +192,21 @@ def get_account_type_based_gl_data(company, start_date, end_date, account_type, 
 			frappe.db.escape(cstr(filters.finance_book))
 		)
 
+	if filters.get("cost_center"):
+		filters.cost_center = get_cost_centers_with_children(filters.cost_center)
+		cond += " and cost_center in %(cost_center)s"
+
 	gl_sum = frappe.db.sql_list(
 		"""
 		select sum(credit) - sum(debit)
 		from `tabGL Entry`
-		where company=%s and posting_date >= %s and posting_date <= %s
+		where company=%(company)s and posting_date >= %(start_date)s and posting_date <= %(end_date)s
 			and voucher_type != 'Period Closing Voucher'
-			and account in ( SELECT name FROM tabAccount WHERE account_type = %s) {cond}
+			and account in ( SELECT name FROM tabAccount WHERE account_type = %(account_type)s) {cond}
 	""".format(
 			cond=cond
 		),
-		(company, start_date, end_date, account_type),
+		filters,
 	)
 
 	return gl_sum[0] if gl_sum and gl_sum[0] else 0
@@ -260,7 +267,10 @@ def get_report_summary(summary_data, currency):
 def get_chart_data(columns, data):
 	labels = [d.get("label") for d in columns[2:]]
 	datasets = [
-		{"name": account.get("account").replace("'", ""), "values": [account.get("total")]}
+		{
+			"name": account.get("account").replace("'", ""),
+			"values": [account.get(d.get("fieldname")) for d in columns[2:]],
+		}
 		for account in data
 		if account.get("parent_account") == None and account.get("currency")
 	]

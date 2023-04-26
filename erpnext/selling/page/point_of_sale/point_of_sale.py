@@ -5,6 +5,7 @@
 import json
 
 import frappe
+from frappe.utils import cint
 from frappe.utils.nestedset import get_root_of
 
 from erpnext.accounts.doctype.pos_invoice.pos_invoice import get_stock_availability
@@ -105,11 +106,11 @@ def get_items(start, page_length, price_list, item_group, pos_profile, search_te
 		ORDER BY
 			item.name asc
 		LIMIT
-			{start}, {page_length}""".format(
-			start=start,
-			page_length=page_length,
-			lft=lft,
-			rgt=rgt,
+			{page_length} offset {start}""".format(
+			start=cint(start),
+			page_length=cint(page_length),
+			lft=cint(lft),
+			rgt=cint(rgt),
 			condition=condition,
 			bin_join_selection=bin_join_selection,
 			bin_join_condition=bin_join_condition,
@@ -271,16 +272,20 @@ def get_past_order_list(search_term, status, limit=20):
 			"POS Invoice",
 			filters={"customer": ["like", "%{}%".format(search_term)], "status": status},
 			fields=fields,
+			page_length=limit,
 		)
 		invoices_by_name = frappe.db.get_all(
 			"POS Invoice",
 			filters={"name": ["like", "%{}%".format(search_term)], "status": status},
 			fields=fields,
+			page_length=limit,
 		)
 
 		invoice_list = invoices_by_customer + invoices_by_name
 	elif status:
-		invoice_list = frappe.db.get_all("POS Invoice", filters={"status": status}, fields=fields)
+		invoice_list = frappe.db.get_all(
+			"POS Invoice", filters={"status": status}, fields=fields, page_length=limit
+		)
 
 	return invoice_list
 

@@ -18,14 +18,14 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 60
 
     strategy:
       fail-fast: false
 
       matrix:
-        container: [1, 2, 3]
+        container: [1, 2]
 
     name: Python Unit Tests
 
@@ -93,7 +93,7 @@ jobs:
         run: bash ${GITHUB_WORKSPACE}/.github/helper/install.sh
 
       - name: Run Tests
-        run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app erpnext --use-orchestrator
+        run: 'cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app erpnext --total-builds 2 --build-number ${{ matrix.container }}'
         env:
           TYPE: server
           CI_BUILD_ID: ${{ github.run_id }}

@@ -10,7 +10,7 @@ from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import add_days, cstr, flt, nowdate, nowtime, random_string
 
 from erpnext.accounts.utils import get_stock_and_account_balance
-from erpnext.stock.doctype.item.test_item import create_item, make_item
+from erpnext.stock.doctype.item.test_item import create_item
 from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
 from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import (
@@ -19,10 +19,11 @@ from erpnext.stock.doctype.stock_reconciliation.stock_reconciliation import (
 )
 from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
 from erpnext.stock.stock_ledger import get_previous_sle, update_entries_after
+from erpnext.stock.tests.test_utils import StockTestMixin
 from erpnext.stock.utils import get_incoming_rate, get_stock_value_on, get_valuation_method
 
 
-class TestStockReconciliation(FrappeTestCase):
+class TestStockReconciliation(FrappeTestCase, StockTestMixin):
 	@classmethod
 	def setUpClass(cls):
 		create_batch_or_serial_no_items()
@@ -40,7 +41,7 @@ class TestStockReconciliation(FrappeTestCase):
 		self._test_reco_sle_gle("Moving Average")
 
 	def _test_reco_sle_gle(self, valuation_method):
-		item_code = make_item(properties={"valuation_method": valuation_method}).name
+		item_code = self.make_item(properties={"valuation_method": valuation_method}).name
 
 		se1, se2, se3 = insert_existing_sle(warehouse="Stores - TCP1", item_code=item_code)
 		company = frappe.db.get_value("Warehouse", "Stores - TCP1", "company")
@@ -391,7 +392,7 @@ class TestStockReconciliation(FrappeTestCase):
 		SR4		| Reco	|	0	|	6	(posting date: today-1) [backdated]
 		PR3		| PR	|	1	|	7	(posting date: today) # can't post future PR
 		"""
-		item_code = make_item().name
+		item_code = self.make_item().name
 		warehouse = "_Test Warehouse - _TC"
 
 		frappe.flags.dont_execute_stock_reposts = True
@@ -457,7 +458,7 @@ class TestStockReconciliation(FrappeTestCase):
 		from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
 		from erpnext.stock.stock_ledger import NegativeStockError
 
-		item_code = make_item().name
+		item_code = self.make_item().name
 		warehouse = "_Test Warehouse - _TC"
 
 		pr1 = make_purchase_receipt(
@@ -505,7 +506,7 @@ class TestStockReconciliation(FrappeTestCase):
 		from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
 		from erpnext.stock.stock_ledger import NegativeStockError
 
-		item_code = make_item().name
+		item_code = self.make_item().name
 		warehouse = "_Test Warehouse - _TC"
 
 		sr = create_stock_reconciliation(
@@ -528,7 +529,9 @@ class TestStockReconciliation(FrappeTestCase):
 		# check if cancellation of stock reco is blocked
 		self.assertRaises(NegativeStockError, sr.cancel)
 
-		repost_exists = bool(frappe.db.exists("Repost Item Valuation", {"voucher_no": sr.name}))
+		repost_exists = bool(
+			frappe.db.exists("Repost Item Valuation", {"voucher_no": sr.name, "status": "Queued"})
+		)
 		self.assertFalse(repost_exists, msg="Negative stock validation not working on reco cancellation")
 
 	def test_intermediate_sr_bin_update(self):
@@ -548,7 +551,7 @@ class TestStockReconciliation(FrappeTestCase):
 		# repost will make this test useless, qty should update in realtime without reposts
 		frappe.flags.dont_execute_stock_reposts = True
 
-		item_code = make_item().name
+		item_code = self.make_item().name
 		warehouse = "_Test Warehouse - _TC"
 
 		sr = create_stock_reconciliation(
@@ -641,6 +644,38 @@ class TestStockReconciliation(FrappeTestCase):
 			"Serial No", filters={"item_code": item_code, "warehouse": warehouse, "status": "Active"}
 		)
 		self.assertEqual(len(active_sr_no), 0)
+
+	def test_serial_no_batch_no_item(self):
+		item = self.make_item(
+			"Test Serial No Batch No Item",
+			{
+				"is_stock_item": 1,
+				"has_serial_no": 1,
+				"has_batch_no": 1,
+				"serial_no_series": "SRS9.####",
+				"batch_number_series": "BNS9.####",
+				"create_new_batch": 1,
+			},
+		)
+
+		warehouse = "_Test Warehouse - _TC"
+
+		sr = create_stock_reconciliation(
+			item_code=item.name,
+			warehouse=warehouse,
+			qty=1,
+			rate=100,
+		)
+
+		sl_entry = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Stock Reconciliation", "voucher_no": sr.name},
+			["actual_qty", "qty_after_transaction"],
+			as_dict=1,
+		)
+
+		self.assertEqual(flt(sl_entry.actual_qty), 1.0)
+		self.assertEqual(flt(sl_entry.qty_after_transaction), 1.0)
 
 
 def create_batch_item_with_batch(item_name, batch_id):

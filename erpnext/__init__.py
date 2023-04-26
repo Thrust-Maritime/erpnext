@@ -4,7 +4,7 @@ import frappe
 
 from erpnext.hooks import regional_overrides
 
-__version__ = "13.30.0"
+__version__ = "13.49.14"
 
 
 def get_default_company(user=None):
@@ -148,6 +148,7 @@ def allow_regional(fn):
 	return caller
 
 
+@frappe.whitelist()
 def get_last_membership(member):
 	"""Returns last membership if exists"""
 	last_membership = frappe.get_all(

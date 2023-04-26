@@ -23,6 +23,8 @@ from erpnext.stock.doctype.stock_entry import test_stock_entry
 from erpnext.stock.doctype.warehouse.test_warehouse import create_warehouse
 from erpnext.stock.utils import get_bin
 
+test_dependencies = ["BOM"]
+
 
 class TestWorkOrder(FrappeTestCase):
 	def setUp(self):
@@ -93,7 +95,7 @@ class TestWorkOrder(FrappeTestCase):
 
 	def test_planned_operating_cost(self):
 		wo_order = make_wo_order_test_record(
-			item="_Test FG Item 2", planned_start_date=now(), qty=1, do_not_save=True
+			item="_Test FG Item 3", planned_start_date=now(), qty=1, do_not_save=True
 		)
 		wo_order.set_work_order_operations()
 		cost = wo_order.planned_operating_cost
@@ -414,7 +416,7 @@ class TestWorkOrder(FrappeTestCase):
 					"doctype": "Item Price",
 					"item_code": "_Test FG Non Stock Item",
 					"price_list_rate": 1000,
-					"price_list": "Standard Buying",
+					"price_list": "_Test Price List India",
 				}
 			).insert(ignore_permissions=True)
 
@@ -423,8 +425,17 @@ class TestWorkOrder(FrappeTestCase):
 			item_code="_Test FG Item", target="_Test Warehouse - _TC", qty=1, basic_rate=100
 		)
 
-		if not frappe.db.get_value("BOM", {"item": fg_item}):
-			make_bom(item=fg_item, rate=1000, raw_materials=["_Test FG Item", "_Test FG Non Stock Item"])
+		if not frappe.db.get_value("BOM", {"item": fg_item, "docstatus": 1}):
+			bom = make_bom(
+				item=fg_item,
+				rate=1000,
+				raw_materials=["_Test FG Item", "_Test FG Non Stock Item"],
+				do_not_save=True,
+			)
+			bom.rm_cost_as_per = "Price List"  # non stock item won't have valuation rate
+			bom.buying_price_list = "_Test Price List India"
+			bom.currency = "INR"
+			bom.save()
 
 		wo = make_wo_order_test_record(production_item=fg_item)
 
@@ -614,6 +625,10 @@ class TestWorkOrder(FrappeTestCase):
 			bom.submit()
 			bom_name = bom.name
 
+		ste1 = test_stock_entry.make_stock_entry(
+			item_code=rm1, target="_Test Warehouse - _TC", qty=32, basic_rate=5000.0
+		)
+
 		work_order = make_wo_order_test_record(
 			item=fg_item, skip_transfer=True, planned_start_date=now(), qty=1
 		)
@@ -638,11 +653,29 @@ class TestWorkOrder(FrappeTestCase):
 		work_order.insert()
 		work_order.submit()
 		self.assertEqual(work_order.has_batch_no, 1)
-		ste1 = frappe.get_doc(make_stock_entry(work_order.name, "Manufacture", 30))
+		batches = frappe.get_all("Batch", filters={"reference_name": work_order.name})
+		self.assertEqual(len(batches), 3)
+		batches = [batch.name for batch in batches]
+
+		ste1 = frappe.get_doc(make_stock_entry(work_order.name, "Manufacture", 10))
 		for row in ste1.get("items"):
 			if row.is_finished_item:
 				self.assertEqual(row.item_code, fg_item)
 				self.assertEqual(row.qty, 10)
+				self.assertTrue(row.batch_no in batches)
+				batches.remove(row.batch_no)
+
+		ste1.submit()
+
+		remaining_batches = []
+		ste1 = frappe.get_doc(make_stock_entry(work_order.name, "Manufacture", 20))
+		for row in ste1.get("items"):
+			if row.is_finished_item:
+				self.assertEqual(row.item_code, fg_item)
+				self.assertEqual(row.qty, 10)
+				remaining_batches.append(row.batch_no)
+
+		self.assertEqual(sorted(remaining_batches), sorted(batches))
 
 		frappe.db.set_value("Manufacturing Settings", None, "make_serial_no_batch_from_work_order", 0)
 
@@ -990,6 +1023,49 @@ class TestWorkOrder(FrappeTestCase):
 			close_work_order(wo_order, "Closed")
 			self.assertEqual(wo_order.get("status"), "Closed")
 
+	def test_fix_time_operations(self):
+		bom = frappe.get_doc(
+			{
+				"doctype": "BOM",
+				"item": "_Test FG Item 2",
+				"is_active": 1,
+				"is_default": 1,
+				"quantity": 1.0,
+				"with_operations": 1,
+				"operations": [
+					{
+						"operation": "_Test Operation 1",
+						"description": "_Test",
+						"workstation": "_Test Workstation 1",
+						"time_in_mins": 60,
+						"operating_cost": 140,
+						"fixed_time": 1,
+					}
+				],
+				"items": [
+					{
+						"amount": 5000.0,
+						"doctype": "BOM Item",
+						"item_code": "_Test Item",
+						"parentfield": "items",
+						"qty": 1.0,
+						"rate": 5000.0,
+					},
+				],
+			}
+		)
+		bom.save()
+		bom.submit()
+
+		wo1 = make_wo_order_test_record(
+			item=bom.item, bom_no=bom.name, qty=1, skip_transfer=1, do_not_submit=1
+		)
+		wo2 = make_wo_order_test_record(
+			item=bom.item, bom_no=bom.name, qty=2, skip_transfer=1, do_not_submit=1
+		)
+
+		self.assertEqual(wo1.operations[0].time_in_mins, wo2.operations[0].time_in_mins)
+
 	def test_partial_manufacture_entries(self):
 		cancel_stock_entry = []
 
@@ -1004,7 +1080,6 @@ class TestWorkOrder(FrappeTestCase):
 		ste1 = test_stock_entry.make_stock_entry(
 			item_code="_Test Item", target="_Test Warehouse - _TC", qty=120, basic_rate=5000.0
 		)
-
 		ste2 = test_stock_entry.make_stock_entry(
 			item_code="_Test Item Home Desktop 100",
 			target="_Test Warehouse - _TC",
@@ -1067,6 +1142,37 @@ class TestWorkOrder(FrappeTestCase):
 
 		try:
 			make_wo_order_test_record(item=fg_item)
+		except frappe.MandatoryError:
+			self.fail("Batch generation causing failing in Work Order")
+
+	@change_settings("Manufacturing Settings", {"make_serial_no_batch_from_work_order": 1})
+	def test_auto_serial_no_creation(self):
+		from erpnext.manufacturing.doctype.bom.test_bom import create_nested_bom
+		from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
+
+		fg_item = frappe.generate_hash(length=20)
+		child_item = frappe.generate_hash(length=20)
+
+		bom_tree = {fg_item: {child_item: {}}}
+
+		create_nested_bom(bom_tree, prefix="")
+
+		item = frappe.get_doc("Item", fg_item)
+		item.has_serial_no = 1
+		item.serial_no_series = f"{item.name}.#####"
+		item.save()
+
+		try:
+			wo_order = make_wo_order_test_record(item=fg_item, qty=2, skip_transfer=True)
+			serial_nos = wo_order.serial_no
+			stock_entry = frappe.get_doc(make_stock_entry(wo_order.name, "Manufacture", 10))
+			stock_entry.set_work_order_details()
+			stock_entry.set_serial_no_batch_for_finished_good()
+			for row in stock_entry.items:
+				if row.item_code == fg_item:
+					self.assertTrue(row.serial_no)
+					self.assertEqual(sorted(get_serial_nos(row.serial_no)), sorted(get_serial_nos(serial_nos)))
+
 		except frappe.MandatoryError:
 			self.fail("Batch generation causing failing in Work Order")
 

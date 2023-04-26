@@ -5,7 +5,7 @@
 from collections import OrderedDict
 
 import frappe
-from frappe import _, scrub
+from frappe import _, qb, scrub
 from frappe.utils import cint, cstr, flt, getdate, nowdate
 
 from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
@@ -92,6 +92,9 @@ class ReceivablePayableReport(object):
 
 		# Get return entries
 		self.get_return_entries()
+
+		# Get Exchange Rate Revaluations
+		self.get_exchange_rate_revaluations()
 
 		self.data = []
 		for gle in self.gl_entries:
@@ -256,7 +259,8 @@ class ReceivablePayableReport(object):
 			row.invoice_grand_total = row.invoiced
 
 			if (abs(row.outstanding) > 1.0 / 10**self.currency_precision) and (
-				abs(row.outstanding_in_account_currency) > 1.0 / 10**self.currency_precision
+				(abs(row.outstanding_in_account_currency) > 1.0 / 10**self.currency_precision)
+				or (row.voucher_no in self.err_journals)
 			):
 				# non-zero oustanding, we must consider this row
 
@@ -683,10 +687,10 @@ class ReceivablePayableReport(object):
 
 		if self.filters.get(scrub(self.party_type)):
 			select_fields = "debit_in_account_currency as debit, credit_in_account_currency as credit"
+			doc_currency_fields = "debit as debit_in_account_currency, credit as credit_in_account_currency"
 		else:
 			select_fields = "debit, credit"
-
-		doc_currency_fields = "debit_in_account_currency, credit_in_account_currency"
+			doc_currency_fields = "debit_in_account_currency, credit_in_account_currency"
 
 		remarks = ", remarks" if self.filters.get("show_remarks") else ""
 
@@ -1031,3 +1035,17 @@ class ReceivablePayableReport(object):
 			"data": {"labels": self.ageing_column_labels, "datasets": rows},
 			"type": "percentage",
 		}
+
+	def get_exchange_rate_revaluations(self):
+		je = qb.DocType("Journal Entry")
+		results = (
+			qb.from_(je)
+			.select(je.name)
+			.where(
+				(je.company == self.filters.company)
+				& (je.posting_date.lte(self.filters.report_date))
+				& (je.voucher_type == "Exchange Rate Revaluation")
+			)
+			.run()
+		)
+		self.err_journals = [x[0] for x in results] if results else []

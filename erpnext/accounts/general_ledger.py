@@ -146,6 +146,7 @@ def update_net_values(entry):
 def merge_similar_entries(gl_map, precision=None):
 	merged_gl_map = []
 	accounting_dimensions = get_accounting_dimensions()
+
 	for entry in gl_map:
 		# if there is already an entry in this account then just add it
 		# to that entry
@@ -225,9 +226,10 @@ def make_entry(args, adv_adj, update_outstanding, from_repost=False):
 	gle.flags.from_repost = from_repost
 	gle.flags.adv_adj = adv_adj
 	gle.flags.update_outstanding = update_outstanding or "Yes"
+	gle.flags.notify_update = False
 	gle.submit()
 
-	if not from_repost:
+	if not from_repost and gle.voucher_type != "Period Closing Voucher":
 		validate_expense_against_budget(args)
 
 def validate_cwip_accounts(gl_map):
@@ -291,20 +293,22 @@ def make_round_off_gle(gl_map, debit_credit_diff, precision):
 	round_off_account, round_off_cost_center = get_round_off_account_and_cost_center(
 		gl_map[0].company, gl_map[0].voucher_type, gl_map[0].voucher_no
 	)
-	round_off_account_exists = False
 	round_off_gle = frappe._dict()
-	for d in gl_map:
-		if d.account == round_off_account:
-			round_off_gle = d
-			if d.debit:
-				debit_credit_diff -= flt(d.debit)
-			else:
-				debit_credit_diff += flt(d.credit)
-			round_off_account_exists = True
+	round_off_account_exists = False
 
-	if round_off_account_exists and abs(debit_credit_diff) < (1.0 / (10**precision)):
-		gl_map.remove(round_off_gle)
-		return
+	if gl_map[0].voucher_type != "Period Closing Voucher":
+		for d in gl_map:
+			if d.account == round_off_account:
+				round_off_gle = d
+				if d.debit:
+					debit_credit_diff -= flt(d.debit) - flt(d.credit)
+				else:
+					debit_credit_diff += flt(d.credit)
+				round_off_account_exists = True
+
+		if round_off_account_exists and abs(debit_credit_diff) < (1.0 / (10**precision)):
+			gl_map.remove(round_off_gle)
+			return
 
 	if not round_off_gle:
 		for k in ["voucher_type", "voucher_no", "company", "posting_date", "remarks"]:
@@ -327,7 +331,6 @@ def make_round_off_gle(gl_map, debit_credit_diff, precision):
 	)
 
 	update_accounting_dimensions(round_off_gle)
-
 	if not round_off_account_exists:
 		gl_map.append(round_off_gle)
 

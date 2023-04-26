@@ -277,7 +277,7 @@ def get_conditions(filters):
 		or filters.get("party")
 		or filters.get("group_by") in ["Group by Account", "Group by Party"]
 	):
-		conditions.append("posting_date >=%(from_date)s")
+		conditions.append("(posting_date >=%(from_date)s or is_opening = 'Yes')")
 
 	conditions.append("(posting_date <=%(to_date)s or is_opening = 'Yes')")
 
@@ -462,7 +462,7 @@ def get_accountwise_gle(filters, accounting_dimensions, gl_entries, gle_map):
 			update_value_in_dict(totals, "opening", gle)
 			update_value_in_dict(totals, "closing", gle)
 
-		elif gle.posting_date <= to_date:
+		elif gle.posting_date <= to_date or (cstr(gle.is_opening) == "Yes" and show_opening_entries):
 			if not group_by_voucher_consolidated:
 				update_value_in_dict(gle_map[group_by_value].totals, "total", gle)
 				update_value_in_dict(gle_map[group_by_value].totals, "closing", gle)

@@ -44,7 +44,10 @@ frappe.ui.form.on("Purchase Order", {
 			return erpnext.queries.warehouse(frm.doc);
 		});
 
-		erpnext.accounts.dimensions.setup_dimension_filters(frm, frm.doctype);
+		// On cancel and amending a purchase order with advance payment, reset advance paid amount
+		if (frm.is_new()) {
+			frm.set_value("advance_paid", 0)
+		}
 	},
 
 	apply_tds: function(frm) {
@@ -188,11 +191,15 @@ erpnext.buying.PurchaseOrderController = erpnext.buying.BuyingController.extend(
 						cur_frm.add_custom_button(__('Purchase Invoice'),
 							this.make_purchase_invoice, __('Create'));
 
-					if(flt(doc.per_billed)==0 && doc.status != "Delivered") {
-						cur_frm.add_custom_button(__('Payment'), cur_frm.cscript.make_payment_entry, __('Create'));
+					if(flt(doc.per_billed) < 100 && doc.status != "Delivered") {
+						this.frm.add_custom_button(
+							__('Payment'),
+							() => this.make_payment_entry(),
+							__('Create')
+						);
 					}
 
-					if(flt(doc.per_billed)==0) {
+					if(flt(doc.per_billed) < 100) {
 						this.frm.add_custom_button(__('Payment Request'),
 							function() { me.make_payment_request() }, __('Create'));
 					}
@@ -427,7 +434,7 @@ erpnext.buying.PurchaseOrderController = erpnext.buying.BuyingController.extend(
 						company: me.frm.doc.company
 					},
 					allow_child_item_selection: true,
-					child_fielname: "items",
+					child_fieldname: "items",
 					child_columns: ["item_code", "qty"]
 				})
 			}, __("Get Items From"));

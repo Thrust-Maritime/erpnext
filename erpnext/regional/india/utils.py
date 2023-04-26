@@ -1,15 +1,29 @@
 import json
+import math
 import re
 
 import frappe
 from frappe import _
 from frappe.model.utils import get_fetch_values
-from frappe.utils import cint, cstr, date_diff, flt, getdate, nowdate
+from frappe.utils import (
+	add_days,
+	cint,
+	cstr,
+	date_diff,
+	flt,
+	get_link_to_form,
+	getdate,
+	month_diff,
+)
 from six import string_types
 
+from erpnext.assets.doctype.asset.asset import (
+	get_straight_line_or_manual_depr_amount,
+	get_wdv_or_dd_depr_amount,
+)
 from erpnext.controllers.accounts_controller import get_taxes_and_charges
 from erpnext.controllers.taxes_and_totals import get_itemised_tax, get_itemised_taxable_amount
-from erpnext.hr.utils import get_salary_assignment
+from erpnext.hr.utils import get_salary_assignments
 from erpnext.payroll.doctype.salary_structure.salary_structure import make_salary_slip
 from erpnext.regional.india import number_state_mapping, state_numbers, states
 
@@ -30,13 +44,12 @@ def validate_gstin_for_india(doc, method):
 
 	gst_category = []
 
-	if hasattr(doc, "gst_category"):
-		if len(doc.links):
-			link_doctype = doc.links[0].get("link_doctype")
-			link_name = doc.links[0].get("link_name")
+	if len(doc.links):
+		link_doctype = doc.links[0].get("link_doctype")
+		link_name = doc.links[0].get("link_name")
 
-			if link_doctype in ["Customer", "Supplier"]:
-				gst_category = frappe.db.get_value(link_doctype, {"name": link_name}, ["gst_category"])
+		if link_doctype in ["Customer", "Supplier"]:
+			gst_category = frappe.db.get_value(link_doctype, {"name": link_name}, ["gst_category"])
 
 	doc.gstin = doc.gstin.upper().strip()
 	if not doc.gstin or doc.gstin == "NA":
@@ -261,9 +274,16 @@ def get_regional_address_details(party_details, doctype, company):
 
 	update_party_details(party_details, doctype)
 
+	customer_gst_category = frappe.get_value(
+		"Customer", party_details.customer, ["gst_category", "export_type"]
+	)
+
 	party_details.place_of_supply = get_place_of_supply(party_details, doctype)
 
-	if is_internal_transfer(party_details, doctype):
+	if is_internal_transfer(party_details, doctype) or customer_gst_category == (
+		"SEZ",
+		"Without Payment of Tax",
+	):
 		party_details.taxes_and_charges = ""
 		party_details.taxes = []
 		return party_details
@@ -291,7 +311,7 @@ def get_regional_address_details(party_details, doctype, company):
 		return party_details
 
 	if (
-		doctype in ("Sales Invoice", "Delivery Note", "Sales Order")
+		doctype in ("Sales Invoice", "Delivery Note", "Sales Order", "Quotation")
 		and party_details.company_gstin
 		and party_details.company_gstin[:2] != party_details.place_of_supply[:2]
 	) or (
@@ -373,44 +393,56 @@ def calculate_annual_eligible_hra_exemption(doc):
 	basic_component, hra_component = frappe.db.get_value(
 		"Company", doc.company, ["basic_component", "hra_component"]
 	)
+
 	if not (basic_component and hra_component):
-		frappe.throw(_("Please mention Basic and HRA component in Company"))
-	annual_exemption, monthly_exemption, hra_amount = 0, 0, 0
+		frappe.throw(
+			_("Please set Basic and HRA component in Company {0}").format(
+				get_link_to_form("Company", doc.company)
+			)
+		)
+
+	annual_exemption = monthly_exemption = hra_amount = basic_amount = 0
+
 	if hra_component and basic_component:
-		assignment = get_salary_assignment(doc.employee, nowdate())
-		if assignment:
-			hra_component_exists = frappe.db.exists(
-				"Salary Detail",
-				{
-					"parent": assignment.salary_structure,
-					"salary_component": hra_component,
-					"parentfield": "earnings",
-					"parenttype": "Salary Structure",
-				},
-			)
+		assignments = get_salary_assignments(doc.employee, doc.payroll_period)
 
-			if hra_component_exists:
-				basic_amount, hra_amount = get_component_amt_from_salary_slip(
-					doc.employee, assignment.salary_structure, basic_component, hra_component
-				)
-				if hra_amount:
-					if doc.monthly_house_rent:
-						annual_exemption = calculate_hra_exemption(
-							assignment.salary_structure,
-							basic_amount,
-							hra_amount,
-							doc.monthly_house_rent,
-							doc.rented_in_metro_city,
-						)
-						if annual_exemption > 0:
-							monthly_exemption = annual_exemption / 12
-						else:
-							annual_exemption = 0
-
-		elif doc.docstatus == 1:
+		if not assignments and doc.docstatus == 1:
 			frappe.throw(
-				_("Salary Structure must be submitted before submission of Tax Ememption Declaration")
+				_("Salary Structure must be submitted before submission of {0}").format(doc.doctype)
 			)
+
+		assignment_dates = [assignment.from_date for assignment in assignments]
+
+		for idx, assignment in enumerate(assignments):
+			if has_hra_component(assignment.salary_structure, hra_component):
+				basic_salary_amt, hra_salary_amt = get_component_amt_from_salary_slip(
+					doc.employee,
+					assignment.salary_structure,
+					basic_component,
+					hra_component,
+					assignment.from_date,
+				)
+				to_date = get_end_date_for_assignment(assignment_dates, idx, doc.payroll_period)
+
+				frequency = frappe.get_value(
+					"Salary Structure", assignment.salary_structure, "payroll_frequency"
+				)
+				basic_amount += get_component_pay(frequency, basic_salary_amt, assignment.from_date, to_date)
+				hra_amount += get_component_pay(frequency, hra_salary_amt, assignment.from_date, to_date)
+
+		if hra_amount:
+			if doc.monthly_house_rent:
+				annual_exemption = calculate_hra_exemption(
+					assignment.salary_structure,
+					basic_amount,
+					hra_amount,
+					doc.monthly_house_rent,
+					doc.rented_in_metro_city,
+				)
+				if annual_exemption > 0:
+					monthly_exemption = annual_exemption / 12
+				else:
+					annual_exemption = 0
 
 	return frappe._dict(
 		{
@@ -421,10 +453,44 @@ def calculate_annual_eligible_hra_exemption(doc):
 	)
 
 
-def get_component_amt_from_salary_slip(employee, salary_structure, basic_component, hra_component):
-	salary_slip = make_salary_slip(
-		salary_structure, employee=employee, for_preview=1, ignore_permissions=True
+def has_hra_component(salary_structure, hra_component):
+	return frappe.db.exists(
+		"Salary Detail",
+		{
+			"parent": salary_structure,
+			"salary_component": hra_component,
+			"parentfield": "earnings",
+			"parenttype": "Salary Structure",
+		},
 	)
+
+
+def get_end_date_for_assignment(assignment_dates, idx, payroll_period):
+	end_date = None
+
+	try:
+		end_date = assignment_dates[idx + 1]
+		end_date = add_days(end_date, -1)
+	except IndexError:
+		pass
+
+	if not end_date:
+		end_date = frappe.db.get_value("Payroll Period", payroll_period, "end_date")
+
+	return end_date
+
+
+def get_component_amt_from_salary_slip(
+	employee, salary_structure, basic_component, hra_component, from_date
+):
+	salary_slip = make_salary_slip(
+		salary_structure,
+		employee=employee,
+		for_preview=1,
+		ignore_permissions=True,
+		posting_date=from_date,
+	)
+
 	basic_amt, hra_amt = 0, 0
 	for earning in salary_slip.earnings:
 		if earning.salary_component == basic_component:
@@ -437,35 +503,37 @@ def get_component_amt_from_salary_slip(employee, salary_structure, basic_compone
 
 
 def calculate_hra_exemption(
-	salary_structure, basic, monthly_hra, monthly_house_rent, rented_in_metro_city
+	salary_structure, annual_basic, annual_hra, monthly_house_rent, rented_in_metro_city
 ):
 	# TODO make this configurable
 	exemptions = []
-	frequency = frappe.get_value("Salary Structure", salary_structure, "payroll_frequency")
 	# case 1: The actual amount allotted by the employer as the HRA.
-	exemptions.append(get_annual_component_pay(frequency, monthly_hra))
-
-	actual_annual_rent = monthly_house_rent * 12
-	annual_basic = get_annual_component_pay(frequency, basic)
+	exemptions.append(annual_hra)
 
 	# case 2: Actual rent paid less 10% of the basic salary.
+	actual_annual_rent = monthly_house_rent * 12
 	exemptions.append(flt(actual_annual_rent) - flt(annual_basic * 0.1))
+
 	# case 3: 50% of the basic salary, if the employee is staying in a metro city (40% for a non-metro city).
 	exemptions.append(annual_basic * 0.5 if rented_in_metro_city else annual_basic * 0.4)
+
 	# return minimum of 3 cases
 	return min(exemptions)
 
-def get_annual_component_pay(frequency, amount):
+
+def get_component_pay(frequency, amount, from_date, to_date):
+	days = date_diff(to_date, from_date) + 1
+
 	if frequency == "Daily":
-		return amount * 365
+		return amount * days
 	elif frequency == "Weekly":
-		return amount * 52
+		return amount * math.floor(days / 7)
 	elif frequency == "Fortnightly":
-		return amount * 26
+		return amount * math.floor(days / 14)
 	elif frequency == "Monthly":
-		return amount * 12
+		return amount * month_diff(to_date, from_date)
 	elif frequency == "Bimonthly":
-		return amount * 6
+		return amount * (month_diff(to_date, from_date) / 2)
 
 def validate_house_rent_dates(doc):
 	if not doc.rented_to_date or not doc.rented_from_date:
@@ -533,7 +601,7 @@ def get_ewb_data(dt, dn):
 
 		if dt == "Delivery Note":
 			data.subSupplyType = 1
-		elif doc.gst_category in ["Registered Regular", "SEZ"]:
+		elif doc.gst_category in ["Unregistered", "Registered Regular", "SEZ"]:
 			data.subSupplyType = 1
 		elif doc.gst_category in ["Overseas", "Deemed Export"]:
 			data.subSupplyType = 3
@@ -555,6 +623,10 @@ def get_ewb_data(dt, dn):
 		shipping_address = frappe.get_doc("Address", doc.shipping_address_name)
 
 		data = get_address_details(data, doc, company_address, billing_address, dispatch_address)
+
+		if is_intrastate_transfer_eway_bill(data):
+			data.docType = "CHL"
+			data.subSupplyType = 8
 
 		data.itemList = []
 		data.totalValue = doc.total
@@ -596,6 +668,10 @@ def get_ewb_data(dt, dn):
 	data = {"version": "1.0.0421", "billLists": ewaybills}
 
 	return data
+
+
+def is_intrastate_transfer_eway_bill(data):
+	return data.fromGstin == data.toGstin
 
 
 @frappe.whitelist()
@@ -919,8 +995,6 @@ def validate_reverse_charge_transaction(doc, method):
 
 			frappe.throw(msg)
 
-		doc.eligibility_for_itc = "ITC on Reverse Charge"
-
 
 def update_itc_availed_fields(doc, method):
 	country = frappe.get_cached_value("Company", doc.company, "country")
@@ -1011,8 +1085,16 @@ def update_taxable_values(doc, method):
 				considered_rows.append(prev_row_id)
 
 	for item in doc.get("items"):
-		proportionate_value = item.base_net_amount if doc.base_net_total else item.qty
-		total_value = doc.base_net_total if doc.base_net_total else doc.total_qty
+		if (
+			doc.apply_discount_on == "Grand Total"
+			and doc.discount_amount
+			and doc.get("is_cash_or_non_trade_discount")
+		):
+			proportionate_value = item.base_amount if doc.base_total else item.qty
+			total_value = doc.base_total if doc.base_total else doc.total_qty
+		else:
+			proportionate_value = item.base_net_amount if doc.base_net_total else item.qty
+			total_value = doc.base_net_total if doc.base_net_total else doc.total_qty
 
 		applicable_charges = flt(
 			flt(
@@ -1029,20 +1111,16 @@ def update_taxable_values(doc, method):
 		doc.get("items")[item_count - 1].taxable_value += diff
 
 
-def get_depreciation_amount(asset, depreciable_value, row):
+def get_depreciation_amount(
+	asset,
+	depreciable_value,
+	row,
+	schedule_idx=0,
+	prev_depreciation_amount=0,
+	has_wdv_or_dd_non_yearly_pro_rata=False,
+):
 	if row.depreciation_method in ("Straight Line", "Manual"):
-		# if the Depreciation Schedule is being prepared for the first time
-		if not asset.flags.increase_in_asset_life:
-			depreciation_amount = (
-				flt(asset.gross_purchase_amount) - flt(row.expected_value_after_useful_life)
-			) / flt(row.total_number_of_depreciations)
-
-		# if the Depreciation Schedule is being modified after Asset Repair
-		else:
-			depreciation_amount = (
-				flt(row.value_after_depreciation) - flt(row.expected_value_after_useful_life)
-			) / (date_diff(asset.to_date, asset.available_for_use_date) / 365)
-
+		return get_straight_line_or_manual_depr_amount(asset, row)
 	else:
 		rate_of_depreciation = row.rate_of_depreciation
 		# if its the first depreciation
@@ -1057,10 +1135,14 @@ def get_depreciation_amount(asset, depreciable_value, row):
 							"As per IT Act, the rate of depreciation for the first depreciation entry is reduced by 50%."
 						)
 					)
-
-		depreciation_amount = flt(depreciable_value * (flt(rate_of_depreciation) / 100))
-
-	return depreciation_amount
+		return get_wdv_or_dd_depr_amount(
+			depreciable_value,
+			rate_of_depreciation,
+			row.frequency_of_depreciation,
+			schedule_idx,
+			prev_depreciation_amount,
+			has_wdv_or_dd_non_yearly_pro_rata,
+		)
 
 def set_item_tax_from_hsn_code(item):
 	if not item.taxes and item.gst_hsn_code:

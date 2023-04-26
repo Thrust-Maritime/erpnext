@@ -4,6 +4,7 @@
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils import cstr, flt, formatdate, getdate
 
 from erpnext.accounts.report.financial_statements import (
@@ -11,6 +12,8 @@ from erpnext.accounts.report.financial_statements import (
 	get_period_list,
 	validate_fiscal_year,
 )
+from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
+from erpnext.assets.doctype.asset.depreciation import get_depreciation_accounts
 
 
 def execute(filters=None):
@@ -42,8 +45,8 @@ def get_conditions(filters):
 		filters.year_end_date = getdate(fiscal_year.year_end_date)
 
 		conditions[date_field] = ["between", [filters.year_start_date, filters.year_end_date]]
-	if filters.get("is_existing_asset"):
-		conditions["is_existing_asset"] = filters.get("is_existing_asset")
+	if filters.get("only_existing_assets"):
+		conditions["is_existing_asset"] = filters.get("only_existing_assets")
 	if filters.get("asset_category"):
 		conditions["asset_category"] = filters.get("asset_category")
 	if filters.get("cost_center"):
@@ -85,7 +88,9 @@ def get_data(filters):
 			"asset_name",
 			"status",
 			"department",
+			"company",
 			"cost_center",
+			"calculate_depreciation",
 			"purchase_receipt",
 			"asset_category",
 			"purchase_date",
@@ -97,12 +102,20 @@ def get_data(filters):
 		]
 		assets_record = frappe.db.get_all("Asset", filters=conditions, fields=fields)
 
-	for asset in assets_record:
-		asset_value = (
-			asset.gross_purchase_amount
-			- flt(asset.opening_accumulated_depreciation)
-			- flt(depreciation_amount_map.get(asset.name))
+	assets_linked_to_fb = None
+
+	if filters.filter_by_finance_book:
+		assets_linked_to_fb = frappe.db.get_all(
+			doctype="Asset Finance Book",
+			filters={"finance_book": filters.finance_book or ("is", "not set")},
+			pluck="parent",
 		)
+
+	for asset in assets_record:
+		if assets_linked_to_fb and asset.asset_id not in assets_linked_to_fb:
+			continue
+
+		asset_value = get_asset_value_after_depreciation(asset.asset_id, filters.finance_book)
 		row = {
 			"asset_id": asset.asset_id,
 			"asset_name": asset.asset_name,
@@ -113,7 +126,7 @@ def get_data(filters):
 			or pi_supplier_map.get(asset.purchase_invoice),
 			"gross_purchase_amount": asset.gross_purchase_amount,
 			"opening_accumulated_depreciation": asset.opening_accumulated_depreciation,
-			"depreciated_amount": depreciation_amount_map.get(asset.asset_id) or 0.0,
+			"depreciated_amount": get_depreciation_amount_of_asset(asset, depreciation_amount_map, filters),
 			"available_for_use_date": asset.available_for_use_date,
 			"location": asset.location,
 			"asset_category": asset.asset_category,
@@ -136,6 +149,7 @@ def prepare_chart_data(data, filters):
 		filters.filter_based_on,
 		"Monthly",
 		company=filters.company,
+		ignore_fiscal_year=True,
 	)
 
 	for d in period_list:
@@ -156,17 +170,26 @@ def prepare_chart_data(data, filters):
 			"datasets": [
 				{
 					"name": _("Asset Value"),
-					"values": [d.get("asset_value") for d in labels_values_map.values()],
+					"values": [flt(d.get("asset_value"), 2) for d in labels_values_map.values()],
 				},
 				{
 					"name": _("Depreciatied Amount"),
-					"values": [d.get("depreciated_amount") for d in labels_values_map.values()],
+					"values": [flt(d.get("depreciated_amount"), 2) for d in labels_values_map.values()],
 				},
 			],
 		},
 		"type": "bar",
 		"barOptions": {"stacked": 1},
 	}
+
+
+def get_depreciation_amount_of_asset(asset, depreciation_amount_map, filters):
+	if asset.calculate_depreciation:
+		depr_amount = depreciation_amount_map.get(asset.asset_id) or 0.0
+	else:
+		depr_amount = get_manual_depreciation_amount_of_asset(asset, filters)
+
+	return flt(depr_amount, 2)
 
 
 def get_finance_book_value_map(filters):
@@ -186,6 +209,31 @@ def get_finance_book_value_map(filters):
 			(date, cstr(filters.finance_book or "")),
 		)
 	)
+
+
+def get_manual_depreciation_amount_of_asset(asset, filters):
+	date = filters.to_date if filters.filter_based_on == "Date Range" else filters.year_end_date
+
+	(_, _, depreciation_expense_account) = get_depreciation_accounts(asset)
+
+	gle = frappe.qb.DocType("GL Entry")
+
+	result = (
+		frappe.qb.from_(gle)
+		.select(Sum(gle.debit))
+		.where(gle.against_voucher == asset.asset_id)
+		.where(gle.account == depreciation_expense_account)
+		.where(gle.debit != 0)
+		.where(gle.is_cancelled == 0)
+		.where(gle.posting_date <= date)
+	).run()
+
+	if result and result[0] and result[0][0]:
+		depr_amount = result[0][0]
+	else:
+		depr_amount = 0
+
+	return depr_amount
 
 
 def get_purchase_receipt_supplier_map():
@@ -260,7 +308,7 @@ def get_columns(filters):
 
 	return [
 		{
-			"label": _("Asset Id"),
+			"label": _("Asset ID"),
 			"fieldtype": "Link",
 			"fieldname": "asset_id",
 			"options": "Asset",

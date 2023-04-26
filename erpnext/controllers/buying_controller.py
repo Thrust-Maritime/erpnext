@@ -86,6 +86,7 @@ class BuyingController(StockController, Subcontracting):
 					company=self.company,
 					party_address=self.get("supplier_address"),
 					shipping_address=self.get("shipping_address"),
+					company_address=self.get("billing_address"),
 					fetch_payment_terms_template=not self.get("ignore_default_payment_terms_template"),
 					ignore_permissions=self.flags.ignore_permissions,
 				)
@@ -204,16 +205,16 @@ class BuyingController(StockController, Subcontracting):
 		from frappe.utils import money_in_words
 		if self.meta.get_field("base_in_words"):
 			if self.meta.get_field("base_rounded_total") and not self.is_rounded_total_disabled():
-				amount = self.base_rounded_total
+				amount = abs(self.base_rounded_total)
 			else:
-				amount = self.base_grand_total
+				amount = abs(self.base_grand_total)
 			self.base_in_words = money_in_words(amount, self.company_currency)
 
 		if self.meta.get_field("in_words"):
 			if self.meta.get_field("rounded_total") and not self.is_rounded_total_disabled():
-				amount = self.rounded_total
+				amount = abs(self.rounded_total)
 			else:
-				amount = self.grand_total
+				amount = abs(self.grand_total)
 
 			self.in_words = money_in_words(amount, self.currency)
 
@@ -311,9 +312,14 @@ class BuyingController(StockController, Subcontracting):
 						raise_error_if_no_rate=False,
 					)
 
-					rate = flt(outgoing_rate * d.conversion_factor, d.precision("rate"))
+					rate = flt(outgoing_rate * (d.conversion_factor or 1), d.precision("rate"))
 				else:
-					rate = frappe.db.get_value(ref_doctype, d.get(frappe.scrub(ref_doctype)), "rate")
+					field = "incoming_rate" if self.get("is_internal_supplier") else "rate"
+					rate = flt(
+						frappe.db.get_value(ref_doctype, d.get(frappe.scrub(ref_doctype)), field)
+						* (d.conversion_factor or 1),
+						d.precision("rate"),
+					)
 
 				if self.is_internal_transfer():
 					if rate != d.rate:
@@ -761,6 +767,8 @@ class BuyingController(StockController, Subcontracting):
 						asset.purchase_date = self.posting_date
 						asset.supplier = self.supplier
 					elif self.docstatus == 2:
+						if asset.docstatus == 2:
+							continue
 						if asset.docstatus == 0:
 							asset.set(field, None)
 							asset.supplier = None

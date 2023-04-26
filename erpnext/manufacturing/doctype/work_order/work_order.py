@@ -145,7 +145,7 @@ class WorkOrder(Document):
 			frappe.throw(_("Sales Order {0} is {1}").format(self.sales_order, status))
 
 	def set_default_warehouse(self):
-		if not self.wip_warehouse:
+		if not self.wip_warehouse and not self.skip_transfer:
 			self.wip_warehouse = frappe.db.get_single_value(
 				"Manufacturing Settings", "default_wip_warehouse"
 			)
@@ -653,19 +653,30 @@ class WorkOrder(Document):
 		"""Fetch operations from BOM and set in 'Work Order'"""
 
 		def _get_operations(bom_no, qty=1):
-			return frappe.db.sql(
-				f"""select
-						operation, description, workstation, idx,
-						base_hour_rate as hour_rate, time_in_mins * {qty} as time_in_mins,
-						"Pending" as status, parent as bom, batch_size, sequence_id
-					from
-						`tabBOM Operation`
-					where
-						parent = %s order by idx
-					""",
-				bom_no,
-				as_dict=1,
+			data = frappe.get_all(
+				"BOM Operation",
+				filters={"parent": bom_no},
+				fields=[
+					"operation",
+					"description",
+					"workstation",
+					"idx",
+					"base_hour_rate as hour_rate",
+					"time_in_mins",
+					"parent as bom",
+					"batch_size",
+					"sequence_id",
+					"fixed_time",
+				],
+				order_by="idx",
 			)
+
+			for d in data:
+				if not d.fixed_time:
+					d.time_in_mins = flt(d.time_in_mins) * flt(qty)
+				d.status = "Pending"
+
+			return data
 
 		self.set("operations", [])
 		if not self.bom_no or not frappe.get_cached_value("BOM", self.bom_no, "with_operations"):
@@ -679,7 +690,7 @@ class WorkOrder(Document):
 
 			for node in bom_traversal:
 				if node.is_bom:
-					operations.extend(_get_operations(node.name, qty=node.exploded_qty))
+					operations.extend(_get_operations(node.name, qty=node.exploded_qty / node.bom_qty))
 
 		bom_qty = frappe.get_cached_value("BOM", self.bom_no, "quantity")
 		operations.extend(_get_operations(self.bom_no, qty=1.0 / bom_qty))
@@ -692,8 +703,8 @@ class WorkOrder(Document):
 
 	def calculate_time(self):
 		for d in self.get("operations"):
-			# d.time_in_mins = flt(d.time_in_mins) / flt(bom_qty) * (flt(self.qty) / flt(d.batch_size))
-			d.time_in_mins = flt(d.time_in_mins) * (flt(self.qty) / flt(d.batch_size))
+			if not d.fixed_time:
+				d.time_in_mins = flt(d.time_in_mins) * (flt(self.qty) / flt(d.batch_size))
 
 		self.calculate_operating_cost()
 

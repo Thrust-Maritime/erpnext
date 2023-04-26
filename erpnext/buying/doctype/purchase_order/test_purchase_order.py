@@ -140,6 +140,43 @@ class TestPurchaseOrder(FrappeTestCase):
 		# ordered qty decreases as ordered qty is 0 (deleted row)
 		self.assertEqual(get_ordered_qty(), existing_ordered_qty - 10)  # 0
 
+	def test_supplied_items_validations_on_po_update_after_submit(self):
+		po = create_purchase_order(item_code="_Test FG Item", is_subcontracted="Yes", qty=5, rate=100)
+		item = po.items[0]
+
+		original_supplied_items = {po.name: po.required_qty for po in po.supplied_items}
+
+		# Just update rate
+		trans_item = [
+			{
+				"item_code": "_Test FG Item",
+				"rate": 20,
+				"qty": 5,
+				"conversion_factor": 1.0,
+				"docname": item.name,
+			}
+		]
+		update_child_qty_rate("Purchase Order", json.dumps(trans_item), po.name)
+		po.reload()
+
+		new_supplied_items = {po.name: po.required_qty for po in po.supplied_items}
+		self.assertEqual(set(original_supplied_items.keys()), set(new_supplied_items.keys()))
+
+		# Update qty to 2x
+		trans_item[0]["qty"] *= 2
+		update_child_qty_rate("Purchase Order", json.dumps(trans_item), po.name)
+		po.reload()
+
+		new_supplied_items = {po.name: po.required_qty for po in po.supplied_items}
+		self.assertEqual(2 * sum(original_supplied_items.values()), sum(new_supplied_items.values()))
+
+		# Set transfer qty and attempt to update qty, shouldn't be allowed
+		po.supplied_items[0].supplied_qty = 2
+		po.supplied_items[0].db_update()
+		trans_item[0]["qty"] *= 2
+		with self.assertRaises(frappe.ValidationError):
+			update_child_qty_rate("Purchase Order", json.dumps(trans_item), po.name)
+
 	def test_update_child(self):
 		mr = make_material_request(qty=10)
 		po = make_purchase_order(mr.name)
@@ -1200,6 +1237,12 @@ class TestPurchaseOrder(FrappeTestCase):
 
 		automatically_fetch_payment_terms(enable=0)
 
+	def test_variant_item_po(self):
+		po = create_purchase_order(item_code="_Test Variant Item", qty=1, rate=100, do_not_save=1)
+
+		self.assertRaises(frappe.ValidationError, po.save)
+
+
 def make_pr_against_po(po, received_qty=0):
 	pr = make_purchase_receipt(po)
 	pr.get("items")[0].qty = received_qty or 5
@@ -1301,8 +1344,8 @@ def create_purchase_order(**args):
 			},
 		)
 
-	po.set_missing_values()
 	if not args.do_not_save:
+		po.set_missing_values()
 		po.insert()
 		if not args.do_not_submit:
 			if po.is_subcontracted == "Yes":
