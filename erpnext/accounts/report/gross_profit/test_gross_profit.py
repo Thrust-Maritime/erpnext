@@ -140,6 +140,7 @@ class TestGrossProfit(FrappeTestCase):
 		doctype_list = [
 			"Sales Invoice",
 			"GL Entry",
+			"Payment Ledger Entry",
 			"Stock Entry",
 			"Stock Ledger Entry",
 			"Delivery Note",

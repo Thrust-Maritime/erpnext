@@ -60,13 +60,6 @@ class TestOpeningInvoiceCreationTool(FrappeTestCase):
 		# Check if update stock is not enabled
 		self.assertEqual(si.update_stock, 0)
 
-		si = frappe.get_doc("Sales Invoice", invoices[0])
-
-		# Check if update stock is not enabled
-		self.assertEqual(si.update_stock, 0)
-
-		property_setter.delete()
-
 	def check_expected_values(self, invoices, expected_value, invoice_type="Sales"):
 		doctype = "Sales Invoice" if invoice_type == "Sales" else "Purchase Invoice"
 
@@ -164,28 +157,6 @@ class TestOpeningInvoiceCreationTool(FrappeTestCase):
 		disable_dimension()
 
 
-	def test_opening_sales_invoice_creation_with_missing_debit_account(self):
-		company = "_Test Opening Invoice Company"
-		party_1, party_2 = make_customer("Customer A"), make_customer("Customer B")
-
-		old_default_receivable_account = frappe.db.get_value("Company", company, "default_receivable_account")
-		frappe.db.set_value("Company", company, "default_receivable_account", "")
-
-		if not frappe.db.exists("Cost Center", "_Test Opening Invoice Company - _TOIC"):
-			cc = frappe.get_doc({"doctype": "Cost Center", "cost_center_name": "_Test Opening Invoice Company",
-				"is_group": 1, "company": "_Test Opening Invoice Company"})
-			cc.insert(ignore_mandatory=True)
-			cc2 = frappe.get_doc({"doctype": "Cost Center", "cost_center_name": "Main", "is_group": 0,
-				"company": "_Test Opening Invoice Company", "parent_cost_center": cc.name})
-			cc2.insert()
-
-		frappe.db.set_value("Company", company, "cost_center", "Main - _TOIC")
-
-		self.assertRaises(AccountMissingError, self.make_invoices, company="_Test Opening Invoice Company", party_1=party_1, party_2=party_2)
-
-		# teardown
-		frappe.db.set_value("Company", company, "default_receivable_account", old_default_receivable_account)
-
 def get_opening_invoice_creation_dict(**args):
 	party = "Customer" if args.get("invoice_type", "Sales") == "Sales" else "Supplier"
 	company = args.get("company", "_Test Company")
@@ -221,6 +192,7 @@ def get_opening_invoice_creation_dict(**args):
 
 	invoice_dict.update(args)
 	return invoice_dict
+
 
 def make_company():
 	if frappe.db.exists("Company", "_Test Opening Invoice Company"):

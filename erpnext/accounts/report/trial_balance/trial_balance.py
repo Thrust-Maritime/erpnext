@@ -33,6 +33,7 @@ def execute(filters=None):
 	columns = get_columns()
 	return columns, data
 
+
 def validate_filters(filters):
 	if not filters.fiscal_year:
 		frappe.throw(_("Fiscal Year {0} is required").format(filters.fiscal_year))
@@ -265,6 +266,7 @@ def calculate_total_row(accounts, company_currency):
 				total_row[field] += d[field]
 
 	return total_row
+
 
 def accumulate_values_into_parents(accounts, accounts_by_name):
 	for d in reversed(accounts):

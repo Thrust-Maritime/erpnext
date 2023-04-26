@@ -10,8 +10,6 @@ from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.document import Document
 from frappe.utils import cint, cstr
 from frappe.utils.nestedset import get_root_of
-from past.builtins import cmp
-from six import iteritems
 
 from erpnext.setup.doctype.customer_group.customer_group import get_parent_customer_groups
 
@@ -165,12 +163,15 @@ def get_party_details(party, party_type, args=None):
 def get_tax_template(posting_date, args):
 	"""Get matching tax rule"""
 	args = frappe._dict(args)
-	conditions = [
-		"""(from_date is null or from_date <= '{0}')
-		and (to_date is null or to_date >= '{0}')""".format(
-			posting_date
+	conditions = []
+
+	if posting_date:
+		conditions.append(
+			f"""(from_date is null or from_date <= '{posting_date}')
+			and (to_date is null or to_date >= '{posting_date}')"""
 		)
-	]
+	else:
+		conditions.append("(from_date is null) and (to_date is null)")
 
 	conditions.append(
 		"ifnull(tax_category, '') = {0}".format(frappe.db.escape(cstr(args.get("tax_category"))))
@@ -178,7 +179,7 @@ def get_tax_template(posting_date, args):
 	if "tax_category" in args.keys():
 		del args["tax_category"]
 
-	for key, value in iteritems(args):
+	for key, value in args.items():
 		if key == "use_for_shopping_cart":
 			conditions.append("use_for_shopping_cart = {0}".format(1 if value else 0))
 		elif key == "customer_group":
@@ -205,6 +206,10 @@ def get_tax_template(posting_date, args):
 		for key in args:
 			if rule.get(key):
 				rule.no_of_keys_matched += 1
+
+	def cmp(a, b):
+		# refernce: https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
+		return int(a > b) - int(a < b)
 
 	rule = sorted(
 		tax_rule,

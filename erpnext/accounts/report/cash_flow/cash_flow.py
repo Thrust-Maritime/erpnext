@@ -5,7 +5,18 @@
 import frappe
 from frappe import _
 from frappe.utils import cint, cstr
-from six import iteritems
+
+from erpnext.accounts.report.financial_statements import (
+	get_columns,
+	get_cost_centers_with_children,
+	get_data,
+	get_filtered_list_for_consolidated_report,
+	get_period_list,
+)
+from erpnext.accounts.report.profit_and_loss_statement.profit_and_loss_statement import (
+	get_net_profit_loss,
+)
+from erpnext.accounts.utils import get_fiscal_year
 
 from erpnext.accounts.report.financial_statements import (
 	get_columns,
@@ -125,6 +136,7 @@ def execute(filters=None):
 
 	return columns, data, None, chart, report_summary
 
+
 def get_cash_flow_accounts():
 	operation_accounts = {
 		"section_name": "Operations",
@@ -154,6 +166,7 @@ def get_cash_flow_accounts():
 
 	# combine all cash flow accounts for iteration
 	return [operation_accounts, investing_accounts, financing_accounts]
+
 
 def get_account_type_based_data(company, account_type, period_list, accumulated_values, filters):
 	data = {}
@@ -256,7 +269,7 @@ def add_total_row_account(
 def get_report_summary(summary_data, currency):
 	report_summary = []
 
-	for label, value in iteritems(summary_data):
+	for label, value in summary_data.items():
 		report_summary.append(
 			{"value": value, "label": label, "datatype": "Currency", "currency": currency}
 		)

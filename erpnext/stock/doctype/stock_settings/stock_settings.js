@@ -34,4 +34,3 @@ frappe.ui.form.on('Stock Settings', {
 		);
 	}
 });
-

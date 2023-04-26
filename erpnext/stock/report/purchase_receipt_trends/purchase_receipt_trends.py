@@ -18,6 +18,7 @@ def execute(filters=None):
 
 	return conditions["columns"], data, None, chart_data
 
+
 def get_chart_data(data, filters):
 	if not data:
 		return []
@@ -45,4 +46,5 @@ def get_chart_data(data, filters):
 		},
 		"type": "bar",
 		"colors": ["#5e64ff"],
+		"fieldtype": "Currency",
 	}

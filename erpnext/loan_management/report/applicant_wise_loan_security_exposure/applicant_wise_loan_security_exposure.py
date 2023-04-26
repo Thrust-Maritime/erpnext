@@ -5,7 +5,9 @@
 import frappe
 from frappe import _
 from frappe.utils import flt
-from six import iteritems
+
+import erpnext
+
 
 import erpnext
 
@@ -108,7 +110,7 @@ def get_data(filters):
 
 	currency = erpnext.get_company_currency(filters.get("company"))
 
-	for key, qty in iteritems(pledge_values):
+	for key, qty in pledge_values.items():
 		if qty:
 			row = {}
 			current_value = flt(qty * loan_security_details.get(key[1], {}).get("latest_price", 0))
@@ -132,6 +134,7 @@ def get_data(filters):
 			data.append(row)
 
 	return data
+
 
 def get_loan_security_details():
 	security_detail_map = {}
@@ -175,6 +178,7 @@ def get_loan_security_details():
 		security_detail_map.setdefault(security.loan_security, security)
 
 	return security_detail_map
+
 
 def get_applicant_wise_total_loan_security_qty(filters, loan_security_details):
 	current_pledges = {}

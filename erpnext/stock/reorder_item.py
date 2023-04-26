@@ -105,7 +105,7 @@ def get_item_warehouse_projected_qty(items_to_consider):
 	for item_code, warehouse, projected_qty in frappe.db.sql(
 		"""select item_code, warehouse, projected_qty
 		from tabBin where item_code in ({0})
-			and (warehouse != "" and warehouse is not null)""".format(
+			and (warehouse != '' and warehouse is not null)""".format(
 			", ".join(["%s"] * len(items_to_consider))
 		),
 		items_to_consider,
@@ -136,14 +136,14 @@ def create_material_request(material_requests):
 	mr_list = []
 	exceptions_list = []
 
-	def _log_exception():
+	def _log_exception(mr):
 		if frappe.local.message_log:
 			exceptions_list.extend(frappe.local.message_log)
 			frappe.local.message_log = []
 		else:
 			exceptions_list.append(frappe.get_traceback())
 
-		frappe.log_error(frappe.get_traceback())
+		mr.log_error("Unable to create material request")
 
 	for request_type in material_requests:
 		for company in material_requests[request_type]:
@@ -207,7 +207,7 @@ def create_material_request(material_requests):
 				mr_list.append(mr)
 
 			except Exception:
-				_log_exception()
+				_log_exception(mr)
 
 	if mr_list:
 		if getattr(frappe.local, "reorder_email_notify", None) is None:
@@ -246,8 +246,7 @@ def notify_errors(exceptions_list):
 		_("Dear System Manager,")
 		+ "<br>"
 		+ _(
-			"An error occured for certain Items while creating Material Requests based on Re-order level. \
-		Please rectify these issues :"
+			"An error occured for certain Items while creating Material Requests based on Re-order level. Please rectify these issues :"
 		)
 		+ "<br>"
 	)
@@ -265,4 +264,5 @@ def notify_errors(exceptions_list):
 	content += _("Regards,") + "<br>" + _("Administrator")
 
 	from frappe.email import sendmail_to_system_managers
+
 	sendmail_to_system_managers(subject, content)

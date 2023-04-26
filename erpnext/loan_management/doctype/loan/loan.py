@@ -17,7 +17,6 @@ from frappe.utils import (
 	now_datetime,
 	nowdate,
 )
-from six import string_types
 
 import erpnext
 from erpnext.accounts.doctype.journal_entry.journal_entry import get_payment_entry
@@ -30,15 +29,12 @@ from erpnext.loan_management.doctype.loan_security_unpledge.loan_security_unpled
 
 class Loan(AccountsController):
 	def validate(self):
-		if self.applicant_type == "Employee" and self.repay_from_salary:
-			validate_employee_currency_with_company_currency(self.applicant, self.company)
 		self.set_loan_amount()
 		self.validate_loan_amount()
 		self.set_missing_fields()
 		self.validate_cost_center()
 		self.validate_accounts()
 		self.check_sanctioned_amount_limit()
-		self.validate_repay_from_salary()
 
 		if self.is_term_loan:
 			validate_repayment_method(
@@ -83,7 +79,7 @@ class Loan(AccountsController):
 
 	def on_cancel(self):
 		self.unlink_loan_security_pledge()
-		self.ignore_linked_doctypes = ["GL Entry"]
+		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 
 	def set_missing_fields(self):
 		if not self.company:
@@ -115,10 +111,6 @@ class Loan(AccountsController):
 					self.applicant_type, frappe.bold(self.applicant)
 				)
 			)
-
-	def validate_repay_from_salary(self):
-		if not self.is_term_loan and self.repay_from_salary:
-			frappe.throw(_("Repay From Salary can be selected only for term loans"))
 
 	def make_repayment_schedule(self):
 		if not self.repayment_start_date:
@@ -369,6 +361,7 @@ def get_monthly_repayment_amount(loan_amount, rate_of_interest, repayment_period
 		monthly_repayment_amount = math.ceil(flt(loan_amount) / repayment_periods)
 	return monthly_repayment_amount
 
+
 @frappe.whitelist()
 def request_loan_closure(loan, posting_date=None):
 	if not posting_date:
@@ -422,6 +415,7 @@ def close_loan(loan, total_amount_paid):
 	frappe.db.set_value("Loan", loan, "total_amount_paid", total_amount_paid)
 	frappe.db.set_value("Loan", loan, "status", "Closed")
 
+
 @frappe.whitelist()
 def make_loan_disbursement(loan, company, applicant_type, applicant, pending_amount=0, as_dict=0):
 	disbursement_entry = frappe.new_doc("Loan Disbursement")
@@ -437,6 +431,7 @@ def make_loan_disbursement(loan, company, applicant_type, applicant, pending_amo
 		return disbursement_entry.as_dict()
 	else:
 		return disbursement_entry
+
 
 @frappe.whitelist()
 def make_repayment_entry(loan, applicant_type, applicant, loan_type, company, as_dict=0):
@@ -492,7 +487,7 @@ def unpledge_security(
 	loan=None, loan_security_pledge=None, security_map=None, as_dict=0, save=0, submit=0, approve=0
 ):
 	# if no security_map is passed it will be considered as full unpledge
-	if security_map and isinstance(security_map, string_types):
+	if security_map and isinstance(security_map, str):
 		security_map = json.loads(security_map)
 
 	if loan:
@@ -534,6 +529,7 @@ def unpledge_security(
 	else:
 		return unpledge_request
 
+
 def create_loan_security_unpledge(unpledge_map, loan, company, applicant_type, applicant):
 	unpledge_request = frappe.new_doc("Loan Security Unpledge")
 	unpledge_request.applicant_type = applicant_type
@@ -546,24 +542,6 @@ def create_loan_security_unpledge(unpledge_map, loan, company, applicant_type, a
 			unpledge_request.append("securities", {"loan_security": security, "qty": qty})
 
 	return unpledge_request
-
-
-def validate_employee_currency_with_company_currency(applicant, company):
-	from erpnext.payroll.doctype.salary_structure_assignment.salary_structure_assignment import (
-		get_employee_currency,
-	)
-	if not applicant:
-		frappe.throw(_("Please select Applicant"))
-	if not company:
-		frappe.throw(_("Please select Company"))
-	employee_currency = get_employee_currency(applicant)
-	company_currency = erpnext.get_company_currency(company)
-	if employee_currency != company_currency:
-		frappe.throw(
-			_(
-				"Loan cannot be repayed from salary for Employee {0} because salary is processed in currency {1}"
-			).format(applicant, employee_currency)
-		)
 
 
 @frappe.whitelist()

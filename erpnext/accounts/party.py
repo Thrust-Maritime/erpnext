@@ -26,12 +26,21 @@ from frappe.utils import (
 	getdate,
 	nowdate,
 )
-from six import iteritems
 
 import erpnext
 from erpnext import get_company_currency
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.exceptions import InvalidAccountCurrency, PartyDisabled, PartyFrozen
+
+PURCHASE_TRANSACTION_TYPES = {"Purchase Order", "Purchase Receipt", "Purchase Invoice"}
+SALES_TRANSACTION_TYPES = {
+	"Quotation",
+	"Sales Order",
+	"Delivery Note",
+	"Sales Invoice",
+	"POS Invoice",
+}
+TRANSACTION_TYPES = PURCHASE_TRANSACTION_TYPES | SALES_TRANSACTION_TYPES
 
 
 class DuplicatePartyAccountError(frappe.ValidationError):
@@ -125,12 +134,6 @@ def _get_party_details(
 	set_other_values(party_details, party, party_type)
 	set_price_list(party_details, party, party_type, price_list, pos_profile)
 
-	party_details["tax_category"] = get_address_tax_category(
-		party.get("tax_category"),
-		party_address,
-		shipping_address if party_type != "Supplier" else party_address,
-	)
-
 	tax_template = set_taxes(
 		party.name,
 		party_type,
@@ -170,6 +173,9 @@ def _get_party_details(
 		party_details["supplier_tds"] = frappe.get_value(
 			party_type, party.name, "tax_withholding_category"
 		)
+
+	if not party_details.get("tax_category") and pos_profile:
+		party_details["tax_category"] = frappe.get_value("POS Profile", pos_profile, "tax_category")
 
 	return party_details
 
@@ -212,52 +218,58 @@ def set_address_details(
 	else:
 		party_details.update(get_company_address(company))
 
-	if doctype and doctype in ["Delivery Note", "Sales Invoice", "Sales Order", "Quotation"]:
-		if party_details.company_address:
-			party_details.update(
-				get_fetch_values(doctype, "company_address", party_details.company_address)
-			)
-		get_regional_address_details(party_details, doctype, company)
+	if doctype in SALES_TRANSACTION_TYPES and party_details.company_address:
+		party_details.update(get_fetch_values(doctype, "company_address", party_details.company_address))
 
-	elif doctype and doctype in ["Purchase Invoice", "Purchase Order", "Purchase Receipt"]:
+	if doctype in PURCHASE_TRANSACTION_TYPES:
 		if shipping_address:
 			party_details.update(
-				{
-					"shipping_address": shipping_address,
-					"shipping_address_display": get_address_display(shipping_address),
-					**get_fetch_values(doctype, "shipping_address", shipping_address),
-				}
+				shipping_address=shipping_address,
+				shipping_address_display=get_address_display(shipping_address),
+				**get_fetch_values(doctype, "shipping_address", shipping_address)
 			)
 
 		if party_details.company_address:
 			# billing address
 			party_details.update(
-				{
-					"billing_address": party_details.company_address,
-					"billing_address_display": (
-						party_details.company_address_display or get_address_display(party_details.company_address)
-					),
-					**get_fetch_values(doctype, "billing_address", party_details.company_address),
-				}
+				billing_address=party_details.company_address,
+				billing_address_display=(
+					party_details.company_address_display or get_address_display(party_details.company_address)
+				),
+				**get_fetch_values(doctype, "billing_address", party_details.company_address)
 			)
 
 			# shipping address - if not already set
 			if not party_details.shipping_address:
 				party_details.update(
-					{
-						"shipping_address": party_details.billing_address,
-						"shipping_address_display": party_details.billing_address_display,
-						**get_fetch_values(doctype, "shipping_address", party_details.billing_address),
-					}
+					shipping_address=party_details.billing_address,
+					shipping_address_display=party_details.billing_address_display,
+					**get_fetch_values(doctype, "shipping_address", party_details.billing_address)
 				)
 
+	party_address, shipping_address = (
+		party_details.get(billing_address_field),
+		party_details.shipping_address_name,
+	)
+
+	party_details["tax_category"] = get_address_tax_category(
+		party.get("tax_category"),
+		party_address,
+		shipping_address if party_type != "Supplier" else party_address,
+	)
+
+	if doctype in TRANSACTION_TYPES:
+		# required to set correct region
+		frappe.flags.company = company
 		get_regional_address_details(party_details, doctype, company)
 
-	return party_details.get(billing_address_field), party_details.shipping_address_name
+	return party_address, shipping_address
+
 
 @erpnext.allow_regional
 def get_regional_address_details(party_details, doctype, company):
 	pass
+
 
 def set_contact_details(party_details, party, party_type):
 	party_details.contact_person = get_default_contact(party_type, party.name)
@@ -531,6 +543,7 @@ def get_due_date(posting_date, party_type, party, company=None, bill_date=None):
 		due_date = posting_date
 	return due_date
 
+
 def get_due_date_from_template(template_name, posting_date, bill_date):
 	"""
 	Inspects all `Payment Term`s from the a `Payment Terms Template` and returns the due
@@ -548,7 +561,7 @@ def get_due_date_from_template(template_name, posting_date, bill_date):
 		elif term.due_date_based_on == "Day(s) after the end of the invoice month":
 			due_date = max(due_date, add_days(get_last_day(due_date), term.credit_days))
 		else:
-			due_date = max(due_date, add_months(get_last_day(due_date), term.credit_months))
+			due_date = max(due_date, get_last_day(add_months(due_date, term.credit_months)))
 	return due_date
 
 
@@ -733,7 +746,7 @@ def get_timeline_data(doctype, name):
 
 	timeline_items = dict(data)
 
-	for date, count in iteritems(timeline_items):
+	for date, count in timeline_items.items():
 		timestamp = get_timestamp(date)
 		out.update({timestamp: count})
 
@@ -836,6 +849,7 @@ def get_dashboard_info(party_type, party, loyalty_program=None):
 
 	return company_wise_info
 
+
 def get_party_shipping_address(doctype, name):
 	"""
 	Returns an Address name (best guess) for the given doctype and name for which `address_type == 'Shipping'` is true.
@@ -853,9 +867,9 @@ def get_party_shipping_address(doctype, name):
 		"where "
 		"dl.link_doctype=%s "
 		"and dl.link_name=%s "
-		'and dl.parenttype="Address" '
+		"and dl.parenttype='Address' "
 		"and ifnull(ta.disabled, 0) = 0 and"
-		'(ta.address_type="Shipping" or ta.is_shipping_address=1) '
+		"(ta.address_type='Shipping' or ta.is_shipping_address=1) "
 		"order by ta.is_shipping_address desc, ta.address_type desc limit 1",
 		(doctype, name),
 	)
@@ -903,11 +917,11 @@ def get_default_contact(doctype, name):
 		"""
 			SELECT dl.parent, c.is_primary_contact, c.is_billing_contact
 			FROM `tabDynamic Link` dl
-			INNER JOIN tabContact c ON c.name = dl.parent
+			INNER JOIN `tabContact` c ON c.name = dl.parent
 			WHERE
 				dl.link_doctype=%s AND
 				dl.link_name=%s AND
-				dl.parenttype = "Contact"
+				dl.parenttype = 'Contact'
 			ORDER BY is_primary_contact DESC, is_billing_contact DESC
 		""",
 		(doctype, name),

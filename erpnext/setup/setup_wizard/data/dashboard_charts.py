@@ -13,6 +13,7 @@ def get_company_for_dashboards():
 			return company_list[0].name
 	return None
 
+
 def get_default_dashboards():
 	company = frappe.get_doc("Company", get_company_for_dashboards())
 	income_account = company.default_income_account or get_account("Income Account", company.name)

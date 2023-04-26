@@ -6,7 +6,7 @@ from json import dumps, loads
 
 import frappe
 from frappe import _
-from frappe.integrations.utils import create_payment_gateway, create_request_log
+from frappe.integrations.utils import create_request_log
 from frappe.model.document import Document
 from frappe.utils import call_hook_method, fmt_money, get_request_site_address
 
@@ -15,6 +15,7 @@ from erpnext.erpnext_integrations.doctype.mpesa_settings.mpesa_custom_fields imp
 	create_custom_pos_fields,
 )
 from erpnext.erpnext_integrations.utils import create_mode_of_payment
+from erpnext.utilities import payment_app_import_guard
 
 
 class MpesaSettings(Document):
@@ -29,6 +30,9 @@ class MpesaSettings(Document):
 			)
 
 	def on_update(self):
+		with payment_app_import_guard():
+			from payments.utils import create_payment_gateway
+
 		create_custom_pos_fields()
 		create_payment_gateway(
 			"Mpesa-" + self.payment_gateway_name,
@@ -112,6 +116,7 @@ class MpesaSettings(Document):
 		if error:
 			frappe.throw(_(getattr(response, "errorMessage")), title=_("Transaction Error"))
 
+
 def generate_stk_push(**kwargs):
 	"""Generate stk push by making a API call to the stk push API."""
 	args = frappe._dict(kwargs)
@@ -149,7 +154,7 @@ def generate_stk_push(**kwargs):
 		return response
 
 	except Exception:
-		frappe.log_error(title=_("Mpesa Express Transaction Error"))
+		frappe.log_error("Mpesa Express Transaction Error")
 		frappe.throw(
 			_("Issue detected with Mpesa configuration, check the error logs for more details"),
 			title=_("Mpesa Express Error"),
@@ -159,6 +164,7 @@ def generate_stk_push(**kwargs):
 def sanitize_mobile_number(number):
 	"""Add country code and strip leading zeroes from the phone number."""
 	return "254" + str(number).lstrip("0")
+
 
 @frappe.whitelist(allow_guest=True)
 def verify_transaction(**kwargs):
@@ -199,7 +205,7 @@ def verify_transaction(**kwargs):
 				integration_request.handle_success(transaction_response)
 			except Exception:
 				integration_request.handle_failure(transaction_response)
-				frappe.log_error(frappe.get_traceback())
+				frappe.log_error("Mpesa: Failed to verify transaction")
 
 	else:
 		integration_request.handle_failure(transaction_response)
@@ -243,6 +249,7 @@ def get_completed_integration_requests_info(reference_doctype, reference_docname
 
 	return mpesa_receipts, completed_payments
 
+
 def get_account_balance(request_payload):
 	"""Call account balance API to send the request to the Mpesa Servers."""
 	try:
@@ -270,8 +277,9 @@ def get_account_balance(request_payload):
 		)
 		return response
 	except Exception:
-		frappe.log_error(title=_("Account Balance Processing Error"))
+		frappe.log_error("Mpesa: Failed to get account balance")
 		frappe.throw(_("Please check your configuration and try again"), title=_("Error"))
+
 
 @frappe.whitelist(allow_guest=True)
 def process_balance_info(**kwargs):
@@ -309,7 +317,7 @@ def process_balance_info(**kwargs):
 		except Exception:
 			request.handle_failure(account_balance_response)
 			frappe.log_error(
-				title=_("Mpesa Account Balance Processing Error"), message=account_balance_response
+				title="Mpesa Account Balance Processing Error", message=account_balance_response
 			)
 	else:
 		request.handle_failure(account_balance_response)

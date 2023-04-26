@@ -29,6 +29,7 @@ def execute(filters=None):
 
 	return columns, data, None, chart_data
 
+
 def validate_filters(filters):
 	from_date, to_date = filters.get("from_date"), filters.get("to_date")
 
@@ -36,6 +37,7 @@ def validate_filters(filters):
 		frappe.throw(_("From and To Dates are required."))
 	elif date_diff(to_date, from_date) < 0:
 		frappe.throw(_("To Date cannot be before From Date."))
+
 
 def get_conditions(filters):
 	conditions = ""
@@ -55,7 +57,6 @@ def get_conditions(filters):
 
 
 def get_data(conditions, filters):
-	# nosemgrep
 	data = frappe.db.sql(
 		"""
 		SELECT
@@ -63,7 +64,7 @@ def get_data(conditions, filters):
 			soi.delivery_date as delivery_date,
 			so.name as sales_order,
 			so.status, so.customer, soi.item_code,
-			DATEDIFF(CURDATE(), soi.delivery_date) as delay_days,
+			DATEDIFF(CURRENT_DATE, soi.delivery_date) as delay_days,
 			IF(so.status in ('Completed','To Bill'), 0, (SELECT delay_days)) as delay,
 			soi.qty, soi.delivered_qty,
 			(soi.qty - soi.delivered_qty) AS pending_qty,
@@ -197,6 +198,7 @@ def prepare_data(data, so_elapsed_time, filters):
 		return data, chart_data
 
 	return data, chart_data
+
 
 def prepare_chart_data(pending, completed):
 	labels = ["Amount to Bill", "Billed Amount"]

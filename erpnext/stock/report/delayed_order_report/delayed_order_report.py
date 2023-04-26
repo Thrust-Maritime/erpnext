@@ -14,6 +14,7 @@ def execute(filters=None):
 
 	return columns, data
 
+
 class DelayedOrderReport(DelayedItemReport):
 	def run(self):
 		return self.get_columns(), self.get_data(consolidated=True) or []

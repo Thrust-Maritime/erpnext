@@ -5,7 +5,6 @@
 import frappe
 from frappe import _
 from frappe.utils import add_days, cint, date_diff, flt, get_datetime, getdate
-from six import iteritems
 
 import erpnext
 from erpnext.accounts.general_ledger import make_gl_entries
@@ -42,7 +41,7 @@ class LoanRepayment(AccountsController):
 		self.check_future_accruals()
 		self.update_repayment_schedule(cancel=1)
 		self.mark_as_unpaid()
-		self.ignore_linked_doctypes = ["GL Entry"]
+		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 		self.make_gl_entries(cancel=1)
 
 	def set_missing_values(self, amounts):
@@ -150,9 +149,6 @@ class LoanRepayment(AccountsController):
 				"status",
 				"is_secured_loan",
 				"total_payment",
-				"debit_adjustment_amount",
-				"credit_adjustment_amount",
-				"refund_amount",
 				"loan_amount",
 				"disbursed_amount",
 				"total_interest_payable",
@@ -302,7 +298,7 @@ class LoanRepayment(AccountsController):
 		idx = 1
 
 		if interest_paid > 0:
-			for lia, amounts in iteritems(repayment_details.get("pending_accrual_entries", [])):
+			for lia, amounts in repayment_details.get("pending_accrual_entries", []).items():
 				interest_amount = 0
 				if amounts["interest_amount"] <= interest_paid:
 					interest_amount = amounts["interest_amount"]
@@ -336,7 +332,7 @@ class LoanRepayment(AccountsController):
 		self, interest_paid, repayment_details, updated_entries
 	):
 		if interest_paid > 0:
-			for lia, amounts in iteritems(repayment_details.get("pending_accrual_entries", [])):
+			for lia, amounts in repayment_details.get("pending_accrual_entries", []).items():
 				paid_principal = 0
 				if amounts["payable_principal_amount"] <= interest_paid:
 					paid_principal = amounts["payable_principal_amount"]
@@ -402,9 +398,9 @@ class LoanRepayment(AccountsController):
 			remarks = "Repayment against loan " + self.against_loan
 
 		if self.reference_number:
-			remarks += " with reference no. {}".format(self.reference_number)
+			remarks += "with reference no. {}".format(self.reference_number)
 
-		if self.repay_from_salary:
+		if hasattr(self, "repay_from_salary") and self.repay_from_salary:
 			payment_account = self.payroll_payable_account
 		else:
 			payment_account = self.payment_account
@@ -696,7 +692,9 @@ def get_amounts(amounts, against_loan, posting_date):
 
 		if (
 			no_of_late_days > 0
-			and (not against_loan_doc.repay_from_salary)
+			and (
+				not (hasattr(against_loan_doc, "repay_from_salary") and against_loan_doc.repay_from_salary)
+			)
 			and entry.accrual_type == "Regular"
 		):
 			penalty_amount += (
@@ -768,7 +766,6 @@ def calculate_amounts(against_loan, posting_date, payment_type=""):
 	if payment_type == "Loan Closure":
 		amounts["payable_principal_amount"] = amounts["pending_principal_amount"]
 		amounts["interest_amount"] += amounts["unaccrued_interest"]
-		amounts["payable_amount"] = amounts["payable_principal_amount"] + amounts["interest_amount"]
 		amounts["payable_amount"] = (
 			amounts["payable_principal_amount"] + amounts["interest_amount"] + amounts["penalty_amount"]
 		)

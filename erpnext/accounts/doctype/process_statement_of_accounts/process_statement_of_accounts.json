@@ -294,10 +294,11 @@
   }
  ],
  "links": [],
- "modified": "2022-10-17 17:47:08.662475",
+ "modified": "2021-09-06 21:00:45.732505",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Process Statement Of Accounts",
+ "naming_rule": "Set by user",
  "owner": "Administrator",
  "permissions": [
   {

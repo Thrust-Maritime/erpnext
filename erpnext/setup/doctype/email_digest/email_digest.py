@@ -176,6 +176,7 @@ class EmailDigest(Document):
 	def get_calendar_events(self):
 		"""Get calendar events for given user"""
 		from frappe.desk.doctype.event.event import get_events
+
 		from_date, to_date = get_future_date_for_calendaer_event(self.frequency)
 
 		events = get_events(from_date, to_date)
@@ -197,7 +198,7 @@ class EmailDigest(Document):
 
 		todo_list = frappe.db.sql(
 			"""select *
-			from `tabToDo` where (owner=%s or assigned_by=%s) and status="Open"
+			from `tabToDo` where (owner=%s or assigned_by=%s) and status='Open'
 			order by field(priority, 'High', 'Medium', 'Low') asc, date asc limit 20""",
 			(user_id, user_id),
 			as_dict=True,
@@ -853,7 +854,7 @@ class EmailDigest(Document):
 
 		sql_po = """select {fields} from `tabPurchase Order Item`
 			left join `tabPurchase Order` on `tabPurchase Order`.name = `tabPurchase Order Item`.parent
-			where status<>'Closed' and `tabPurchase Order Item`.docstatus=1 and curdate() > `tabPurchase Order Item`.schedule_date
+			where status<>'Closed' and `tabPurchase Order Item`.docstatus=1 and CURRENT_DATE > `tabPurchase Order Item`.schedule_date
 			and received_qty < qty order by `tabPurchase Order Item`.parent DESC,
 			`tabPurchase Order Item`.schedule_date DESC""".format(
 			fields=fields_po
@@ -861,7 +862,7 @@ class EmailDigest(Document):
 
 		sql_poi = """select {fields} from `tabPurchase Order Item`
 			left join `tabPurchase Order` on `tabPurchase Order`.name = `tabPurchase Order Item`.parent
-			where status<>'Closed' and `tabPurchase Order Item`.docstatus=1 and curdate() > `tabPurchase Order Item`.schedule_date
+			where status<>'Closed' and `tabPurchase Order Item`.docstatus=1 and CURRENT_DATE > `tabPurchase Order Item`.schedule_date
 			and received_qty < qty order by `tabPurchase Order Item`.idx""".format(
 			fields=fields_poi
 		)
@@ -928,6 +929,7 @@ def get_count_for_period(account, fieldname, from_date, to_date):
 		count = count_on_to_date + (last_year_closing_count - count_before_from_date)
 
 	return count
+
 
 def get_future_date_for_calendaer_event(frequency):
 	from_date = to_date = today()

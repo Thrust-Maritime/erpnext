@@ -9,10 +9,9 @@ from frappe.desk.reportview import get_match_cond
 from frappe.model.document import Document
 from frappe.utils import add_days, flt, get_datetime, get_time, get_url, nowtime, today
 
+from erpnext import get_default_company
 from erpnext.controllers.queries import get_filters_cond
-from erpnext.education.doctype.student_attendance.student_attendance import get_holiday_list
-from erpnext.hr.doctype.daily_work_summary.daily_work_summary import get_users_email
-from erpnext.hr.doctype.holiday_list.holiday_list import is_holiday
+from erpnext.setup.doctype.holiday_list.holiday_list import is_holiday
 
 
 class Project(Document):
@@ -209,26 +208,20 @@ class Project(Document):
 			self.status = "Completed"
 
 	def update_costing(self):
-		from_time_sheet = frappe.db.sql(
-			"""select
-			sum(costing_amount) as costing_amount,
-			sum(billing_amount) as billing_amount,
-			min(from_time) as start_date,
-			max(to_time) as end_date,
-			sum(hours) as time
-			from `tabTimesheet Detail` where project = %s and docstatus = 1""",
-			self.name,
-			as_dict=1,
-		)[0]
+		from frappe.query_builder.functions import Max, Min, Sum
 
-		from_expense_claim = frappe.db.sql(
-			"""select
-			sum(total_sanctioned_amount) as total_sanctioned_amount
-			from `tabExpense Claim` where project = %s
-			and docstatus = 1""",
-			self.name,
-			as_dict=1,
-		)[0]
+		TimesheetDetail = frappe.qb.DocType("Timesheet Detail")
+		from_time_sheet = (
+			frappe.qb.from_(TimesheetDetail)
+			.select(
+				Sum(TimesheetDetail.costing_amount).as_("costing_amount"),
+				Sum(TimesheetDetail.billing_amount).as_("billing_amount"),
+				Min(TimesheetDetail.from_time).as_("start_date"),
+				Max(TimesheetDetail.to_time).as_("end_date"),
+				Sum(TimesheetDetail.hours).as_("time"),
+			)
+			.where((TimesheetDetail.project == self.name) & (TimesheetDetail.docstatus == 1))
+		).run(as_dict=True)[0]
 
 		self.actual_start_date = from_time_sheet.start_date
 		self.actual_end_date = from_time_sheet.end_date
@@ -237,7 +230,6 @@ class Project(Document):
 		self.total_billable_amount = from_time_sheet.billing_amount
 		self.actual_time = from_time_sheet.time
 
-		self.total_expense_claim = from_expense_claim.total_sanctioned_amount
 		self.update_purchase_costing()
 		self.update_sales_amount()
 		self.update_billed_amount()
@@ -246,7 +238,6 @@ class Project(Document):
 	def calculate_gross_margin(self):
 		expense_amount = (
 			flt(self.total_costing_amount)
-			+ flt(self.total_expense_claim)
 			+ flt(self.total_purchase_cost)
 			+ flt(self.get("total_consumed_material_cost", 0))
 		)
@@ -324,21 +315,39 @@ def get_timeline_data(doctype, name):
 def get_project_list(
 	doctype, txt, filters, limit_start, limit_page_length=20, order_by="modified"
 ):
-	return frappe.db.sql(
-		"""select distinct project.*
-		from tabProject project, `tabProject User` project_user
-		where
-			(project_user.user = %(user)s
-			and project_user.parent = project.name)
-			or project.owner = %(user)s
-			order by project.modified desc
-			limit {0}, {1}
-		""".format(
-			limit_start, limit_page_length
-		),
-		{"user": frappe.session.user},
-		as_dict=True,
-		update={"doctype": "Project"},
+	meta = frappe.get_meta(doctype)
+	if not filters:
+		filters = []
+
+	fields = "distinct *"
+
+	or_filters = []
+
+	if txt:
+		if meta.search_fields:
+			for f in meta.get_search_fields():
+				if f == "name" or meta.get_field(f).fieldtype in (
+					"Data",
+					"Text",
+					"Small Text",
+					"Text Editor",
+					"select",
+				):
+					or_filters.append([doctype, f, "like", "%" + txt + "%"])
+		else:
+			if isinstance(filters, dict):
+				filters["name"] = ("like", "%" + txt + "%")
+			else:
+				filters.append([doctype, "name", "like", "%" + txt + "%"])
+
+	return frappe.get_list(
+		doctype,
+		fields=fields,
+		filters=filters,
+		or_filters=or_filters,
+		limit_start=limit_start,
+		limit_page_length=limit_page_length,
+		order_by=order_by,
 	)
 
 
@@ -366,11 +375,11 @@ def get_users_for_project(doctype, txt, searchfield, start, page_len, filters):
 				or full_name like %(txt)s)
 			{fcond} {mcond}
 		order by
-			if(locate(%(_txt)s, name), locate(%(_txt)s, name), 99999),
-			if(locate(%(_txt)s, full_name), locate(%(_txt)s, full_name), 99999),
+			(case when locate(%(_txt)s, name) > 0 then locate(%(_txt)s, name) else 99999 end),
+			(case when locate(%(_txt)s, full_name) > 0 then locate(%(_txt)s, full_name) else 99999 end),
 			idx desc,
 			name, full_name
-		limit %(start)s, %(page_len)s""".format(
+		limit %(page_len)s offset %(start)s""".format(
 			**{
 				"key": searchfield,
 				"fcond": get_filters_cond(doctype, filters, conditions),
@@ -384,6 +393,7 @@ def get_users_for_project(doctype, txt, searchfield, start, page_len, filters):
 @frappe.whitelist()
 def get_cost_center_name(project):
 	return frappe.db.get_value("Project", project, "cost_center")
+
 
 def hourly_reminder():
 	fields = ["from_time", "to_time"]
@@ -616,6 +626,7 @@ def update_project_sales_billing():
 	for project in project_map.values():
 		project.save()
 
+
 @frappe.whitelist()
 def create_kanban_board_if_not_exists(project):
 	from frappe.desk.doctype.kanban_board.kanban_board import quick_kanban_board
@@ -643,3 +654,21 @@ def set_project_status(project, status):
 
 	project.status = status
 	project.save()
+
+
+def get_holiday_list(company=None):
+	if not company:
+		company = get_default_company() or frappe.get_all("Company")[0].name
+
+	holiday_list = frappe.get_cached_value("Company", company, "default_holiday_list")
+	if not holiday_list:
+		frappe.throw(
+			_("Please set a default Holiday List for Company {0}").format(
+				frappe.bold(get_default_company())
+			)
+		)
+	return holiday_list
+
+
+def get_users_email(doc):
+	return [d.email for d in doc.users if frappe.db.get_value("User", d.user, "enabled")]

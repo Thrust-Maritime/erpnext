@@ -30,11 +30,11 @@ class SupplierQuotation(BuyingController):
 		self.validate_valid_till()
 
 	def on_submit(self):
-		frappe.db.set(self, "status", "Submitted")
+		self.db_set("status", "Submitted")
 		self.update_rfq_supplier_status(1)
 
 	def on_cancel(self):
-		frappe.db.set(self, "status", "Cancelled")
+		self.db_set("status", "Cancelled")
 		self.update_rfq_supplier_status(0)
 
 	def on_trash(self):
@@ -170,6 +170,27 @@ def make_purchase_order(source_name, target_doc=None):
 
 	doclist.set_onload("ignore_price_list", True)
 	return doclist
+
+
+@frappe.whitelist()
+def make_purchase_invoice(source_name, target_doc=None):
+	doc = get_mapped_doc(
+		"Supplier Quotation",
+		source_name,
+		{
+			"Supplier Quotation": {
+				"doctype": "Purchase Invoice",
+				"validation": {
+					"docstatus": ["=", 1],
+				},
+			},
+			"Supplier Quotation Item": {"doctype": "Purchase Invoice Item"},
+			"Purchase Taxes and Charges": {"doctype": "Purchase Taxes and Charges"},
+		},
+		target_doc,
+	)
+
+	return doc
 
 
 @frappe.whitelist()

@@ -7,7 +7,6 @@ import os
 import frappe
 from frappe.utils import cstr
 from frappe.utils.nestedset import rebuild_tree
-from six import iteritems
 from unidecode import unidecode
 
 
@@ -19,7 +18,7 @@ def create_charts(
 		accounts = []
 
 		def _import_accounts(children, parent, root_type, root_account=False):
-			for account_name, child in iteritems(children):
+			for account_name, child in children.items():
 				if root_account:
 					root_type = child.get("root_type")
 
@@ -30,6 +29,7 @@ def create_charts(
 					"root_type",
 					"is_group",
 					"tax_rate",
+					"account_currency",
 				]:
 
 					account_number = cstr(child.get("account_number")).strip()
@@ -96,13 +96,24 @@ def identify_is_group(child):
 		is_group = child.get("is_group")
 	elif len(
 		set(child.keys())
-		- set(["account_name", "account_type", "root_type", "is_group", "tax_rate", "account_number"])
+		- set(
+			[
+				"account_name",
+				"account_type",
+				"root_type",
+				"is_group",
+				"tax_rate",
+				"account_number",
+				"account_currency",
+			]
+		)
 	):
 		is_group = 1
 	else:
 		is_group = 0
 
 	return is_group
+
 
 def get_chart(chart_template, existing_company=None):
 	chart = {}
@@ -132,6 +143,7 @@ def get_chart(chart_template, existing_company=None):
 						chart = f.read()
 						if chart and json.loads(chart).get("name") == chart_template:
 							return json.loads(chart).get("tree")
+
 
 @frappe.whitelist()
 def get_charts_for_country(country, with_standard=False):
@@ -182,6 +194,7 @@ def get_account_tree_from_existing_company(existing_company):
 			"root_type",
 			"tax_rate",
 			"account_number",
+			"account_currency",
 		],
 		order_by="lft, rgt",
 	)
@@ -192,6 +205,7 @@ def get_account_tree_from_existing_company(existing_company):
 	if all_accounts:
 		build_account_tree(account_tree, None, all_accounts)
 	return account_tree
+
 
 def build_account_tree(tree, parent, all_accounts):
 	# find children
@@ -221,6 +235,7 @@ def build_account_tree(tree, parent, all_accounts):
 		# call recursively to build a subtree for current account
 		build_account_tree(tree[child.account_name], child, all_accounts)
 
+
 @frappe.whitelist()
 def validate_bank_account(coa, bank_account):
 	accounts = []
@@ -229,7 +244,7 @@ def validate_bank_account(coa, bank_account):
 	if chart:
 
 		def _get_account_names(account_master):
-			for account_name, child in iteritems(account_master):
+			for account_name, child in account_master.items():
 				if account_name not in ["account_number", "account_type", "root_type", "is_group", "tax_rate"]:
 					accounts.append(account_name)
 
@@ -253,7 +268,7 @@ def build_tree_from_json(chart_template, chart_data=None, from_coa_importer=Fals
 
 	def _import_accounts(children, parent):
 		"""recursively called to form a parent-child based list of dict from chart template"""
-		for account_name, child in iteritems(children):
+		for account_name, child in children.items():
 			account = {}
 			if account_name in [
 				"account_name",
@@ -262,6 +277,7 @@ def build_tree_from_json(chart_template, chart_data=None, from_coa_importer=Fals
 				"root_type",
 				"is_group",
 				"tax_rate",
+				"account_currency",
 			]:
 				continue
 

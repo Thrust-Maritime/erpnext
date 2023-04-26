@@ -102,6 +102,7 @@ def get_loyalty_program_details(
 	lp_details.update(loyalty_program.as_dict())
 	return lp_details
 
+
 @frappe.whitelist()
 def get_redeemption_factor(loyalty_program=None, customer=None):
 	customer_loyalty_program = None

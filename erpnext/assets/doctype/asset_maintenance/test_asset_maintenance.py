@@ -73,6 +73,7 @@ class TestAssetMaintenance(unittest.TestCase):
 		next_due_date = calculate_next_due_date(asset_maintenance_log.completion_date, "Monthly")
 		self.assertEqual(asset_maintenance.asset_maintenance_tasks[0].next_due_date, next_due_date)
 
+
 def create_asset_data():
 	if not frappe.db.exists("Asset Category", "Equipment"):
 		create_asset_category()

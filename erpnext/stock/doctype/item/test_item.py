@@ -5,8 +5,10 @@
 import json
 
 import frappe
+from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.test_runner import make_test_objects
 from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.utils import add_days, today
 
 from erpnext.controllers.item_variant import (
 	InvalidItemAttributeValueError,
@@ -402,8 +404,8 @@ class TestItem(FrappeTestCase):
 		frappe.delete_doc_if_exists("Item Attribute", "Test Item Length")
 
 		frappe.db.sql(
-			'''delete from `tabItem Variant Attribute`
-			where attribute="Test Item Length"'''
+			"""delete from `tabItem Variant Attribute`
+			where attribute='Test Item Length' """
 		)
 
 		frappe.flags.attribute_values = None
@@ -614,6 +616,7 @@ class TestItem(FrappeTestCase):
 
 	def test_heatmap_data(self):
 		import time
+
 		data = get_timeline_data("Item", "_Test Item")
 		self.assertTrue(isinstance(data, dict))
 
@@ -625,6 +628,17 @@ class TestItem(FrappeTestCase):
 			self.assertTrue(one_year_ago <= timestamp <= now)
 			self.assertIsInstance(count, int)
 			self.assertTrue(count >= 0)
+
+	def test_index_creation(self):
+		"check if index is getting created in db"
+
+		indices = frappe.db.sql("show index from tabItem", as_dict=1)
+		expected_columns = {"item_code", "item_name", "item_group"}
+		for index in indices:
+			expected_columns.discard(index.get("Column_name"))
+
+		if expected_columns:
+			self.fail(f"Expected db index on these columns: {', '.join(expected_columns)}")
 
 	def test_attribute_completions(self):
 		expected_attrs = {"Small", "Extra Small", "Extra Large", "Large", "2XL", "Medium"}
@@ -645,6 +659,7 @@ class TestItem(FrappeTestCase):
 
 	def test_check_stock_uom_with_bin_no_sle(self):
 		from erpnext.stock.stock_balance import update_bin_qty
+
 		item = create_item("_Item with bin qty")
 		item.stock_uom = "Gram"
 		item.save()
@@ -687,6 +702,31 @@ class TestItem(FrappeTestCase):
 		item.item_group = "All Item Groups"
 		item.save()  # if item code saved without item_code then series worked
 
+	@change_settings("Stock Settings", {"allow_negative_stock": 0})
+	def test_item_wise_negative_stock(self):
+		"""When global settings are disabled check that item that allows
+		negative stock can still consume material in all known stock
+		transactions that consume inventory."""
+		from erpnext.stock.stock_ledger import is_negative_stock_allowed
+
+		item = make_item("_TestNegativeItemSetting", {"allow_negative_stock": 1, "valuation_rate": 100})
+		self.assertTrue(is_negative_stock_allowed(item_code=item.name))
+
+		self.consume_item_code_with_differet_stock_transactions(item_code=item.name)
+
+	@change_settings("Stock Settings", {"allow_negative_stock": 0})
+	def test_backdated_negative_stock(self):
+		"""same as test above but backdated entries"""
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		item = make_item("_TestNegativeItemSetting", {"allow_negative_stock": 1, "valuation_rate": 100})
+
+		# create a future entry so all new entries are backdated
+		make_stock_entry(
+			qty=1, item_code=item.name, target="_Test Warehouse - _TC", posting_date=add_days(today(), 5)
+		)
+		self.consume_item_code_with_differet_stock_transactions(item_code=item.name)
+
 	@change_settings("Stock Settings", {"sample_retention_warehouse": "_Test Warehouse - _TC"})
 	def test_retain_sample(self):
 		item = make_item(
@@ -699,9 +739,33 @@ class TestItem(FrappeTestCase):
 
 		item.has_batch_no = None
 		item.save()
-		self.assertEqual(item.retain_sample, None)
-		self.assertEqual(item.sample_quantity, None)
+		self.assertEqual(item.retain_sample, False)
+		self.assertEqual(item.sample_quantity, 0)
 		item.delete()
+
+	def consume_item_code_with_differet_stock_transactions(
+		self, item_code, warehouse="_Test Warehouse - _TC"
+	):
+		from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
+		from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
+		from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		typical_args = {"item_code": item_code, "warehouse": warehouse}
+
+		create_delivery_note(**typical_args)
+		create_sales_invoice(update_stock=1, **typical_args)
+		make_stock_entry(item_code=item_code, source=warehouse, qty=1, purpose="Material Issue")
+		make_stock_entry(item_code=item_code, source=warehouse, target="Stores - _TC", qty=1)
+		# standalone return
+		make_purchase_receipt(is_return=True, qty=-1, **typical_args)
+
+	def test_item_dashboard(self):
+		from erpnext.stock.dashboard.item_dashboard import get_data
+
+		self.assertTrue(get_data(item_code="_Test Item"))
+		self.assertTrue(get_data(warehouse="_Test Warehouse - _TC"))
+		self.assertTrue(get_data(item_group="All Item Groups"))
 
 	def test_empty_description(self):
 		item = make_item(properties={"description": "<p></p>"})
@@ -709,6 +773,95 @@ class TestItem(FrappeTestCase):
 		item.description = ""
 		item.save()
 		self.assertEqual(item.description, item.item_name)
+
+	def test_item_type_field_change(self):
+		"""Check if critical fields like `is_stock_item`, `has_batch_no` are not changed if transactions exist."""
+		from erpnext.accounts.doctype.purchase_invoice.test_purchase_invoice import make_purchase_invoice
+		from erpnext.stock.doctype.delivery_note.test_delivery_note import create_delivery_note
+		from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		transaction_creators = [
+			lambda i: make_purchase_receipt(item_code=i),
+			lambda i: make_purchase_invoice(item_code=i, update_stock=1),
+			lambda i: make_stock_entry(item_code=i, qty=1, target="_Test Warehouse - _TC"),
+			lambda i: create_delivery_note(item_code=i),
+		]
+
+		properties = {"has_batch_no": 0, "allow_negative_stock": 1, "valuation_rate": 10}
+		for transaction_creator in transaction_creators:
+			item = make_item(properties=properties)
+			transaction = transaction_creator(item.name)
+			item.has_batch_no = 1
+			self.assertRaises(frappe.ValidationError, item.save)
+
+			transaction.cancel()
+			# should be allowed now
+			item.reload()
+			item.has_batch_no = 1
+			item.save()
+
+	def test_customer_codes_length(self):
+		"""Check if item code with special characters are allowed."""
+		item = make_item(properties={"item_code": "Test Item Code With Special Characters"})
+		for row in range(3):
+			item.append("customer_items", {"ref_code": frappe.generate_hash("", 120)})
+		item.save()
+		self.assertTrue(len(item.customer_code) > 140)
+
+	def test_update_is_stock_item(self):
+		# Step - 1: Create an Item with Maintain Stock enabled
+		item = make_item(properties={"is_stock_item": 1})
+
+		# Step - 2: Disable Maintain Stock
+		item.is_stock_item = 0
+		item.save()
+		item.reload()
+		self.assertEqual(item.is_stock_item, 0)
+
+		# Step - 3: Create Product Bundle
+		pb = frappe.new_doc("Product Bundle")
+		pb.new_item_code = item.name
+		pb.flags.ignore_mandatory = True
+		pb.save()
+
+		# Step - 4: Try to enable Maintain Stock, should throw a validation error
+		item.is_stock_item = 1
+		self.assertRaises(frappe.ValidationError, item.save)
+		item.reload()
+
+		# Step - 5: Delete Product Bundle
+		pb.delete()
+
+		# Step - 6: Again try to enable Maintain Stock
+		item.is_stock_item = 1
+		item.save()
+		item.reload()
+		self.assertEqual(item.is_stock_item, 1)
+
+	def test_serach_fields_for_item(self):
+		from erpnext.controllers.queries import item_query
+
+		make_property_setter("Item", None, "search_fields", "item_name", "Data", for_doctype="Doctype")
+
+		item = make_item(properties={"item_name": "Test Item", "description": "Test Description"})
+		data = item_query(
+			"Item", "Test Item", "", 0, 20, filters={"item_name": "Test Item"}, as_dict=True
+		)
+		self.assertEqual(data[0].name, item.name)
+		self.assertEqual(data[0].item_name, item.item_name)
+		self.assertTrue("description" not in data[0])
+
+		make_property_setter(
+			"Item", None, "search_fields", "item_name, description", "Data", for_doctype="Doctype"
+		)
+		data = item_query(
+			"Item", "Test Item", "", 0, 20, filters={"item_name": "Test Item"}, as_dict=True
+		)
+		self.assertEqual(data[0].name, item.name)
+		self.assertEqual(data[0].item_name, item.item_name)
+		self.assertEqual(data[0].description, item.description)
+		self.assertTrue("description" in data[0])
 
 
 def set_item_variant_settings(fields):

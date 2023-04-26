@@ -9,6 +9,7 @@ import frappe
 class TestPOSOpeningEntry(unittest.TestCase):
 	pass
 
+
 def create_opening_entry(pos_profile, user):
 	entry = frappe.new_doc("POS Opening Entry")
 	entry.pos_profile = pos_profile.name

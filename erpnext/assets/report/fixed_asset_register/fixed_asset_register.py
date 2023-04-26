@@ -137,6 +137,7 @@ def get_data(filters):
 
 	return data
 
+
 def prepare_chart_data(data, filters):
 	labels_values_map = {}
 	date_field = frappe.scrub(filters.date_based_on)

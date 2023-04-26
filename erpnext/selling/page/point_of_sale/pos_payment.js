@@ -161,8 +161,7 @@ erpnext.PointOfSale.Payment = class {
 
 		frappe.ui.form.on('POS Invoice', 'contact_mobile', (frm) => {
 			const contact = frm.doc.contact_mobile;
-			if (!this.request_for_payment_field) return;
-			const request_button = $(this.request_for_payment_field.$input[0]);
+			const request_button = $(this.request_for_payment_field?.$input[0]);
 			if (contact) {
 				request_button.removeClass('btn-default').addClass('btn-primary');
 			} else {
@@ -323,6 +322,11 @@ erpnext.PointOfSale.Payment = class {
 		this.focus_on_default_mop();
 	}
 
+	after_render() {
+		const frm = this.events.get_frm();
+		frm.script_manager.trigger("after_payment_render", frm.doc.doctype, frm.doc.docname);
+	}
+
 	edit_cart() {
 		this.events.toggle_other_sections(false);
 		this.toggle_component(false);
@@ -333,6 +337,7 @@ erpnext.PointOfSale.Payment = class {
 		this.toggle_component(true);
 
 		this.render_payment_section();
+		this.after_render();
 	}
 
 	toggle_remarks_control() {

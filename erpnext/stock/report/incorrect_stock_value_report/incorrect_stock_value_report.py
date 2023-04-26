@@ -5,9 +5,8 @@
 import frappe
 from frappe import _
 from frappe.query_builder import Field
-from frappe.query_builder.functions import Min, Timestamp
+from frappe.query_builder.functions import CombineDatetime, Min
 from frappe.utils import add_days, getdate, today
-from six import iteritems
 
 import erpnext
 from erpnext.accounts.utils import get_stock_and_account_balance
@@ -27,6 +26,7 @@ def execute(filters=None):
 
 	return columns, data
 
+
 def get_unsync_date(filters):
 	date = filters.from_date
 	if not date:
@@ -45,6 +45,7 @@ def get_unsync_date(filters):
 			return date
 
 		date = add_days(date, 1)
+
 
 def get_data(report_filters):
 	from_date = get_unsync_date(report_filters)
@@ -74,16 +75,16 @@ def get_data(report_filters):
 			& (sle.company == report_filters.company)
 			& (sle.is_cancelled == 0)
 		)
-		.orderby(Timestamp(sle.posting_date, sle.posting_time), sle.creation)
+		.orderby(CombineDatetime(sle.posting_date, sle.posting_time), sle.creation)
 	).run(as_dict=True)
 
 	for d in data:
 		voucher_wise_dict.setdefault((d.item_code, d.warehouse), []).append(d)
 
 	closing_date = add_days(from_date, -1)
-	for key, stock_data in iteritems(voucher_wise_dict):
+	for key, stock_data in voucher_wise_dict.items():
 		prev_stock_value = get_stock_value_on(
-			posting_date=closing_date, item_code=key[0], warehouse=key[1]
+			posting_date=closing_date, item_code=key[0], warehouses=key[1]
 		)
 		for data in stock_data:
 			expected_stock_value = prev_stock_value + data.stock_value_difference
@@ -93,6 +94,7 @@ def get_data(report_filters):
 				result.append(data)
 
 	return result
+
 
 def get_columns(filters):
 	return [

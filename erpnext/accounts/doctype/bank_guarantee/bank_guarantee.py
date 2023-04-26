@@ -20,6 +20,7 @@ class BankGuarantee(Document):
 		if not self.bank:
 			frappe.throw(_("Enter the name of the bank or lending institution before submittting."))
 
+
 @frappe.whitelist()
 def get_voucher_details(bank_guarantee_type: str, reference_name: str):
 	if not isinstance(reference_name, str):

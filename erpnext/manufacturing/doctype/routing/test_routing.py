@@ -92,6 +92,7 @@ def setup_operations(rows):
 		make_workstation(row)
 		make_operation(row)
 
+
 def create_routing(**args):
 	args = frappe._dict(args)
 
@@ -110,6 +111,7 @@ def create_routing(**args):
 			doc.save()
 
 	return doc
+
 
 def setup_bom(**args):
 	from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom

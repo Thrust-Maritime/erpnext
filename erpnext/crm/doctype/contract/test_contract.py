@@ -100,6 +100,7 @@ class TestContract(unittest.TestCase):
 
 		self.assertEqual(self.contract_doc.fulfilment_status, "Lapsed")
 
+
 def get_contract():
 	doc = frappe.new_doc("Contract")
 	doc.party_type = "Customer"

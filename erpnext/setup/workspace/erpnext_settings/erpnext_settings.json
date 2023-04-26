@@ -1,28 +1,26 @@
 {
- "category": "Modules",
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"Your Shortcuts\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t\",\"level\":4,\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Projects Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Accounts Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HR Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Selling Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Buying Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Support Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Shopping Cart Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Portal Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Domain Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Products Settings\",\"col\":4}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Naming Series\",\"col\":4}}]",
- "creation": "2020-03-12 14:47:51.166455",
- "developer_mode_only": 0,
- "disable_user_customization": 0,
+ "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t\\n\\t\\t\\t\\n\\t\\t</b></span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Projects Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Accounts Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Stock Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"HR Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Selling Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Buying Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Support Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Shopping Cart Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Portal Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Domain Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Products Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Naming Series\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Manufacturing Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Education Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Hotel Settings\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"CRM Settings\",\"col\":3}}]",
+ "creation": "2022-01-27 13:14:47.349433",
  "docstatus": 0,
  "doctype": "Workspace",
- "extends": "Settings",
- "extends_another_page": 1,
+ "for_user": "",
  "hide_custom": 0,
- "icon": "settings",
+ "icon": "setting",
  "idx": 0,
- "is_default": 0,
- "is_standard": 1,
  "label": "ERPNext Settings",
  "links": [],
- "modified": "2021-11-12 01:32:55.323591",
+ "modified": "2022-06-27 16:53:07.056620",
  "modified_by": "Administrator",
  "module": "Setup",
  "name": "ERPNext Settings",
  "owner": "Administrator",
- "pin_to_bottom": 0,
- "pin_to_top": 0,
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 12.0,
  "shortcuts": [
   {
    "icon": "project",
@@ -48,12 +46,6 @@
    "icon": "stock",
    "label": "Stock Settings",
    "link_to": "Stock Settings",
-   "type": "DocType"
-  },
-  {
-   "icon": "hr",
-   "label": "HR Settings",
-   "link_to": "HR Settings",
    "type": "DocType"
   },
   {
@@ -94,31 +86,18 @@
    "type": "DocType"
   },
   {
-   "icon": "education",
-   "label": "Education Settings",
-   "link_to": "Education Settings",
-   "restrict_to_domain": "Education",
-   "type": "DocType"
-  },
-  {
-   "icon": "organization",
-   "label": "Hotel Settings",
-   "link_to": "Hotel Settings",
-   "restrict_to_domain": "Hospitality",
-   "type": "DocType"
-  },
-  {
-   "icon": "non-profit",
-   "label": "Healthcare Settings",
-   "link_to": "Healthcare Settings",
-   "restrict_to_domain": "Healthcare",
-   "type": "DocType"
-  },
-  {
    "icon": "setting",
    "label": "Domain Settings",
    "link_to": "Domain Settings",
    "type": "DocType"
+  },
+  {
+   "doc_view": "",
+   "icon": "crm",
+   "label": "CRM Settings",
+   "link_to": "CRM Settings",
+   "type": "DocType"
   }
- ]
+ ],
+ "title": "ERPNext Settings"
 }

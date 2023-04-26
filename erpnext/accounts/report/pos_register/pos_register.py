@@ -44,6 +44,7 @@ def execute(filters=None):
 
 	return columns, grouped_data
 
+
 def get_pos_entries(filters, group_by_field):
 	conditions = get_conditions(filters)
 	order_by = "p.posting_date"
@@ -154,6 +155,7 @@ def get_conditions(filters):
 				)"""
 
 	return conditions
+
 
 def get_group_by_field(group_by):
 	group_by_field = ""

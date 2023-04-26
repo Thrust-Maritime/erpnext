@@ -203,6 +203,7 @@ def task_exists(subject):
 		return False
 	return frappe.get_doc("Task", result[0].name)
 
+
 def calculate_end_date(project, start, duration):
 	start = add_days(project.expected_start_date, start)
 	start = project.update_if_holiday(start)

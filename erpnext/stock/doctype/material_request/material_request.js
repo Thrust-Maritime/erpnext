@@ -108,10 +108,13 @@ frappe.ui.form.on('Material Request', {
 						() => frm.events.create_pick_list(frm), __('Create'));
 				}
 
-				if (frm.doc.material_request_type === "Material Transfer") {
+				if (frm.doc.material_request_type === 'Material Transfer') {
 					add_create_pick_list_button();
-					frm.add_custom_button(__("Transfer Material"),
+					frm.add_custom_button(__('Material Transfer'),
 						() => frm.events.make_stock_entry(frm), __('Create'));
+
+					frm.add_custom_button(__('Material Transfer (In Transit)'),
+						() => frm.events.make_in_transit_stock_entry(frm), __('Create'));
 				}
 
 				if (frm.doc.material_request_type === "Material Issue") {
@@ -333,6 +336,46 @@ frappe.ui.form.on('Material Request', {
 		});
 	},
 
+	make_in_transit_stock_entry(frm) {
+		frappe.prompt(
+			[
+				{
+					label: __('In Transit Warehouse'),
+					fieldname: 'in_transit_warehouse',
+					fieldtype: 'Link',
+					options: 'Warehouse',
+					reqd: 1,
+					get_query: () => {
+						return{
+							filters: {
+								'company': frm.doc.company,
+								'is_group': 0,
+								'warehouse_type': 'Transit'
+							}
+						}
+					}
+				}
+			],
+			(values) => {
+				frappe.call({
+					method: "erpnext.stock.doctype.material_request.material_request.make_in_transit_stock_entry",
+					args: {
+						source_name: frm.doc.name,
+						in_transit_warehouse: values.in_transit_warehouse
+					},
+					callback: function(r) {
+						if (r.message) {
+							let doc = frappe.model.sync(r.message);
+							frappe.set_route('Form', doc[0].doctype, doc[0].name);
+						}
+					}
+				})
+			},
+			__('In Transit Transfer'),
+			__('Create Stock Entry')
+		)
+	},
+
 	create_pick_list: (frm) => {
 		frappe.model.open_mapped_doc({
 			method: "erpnext.stock.doctype.material_request.material_request.create_pick_list",
@@ -408,28 +451,28 @@ frappe.ui.form.on("Material Request Item", {
 	}
 });
 
-erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.extend({
-	tc_name: function() {
+erpnext.buying.MaterialRequestController = class MaterialRequestController extends erpnext.buying.BuyingController {
+	tc_name() {
 		this.get_terms();
-	},
+	}
 
-	item_code: function() {
+	item_code() {
 		// to override item code trigger from transaction.js
-	},
+	}
 
-	validate_company_and_party: function() {
+	validate_company_and_party() {
 		return true;
-	},
+	}
 
-	calculate_taxes_and_totals: function() {
+	calculate_taxes_and_totals() {
 		return;
-	},
+	}
 
-	validate: function() {
+	validate() {
 		set_schedule_date(this.frm);
-	},
+	}
 
-	onload: function(doc, cdt, cdn) {
+	onload(doc, cdt, cdn) {
 		this.frm.set_query("item_code", "items", function() {
 			if (doc.material_request_type == "Customer Provided") {
 				return{
@@ -451,9 +494,9 @@ erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.exten
 				}
 			}
 		});
-	},
+	}
 
-	items_add: function(doc, cdt, cdn) {
+	items_add(doc, cdt, cdn) {
 		var row = frappe.get_doc(cdt, cdn);
 		if(doc.schedule_date) {
 			row.schedule_date = doc.schedule_date;
@@ -461,19 +504,19 @@ erpnext.buying.MaterialRequestController = erpnext.buying.BuyingController.exten
 		} else {
 			this.frm.script_manager.copy_from_first_row("items", row, ["schedule_date"]);
 		}
-	},
+	}
 
-	items_on_form_rendered: function() {
-		set_schedule_date(this.frm);
-	},
-
-	schedule_date: function() {
+	items_on_form_rendered() {
 		set_schedule_date(this.frm);
 	}
-});
+
+	schedule_date() {
+		set_schedule_date(this.frm);
+	}
+};
 
 // for backward compatibility: combine new and previous states
-$.extend(cur_frm.cscript, new erpnext.buying.MaterialRequestController({frm: cur_frm}));
+extend_cscript(cur_frm.cscript, new erpnext.buying.MaterialRequestController({frm: cur_frm}));
 
 function set_schedule_date(frm) {
 	if(frm.doc.schedule_date){

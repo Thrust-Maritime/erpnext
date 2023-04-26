@@ -24,6 +24,7 @@ class PackingSlip(Document):
 		self.validate_qty()
 
 		from erpnext.utilities.transaction_base import validate_uom_is_integer
+
 		validate_uom_is_integer(self, "stock_uom", "qty")
 		validate_uom_is_integer(self, "weight_uom", "net_weight")
 
@@ -191,6 +192,7 @@ class PackingSlip(Document):
 
 		self.update_item_details()
 
+
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def item_details(doctype, txt, searchfield, start, page_len, filters):
@@ -201,7 +203,7 @@ def item_details(doctype, txt, searchfield, start, page_len, filters):
 				where name in ( select item_code FROM `tabDelivery Note Item`
 	 						where parent= %s)
 	 			and %s like "%s" %s
-	 			limit  %s, %s """
+	 			limit  %s offset %s """
 		% ("%s", searchfield, "%s", get_match_cond(doctype), "%s", "%s"),
-		((filters or {}).get("delivery_note"), "%%%s%%" % txt, start, page_len),
+		((filters or {}).get("delivery_note"), "%%%s%%" % txt, page_len, start),
 	)

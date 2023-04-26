@@ -55,6 +55,14 @@ frappe.ui.form.on(cur_frm.doctype, {
 	},
 
 	allocate_advances_automatically: function(frm) {
+		frm.trigger('fetch_advances');
+	},
+
+	only_include_allocated_payments: function(frm) {
+		frm.trigger('fetch_advances');
+	},
+
+	fetch_advances: function(frm) {
 		if(frm.doc.allocate_advances_automatically) {
 			frappe.call({
 				doc: frm.doc,
@@ -143,6 +151,12 @@ var get_payment_mode_account = function(frm, mode_of_payment, callback) {
 
 cur_frm.cscript.account_head = function(doc, cdt, cdn) {
 	var d = locals[cdt][cdn];
+
+	if (doc.docstatus == 1) {
+		// Should not trigger any changes on change post submit
+		return;
+	}
+
 	if(!d.charge_type && d.account_head){
 		frappe.msgprint(__("Please select Charge Type first"));
 		frappe.model.set_value(cdt, cdn, "account_head", "");

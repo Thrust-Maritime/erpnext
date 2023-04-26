@@ -99,6 +99,7 @@ def get_assets_details(assets):
 
 	return assets_details
 
+
 def get_columns():
 	return [
 		{

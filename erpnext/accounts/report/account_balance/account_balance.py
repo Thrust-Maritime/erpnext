@@ -14,6 +14,7 @@ def execute(filters=None):
 	data = get_data(filters)
 	return columns, data
 
+
 def get_columns(filters):
 	columns = [
 		{
@@ -42,6 +43,7 @@ def get_columns(filters):
 
 	return columns
 
+
 def get_conditions(filters):
 	conditions = {}
 
@@ -56,6 +58,7 @@ def get_conditions(filters):
 		conditions["root_type"] = filters.root_type
 
 	return conditions
+
 
 def get_data(filters):
 

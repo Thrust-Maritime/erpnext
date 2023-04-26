@@ -1,6 +1,9 @@
 # Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+
+from typing import Literal
+
 import frappe
 from frappe.tests.utils import FrappeTestCase, change_settings
 from frappe.utils import random_string
@@ -24,7 +27,7 @@ from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
 class TestJobCard(FrappeTestCase):
 	def setUp(self):
 		make_bom_for_jc_tests()
-		self.transfer_material_against = "Work Order"
+		self.transfer_material_against: Literal["Work Order", "Job Card"] = "Work Order"
 		self.source_warehouse = None
 		self._work_order = None
 
@@ -389,7 +392,6 @@ class TestJobCard(FrappeTestCase):
 		jc.for_quantity = 2
 		jc.transferred_qty = 1
 		jc.total_completed_qty = 0
-		jc.time_logs = []
 		assertStatus("Open")
 
 		jc.transferred_qty = jc.for_quantity

@@ -3,6 +3,7 @@
 
 
 import json
+from typing import Optional
 
 import frappe
 from frappe import _
@@ -12,7 +13,6 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import get_url
 from frappe.utils.print_format import download_pdf
 from frappe.utils.user import get_user_fullname
-from six import string_types
 
 from erpnext.accounts.party import get_party_account_currency, get_party_details
 from erpnext.buying.utils import validate_for_items
@@ -20,6 +20,7 @@ from erpnext.controllers.buying_controller import BuyingController
 from erpnext.stock.doctype.material_request.material_request import set_missing_values
 
 STANDARD_USERS = ("Guest", "Administrator")
+
 
 class RequestforQuotation(BuyingController):
 	def validate(self):
@@ -31,7 +32,7 @@ class RequestforQuotation(BuyingController):
 
 		if self.docstatus < 1:
 			# after amend and save, status still shows as cancelled, until submit
-			frappe.db.set(self, "status", "Draft")
+			self.db_set("status", "Draft")
 
 	def validate_duplicate_supplier(self):
 		supplier_list = [d.supplier for d in self.suppliers]
@@ -73,14 +74,14 @@ class RequestforQuotation(BuyingController):
 			)
 
 	def on_submit(self):
-		frappe.db.set(self, "status", "Submitted")
+		self.db_set("status", "Submitted")
 		for supplier in self.suppliers:
 			supplier.email_sent = 0
 			supplier.quote_status = "Pending"
 		self.send_to_supplier()
 
 	def on_cancel(self):
-		frappe.db.set(self, "status", "Cancelled")
+		self.db_set("status", "Cancelled")
 
 	@frappe.whitelist()
 	def get_supplier_email_preview(self, supplier):
@@ -112,7 +113,10 @@ class RequestforQuotation(BuyingController):
 
 	def get_link(self):
 		# RFQ link for supplier portal
-		return get_url("/app/request-for-quotation/" + self.name)
+		route = frappe.db.get_value(
+			"Portal Menu Item", {"reference_doctype": "Request for Quotation"}, ["route"]
+		)
+		return get_url("/app/{0}/".format(route) + self.name)
 
 	def update_supplier_part_no(self, supplier):
 		self.vendor = supplier
@@ -216,6 +220,7 @@ class RequestforQuotation(BuyingController):
 			recipients=data.email_id,
 			sender=sender,
 			attachments=attachments,
+			print_format=self.meta.default_print_format or "Standard",
 			send_email=True,
 			doctype=self.doctype,
 			name=self.name,
@@ -224,9 +229,7 @@ class RequestforQuotation(BuyingController):
 		frappe.msgprint(_("Email Sent to Supplier {0}").format(data.supplier))
 
 	def get_attachments(self):
-		attachments = [d.name for d in get_attachments(self.doctype, self.name)]
-		attachments.append(frappe.attach_print(self.doctype, self.name, doc=self))
-		return attachments
+		return [d.name for d in get_attachments(self.doctype, self.name)]
 
 	def update_rfq_supplier_status(self, sup_name=None):
 		for supplier in self.suppliers:
@@ -323,7 +326,7 @@ def make_supplier_quotation_from_rfq(source_name, target_doc=None, for_supplier=
 # This method is used to make supplier quotation from supplier's portal.
 @frappe.whitelist()
 def create_supplier_quotation(doc):
-	if isinstance(doc, string_types):
+	if isinstance(doc, str):
 		doc = json.loads(doc)
 
 	try:
@@ -347,6 +350,7 @@ def create_supplier_quotation(doc):
 		return sq_doc.name
 	except Exception:
 		return None
+
 
 def add_items(sq_doc, supplier, items):
 	for data in items:
@@ -388,16 +392,27 @@ def create_rfq_items(sq_doc, supplier, data):
 
 
 @frappe.whitelist()
-def get_pdf(doctype, name, supplier):
-	doc = get_rfq_doc(doctype, name, supplier)
-	if doc:
-		download_pdf(doctype, name, doc=doc)
-
-def get_rfq_doc(doctype, name, supplier):
+def get_pdf(
+	name: str,
+	supplier: str,
+	print_format: Optional[str] = None,
+	language: Optional[str] = None,
+	letterhead: Optional[str] = None,
+):
+	doc = frappe.get_doc("Request for Quotation", name)
 	if supplier:
-		doc = frappe.get_doc(doctype, name)
 		doc.update_supplier_part_no(supplier)
-		return doc
+
+	# permissions get checked in `download_pdf`
+	download_pdf(
+		doc.doctype,
+		doc.name,
+		print_format,
+		doc=doc,
+		language=language,
+		letterhead=letterhead or None,
+	)
+
 
 
 @frappe.whitelist()

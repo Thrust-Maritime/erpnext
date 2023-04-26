@@ -20,7 +20,7 @@ class MaintenanceVisit(TransactionBase):
 
 	def validate_purpose_table(self):
 		if not self.purposes:
-			frappe.throw(_("Add Items in the Purpose Table"), title="Purposes Required")
+			frappe.throw(_("Add Items in the Purpose Table"), title=_("Purposes Required"))
 
 	def validate_maintenance_date(self):
 		if self.maintenance_type == "Scheduled" and self.maintenance_schedule_detail:
@@ -125,12 +125,12 @@ class MaintenanceVisit(TransactionBase):
 
 	def on_submit(self):
 		self.update_customer_issue(1)
-		frappe.db.set(self, "status", "Submitted")
+		self.db_set("status", "Submitted")
 		self.update_status_and_actual_date()
 
 	def on_cancel(self):
 		self.check_if_last_visit()
-		frappe.db.set(self, "status", "Cancelled")
+		self.db_set("status", "Cancelled")
 		self.update_status_and_actual_date(cancel=True)
 
 	def on_update(self):

@@ -1,10 +1,10 @@
 import base64
 import hashlib
 import hmac
+from urllib.parse import urlparse
 
 import frappe
 from frappe import _
-from six.moves.urllib.parse import urlparse
 
 from erpnext import get_default_company
 
@@ -25,6 +25,7 @@ def validate_webhooks_request(doctype, hmac_key, secret_key="secret"):
 		return fn
 
 	return innerfn
+
 
 def get_webhook_address(connector_name, method, exclude_uri=False, force_https=False):
 	endpoint = "erpnext.erpnext_integrations.connectors.{0}.{1}".format(connector_name, method)

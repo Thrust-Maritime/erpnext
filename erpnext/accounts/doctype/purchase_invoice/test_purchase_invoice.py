@@ -5,6 +5,7 @@
 import unittest
 
 import frappe
+from frappe.tests.utils import change_settings
 from frappe.utils import add_days, cint, flt, getdate, nowdate, today
 
 import erpnext
@@ -115,6 +116,7 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 
 	def test_payment_entry_unlink_against_purchase_invoice(self):
 		from erpnext.accounts.doctype.payment_entry.test_payment_entry import get_payment_entry
+
 		unlink_payment_on_cancel_of_invoice(0)
 
 		pi_doc = make_purchase_invoice()
@@ -303,6 +305,39 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 			self.assertEqual(expected_values[gle.account][1], gle.debit)
 			self.assertEqual(expected_values[gle.account][2], gle.credit)
 
+	def test_purchase_invoice_with_exchange_rate_difference(self):
+		from erpnext.stock.doctype.purchase_receipt.purchase_receipt import (
+			make_purchase_invoice as create_purchase_invoice,
+		)
+
+		pr = make_purchase_receipt(
+			company="_Test Company with perpetual inventory",
+			warehouse="Stores - TCP1",
+			currency="USD",
+			conversion_rate=70,
+		)
+
+		pi = create_purchase_invoice(pr.name)
+		pi.conversion_rate = 80
+
+		pi.insert()
+		pi.submit()
+
+		# Get exchnage gain and loss account
+		exchange_gain_loss_account = frappe.db.get_value(
+			"Company", pi.company, "exchange_gain_loss_account"
+		)
+
+		# fetching the latest GL Entry with exchange gain and loss account account
+		amount = frappe.db.get_value(
+			"GL Entry", {"account": exchange_gain_loss_account, "voucher_no": pi.name}, "debit"
+		)
+		discrepancy_caused_by_exchange_rate_diff = abs(
+			pi.items[0].base_net_amount - pr.items[0].base_net_amount
+		)
+
+		self.assertEqual(discrepancy_caused_by_exchange_rate_diff, amount)
+
 	def test_purchase_invoice_change_naming_series(self):
 		pi = frappe.copy_doc(test_records[1])
 		pi.insert()
@@ -378,37 +413,6 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 		]
 
 		for i, tax in enumerate(pi.get("taxes")):
-			self.assertEqual(tax.account_head, expected_values[i][0])
-			self.assertEqual(tax.tax_amount, expected_values[i][1])
-			self.assertEqual(tax.total, expected_values[i][2])
-
-	def test_purchase_invoice_with_subcontracted_item(self):
-		wrapper = frappe.copy_doc(test_records[0])
-		wrapper.get("items")[0].item_code = "_Test FG Item"
-		wrapper.insert()
-		wrapper.load_from_db()
-
-		expected_values = [["_Test FG Item", 90, 59], ["_Test Item Home Desktop 200", 135, 177]]
-		for i, item in enumerate(wrapper.get("items")):
-			self.assertEqual(item.item_code, expected_values[i][0])
-			self.assertEqual(item.item_tax_amount, expected_values[i][1])
-			self.assertEqual(item.valuation_rate, expected_values[i][2])
-
-		self.assertEqual(wrapper.base_net_total, 1250)
-
-		# tax amounts
-		expected_values = [
-			["_Test Account Shipping Charges - _TC", 100, 1350],
-			["_Test Account Customs Duty - _TC", 125, 1350],
-			["_Test Account Excise Duty - _TC", 140, 1490],
-			["_Test Account Education Cess - _TC", 2.8, 1492.8],
-			["_Test Account S&H Education Cess - _TC", 1.4, 1494.2],
-			["_Test Account CST - _TC", 29.88, 1524.08],
-			["_Test Account VAT - _TC", 156.25, 1680.33],
-			["_Test Account Discount - _TC", 168.03, 1512.30],
-		]
-
-		for i, tax in enumerate(wrapper.get("taxes")):
 			self.assertEqual(tax.account_head, expected_values[i][0])
 			self.assertEqual(tax.tax_amount, expected_values[i][1])
 			self.assertEqual(tax.total, expected_values[i][2])
@@ -872,30 +876,6 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 		pi.reload()
 		pi.cancel()
 		self.assertEqual(actual_qty_0, get_qty_after_transaction())
-
-	def test_subcontracting_via_purchase_invoice(self):
-		from erpnext.buying.doctype.purchase_order.test_purchase_order import update_backflush_based_on
-		from erpnext.stock.doctype.stock_entry.test_stock_entry import make_stock_entry
-
-		update_backflush_based_on("BOM")
-		make_stock_entry(
-			item_code="_Test Item", target="_Test Warehouse 1 - _TC", qty=100, basic_rate=100
-		)
-		make_stock_entry(
-			item_code="_Test Item Home Desktop 100",
-			target="_Test Warehouse 1 - _TC",
-			qty=100,
-			basic_rate=100,
-		)
-
-		pi = make_purchase_invoice(
-			item_code="_Test FG Item", qty=10, rate=500, update_stock=1, is_subcontracted="Yes"
-		)
-
-		self.assertEqual(len(pi.get("supplied_items")), 2)
-
-		rm_supp_cost = sum(d.amount for d in pi.get("supplied_items"))
-		self.assertEqual(flt(pi.get("items")[0].rm_supp_cost, 2), flt(rm_supp_cost, 2))
 
 	def test_rejected_serial_no(self):
 		pi = make_purchase_invoice(
@@ -1386,14 +1366,29 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 	def test_purchase_invoice_advance_taxes(self):
 		from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
+		company = "_Test Company"
+
+		tds_account_args = {
+			"doctype": "Account",
+			"account_name": "TDS Payable",
+			"account_type": "Tax",
+			"parent_account": frappe.db.get_value(
+				"Account", {"account_name": "Duties and Taxes", "company": company}
+			),
+			"company": company,
+		}
+
+		tds_account = create_account(**tds_account_args)
+		tax_withholding_category = "Test TDS - 194 - Dividends - Individual"
+
+		# Update tax withholding category with current fiscal year and rate details
+		create_tax_witholding_category(tax_withholding_category, company, tds_account)
+
 		# create a new supplier to test
 		supplier = create_supplier(
 			supplier_name="_Test TDS Advance Supplier",
-			tax_withholding_category="TDS - 194 - Dividends - Individual",
+			tax_withholding_category=tax_withholding_category,
 		)
-
-		# Update tax withholding category with current fiscal year and rate details
-		update_tax_witholding_category("_Test Company", "TDS Payable - _TC")
 
 		# Create Purchase Order with TDS applied
 		po = create_purchase_order(
@@ -1410,7 +1405,7 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 		payment_entry = get_payment_entry(dt="Purchase Order", dn=po.name)
 		payment_entry.paid_from = "Cash - _TC"
 		payment_entry.apply_tax_withholding_amount = 1
-		payment_entry.tax_withholding_category = "TDS - 194 - Dividends - Individual"
+		payment_entry.tax_withholding_category = tax_withholding_category
 		payment_entry.save()
 		payment_entry.submit()
 
@@ -1418,7 +1413,7 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 		expected_gle = [
 			["Cash - _TC", 0, 27000],
 			["Creditors - _TC", 30000, 0],
-			["TDS Payable - _TC", 0, 3000],
+			[tds_account, 0, 3000],
 		]
 
 		gl_entries = frappe.db.sql(
@@ -1444,7 +1439,7 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 		purchase_invoice.submit()
 
 		# Check GLE for Purchase Invoice
-		# Zero net effect on final TDS Payable on invoice
+		# Zero net effect on final TDS payable on invoice
 		expected_gle = [["_Test Account Cost for Goods Sold - _TC", 30000], ["Creditors - _TC", -30000]]
 
 		gl_entries = frappe.db.sql(
@@ -1528,6 +1523,94 @@ class TestPurchaseInvoice(unittest.TestCase, StockTestMixin):
 		company.enable_provisional_accounting_for_non_stock_items = 0
 		company.save()
 
+	def test_adjust_incoming_rate(self):
+		frappe.db.set_single_value("Buying Settings", "maintain_same_rate", 0)
+
+		frappe.db.set_single_value(
+			"Buying Settings", "set_landed_cost_based_on_purchase_invoice_rate", 1
+		)
+
+		# Increase the cost of the item
+
+		pr = make_purchase_receipt(qty=1, rate=100)
+
+		stock_value_difference = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Purchase Receipt", "voucher_no": pr.name},
+			"stock_value_difference",
+		)
+		self.assertEqual(stock_value_difference, 100)
+
+		pi = create_purchase_invoice_from_receipt(pr.name)
+		for row in pi.items:
+			row.rate = 150
+
+		pi.save()
+		pi.submit()
+
+		stock_value_difference = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Purchase Receipt", "voucher_no": pr.name},
+			"stock_value_difference",
+		)
+		self.assertEqual(stock_value_difference, 150)
+
+		# Reduce the cost of the item
+
+		pr = make_purchase_receipt(qty=1, rate=100)
+
+		stock_value_difference = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Purchase Receipt", "voucher_no": pr.name},
+			"stock_value_difference",
+		)
+		self.assertEqual(stock_value_difference, 100)
+
+		pi = create_purchase_invoice_from_receipt(pr.name)
+		for row in pi.items:
+			row.rate = 50
+
+		pi.save()
+		pi.submit()
+
+		stock_value_difference = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Purchase Receipt", "voucher_no": pr.name},
+			"stock_value_difference",
+		)
+		self.assertEqual(stock_value_difference, 50)
+
+		frappe.db.set_single_value(
+			"Buying Settings", "set_landed_cost_based_on_purchase_invoice_rate", 0
+		)
+
+		# Don't adjust incoming rate
+
+		pr = make_purchase_receipt(qty=1, rate=100)
+
+		stock_value_difference = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Purchase Receipt", "voucher_no": pr.name},
+			"stock_value_difference",
+		)
+		self.assertEqual(stock_value_difference, 100)
+
+		pi = create_purchase_invoice_from_receipt(pr.name)
+		for row in pi.items:
+			row.rate = 50
+
+		pi.save()
+		pi.submit()
+
+		stock_value_difference = frappe.db.get_value(
+			"Stock Ledger Entry",
+			{"voucher_type": "Purchase Receipt", "voucher_no": pr.name},
+			"stock_value_difference",
+		)
+		self.assertEqual(stock_value_difference, 100)
+
+		frappe.db.set_single_value("Buying Settings", "maintain_same_rate", 1)
+
 	def test_item_less_defaults(self):
 
 		pi = frappe.new_doc("Purchase Invoice")
@@ -1596,40 +1679,30 @@ def check_gl_entries(doc, voucher_no, expected_gle, posting_date):
 		doc.assertEqual(expected_gle[i][2], gle.credit)
 		doc.assertEqual(getdate(expected_gle[i][3]), gle.posting_date)
 
-def update_tax_witholding_category(company, account):
+
+def create_tax_witholding_category(category_name, company, account):
 	from erpnext.accounts.utils import get_fiscal_year
 
 	fiscal_year = get_fiscal_year(date=nowdate())
 
-	if not frappe.db.get_value(
-		"Tax Withholding Rate",
+	return frappe.get_doc(
 		{
-			"parent": "TDS - 194 - Dividends - Individual",
-			"from_date": (">=", fiscal_year[1]),
-			"to_date": ("<=", fiscal_year[2]),
-		},
-	):
-		tds_category = frappe.get_doc("Tax Withholding Category", "TDS - 194 - Dividends - Individual")
-		tds_category.set("rates", [])
+			"doctype": "Tax Withholding Category",
+			"name": category_name,
+			"category_name": category_name,
+			"accounts": [{"company": company, "account": account}],
+			"rates": [
+				{
+					"from_date": fiscal_year[1],
+					"to_date": fiscal_year[2],
+					"tax_withholding_rate": 10,
+					"single_threshold": 2500,
+					"cumulative_threshold": 0,
+				}
+			],
+		}
+	).insert(ignore_if_duplicate=True)
 
-		tds_category.append(
-			"rates",
-			{
-				"from_date": fiscal_year[1],
-				"to_date": fiscal_year[2],
-				"tax_withholding_rate": 10,
-				"single_threshold": 2500,
-				"cumulative_threshold": 0,
-			},
-		)
-		tds_category.save()
-
-	if not frappe.db.get_value(
-		"Tax Withholding Account", {"parent": "TDS - 194 - Dividends - Individual", "account": account}
-	):
-		tds_category = frappe.get_doc("Tax Withholding Category", "TDS - 194 - Dividends - Individual")
-		tds_category.append("accounts", {"company": company, "account": account})
-		tds_category.save()
 
 
 def unlink_payment_on_cancel_of_invoice(enable=1):
@@ -1637,10 +1710,6 @@ def unlink_payment_on_cancel_of_invoice(enable=1):
 	accounts_settings.unlink_payment_on_cancellation_of_invoice = enable
 	accounts_settings.save()
 
-def enable_discount_accounting(enable=1):
-	accounts_settings = frappe.get_doc("Accounts Settings")
-	accounts_settings.enable_discount_accounting = enable
-	accounts_settings.save()
 
 def make_purchase_invoice(**args):
 	pi = frappe.new_doc("Purchase Invoice")
@@ -1662,7 +1731,7 @@ def make_purchase_invoice(**args):
 	pi.conversion_rate = args.conversion_rate or 1
 	pi.is_return = args.is_return
 	pi.return_against = args.return_against
-	pi.is_subcontracted = args.is_subcontracted or "No"
+	pi.is_subcontracted = args.is_subcontracted or 0
 	pi.supplier_warehouse = args.supplier_warehouse or "_Test Warehouse 1 - _TC"
 	pi.cost_center = args.parent_cost_center
 
@@ -1702,6 +1771,7 @@ def make_purchase_invoice(**args):
 			pi.submit()
 	return pi
 
+
 def make_purchase_invoice_against_cost_center(**args):
 	pi = frappe.new_doc("Purchase Invoice")
 	args = frappe._dict(args)
@@ -1724,7 +1794,7 @@ def make_purchase_invoice_against_cost_center(**args):
 	pi.is_return = args.is_return
 	pi.is_return = args.is_return
 	pi.credit_to = args.return_against or "Creditors - _TC"
-	pi.is_subcontracted = args.is_subcontracted or "No"
+	pi.is_subcontracted = args.is_subcontracted or 0
 	if args.supplier_warehouse:
 		pi.supplier_warehouse = "_Test Warehouse 1 - _TC"
 

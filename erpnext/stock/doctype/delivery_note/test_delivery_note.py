@@ -269,6 +269,7 @@ class TestDeliveryNote(FrappeTestCase):
 		self.assertEqual(dn.per_returned, 40)
 
 		from erpnext.controllers.sales_and_purchase_return import make_return_doc
+
 		return_dn_2 = make_return_doc("Delivery Note", dn.name)
 
 		# Check if unreturned amount is mapped in 2nd return
@@ -1214,5 +1215,6 @@ def create_delivery_note(**args):
 		if not args.do_not_submit:
 			dn.submit()
 	return dn
+
 
 test_dependencies = ["Product Bundle"]

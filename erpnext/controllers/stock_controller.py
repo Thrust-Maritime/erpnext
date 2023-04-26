@@ -18,6 +18,9 @@ from erpnext.accounts.general_ledger import (
 from erpnext.accounts.utils import get_fiscal_year
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.stock import get_warehouse_account_map
+from erpnext.stock.doctype.inventory_dimension.inventory_dimension import (
+	get_evaluated_inventory_dimension,
+)
 from erpnext.stock.stock_ledger import get_items_to_be_repost
 
 
@@ -54,7 +57,7 @@ class StockController(AccountsController):
 			make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name)
 
 		provisional_accounting_for_non_stock_items = cint(
-			frappe.db.get_value(
+			frappe.get_cached_value(
 				"Company", self.company, "enable_provisional_accounting_for_non_stock_items"
 			)
 		)
@@ -197,7 +200,7 @@ class StockController(AccountsController):
 				elif self.get("is_internal_supplier"):
 					warehouse_asset_account = warehouse_account[item_row.get("warehouse")]["account"]
 
-				expense_account = frappe.db.get_value("Company", self.company, "default_expense_account")
+				expense_account = frappe.get_cached_value("Company", self.company, "default_expense_account")
 
 				gl_list.append(
 					self.get_gl_dict(
@@ -232,7 +235,7 @@ class StockController(AccountsController):
 
 		if warehouse_with_no_account:
 			for wh in warehouse_with_no_account:
-				if frappe.db.get_value("Warehouse", wh, "company"):
+				if frappe.get_cached_value("Warehouse", wh, "company"):
 					frappe.throw(
 						_(
 							"Warehouse {0} is not linked to any account, please mention the account in the warehouse record or set default inventory account in company {1}."
@@ -361,7 +364,13 @@ class StockController(AccountsController):
 			)
 			if (
 				self.doctype
-				not in ("Purchase Receipt", "Purchase Invoice", "Stock Reconciliation", "Stock Entry")
+				not in (
+					"Purchase Receipt",
+					"Purchase Invoice",
+					"Stock Reconciliation",
+					"Stock Entry",
+					"Subcontracting Receipt",
+				)
 				and not is_expense_account
 			):
 				frappe.throw(
@@ -418,7 +427,42 @@ class StockController(AccountsController):
 		)
 
 		sl_dict.update(args)
+		self.update_inventory_dimensions(d, sl_dict)
+
 		return sl_dict
+
+	def update_inventory_dimensions(self, row, sl_dict) -> None:
+		# To handle delivery note and sales invoice
+		if row.get("item_row"):
+			row = row.get("item_row")
+
+		dimensions = get_evaluated_inventory_dimension(row, sl_dict, parent_doc=self)
+		for dimension in dimensions:
+			if not dimension:
+				continue
+
+			if row.get(dimension.source_fieldname):
+				sl_dict[dimension.target_fieldname] = row.get(dimension.source_fieldname)
+
+			if not sl_dict.get(dimension.target_fieldname) and dimension.fetch_from_parent:
+				sl_dict[dimension.target_fieldname] = self.get(dimension.fetch_from_parent)
+
+				# Get value based on doctype name
+				if not sl_dict.get(dimension.target_fieldname):
+					fieldname = next(
+						(
+							field.fieldname
+							for field in frappe.get_meta(self.doctype).fields
+							if field.options == dimension.fetch_from_parent
+						),
+						None,
+					)
+
+					if fieldname and self.get(fieldname):
+						sl_dict[dimension.target_fieldname] = self.get(fieldname)
+
+				if sl_dict[dimension.target_fieldname] and self.docstatus == 1:
+					row.db_set(dimension.source_fieldname, sl_dict[dimension.target_fieldname])
 
 	def make_sl_entries(self, sl_entries, allow_negative_stock=False, via_landed_cost_voucher=False):
 		from erpnext.stock.stock_ledger import make_sl_entries
@@ -698,6 +742,47 @@ class StockController(AccountsController):
 			else:
 				create_repost_item_valuation_entry(args)
 
+	def add_gl_entry(
+		self,
+		gl_entries,
+		account,
+		cost_center,
+		debit,
+		credit,
+		remarks,
+		against_account,
+		debit_in_account_currency=None,
+		credit_in_account_currency=None,
+		account_currency=None,
+		project=None,
+		voucher_detail_no=None,
+		item=None,
+		posting_date=None,
+	):
+
+		gl_entry = {
+			"account": account,
+			"cost_center": cost_center,
+			"debit": debit,
+			"credit": credit,
+			"against": against_account,
+			"remarks": remarks,
+		}
+
+		if voucher_detail_no:
+			gl_entry.update({"voucher_detail_no": voucher_detail_no})
+
+		if debit_in_account_currency:
+			gl_entry.update({"debit_in_account_currency": debit_in_account_currency})
+
+		if credit_in_account_currency:
+			gl_entry.update({"credit_in_account_currency": credit_in_account_currency})
+
+		if posting_date:
+			gl_entry.update({"posting_date": posting_date})
+
+		gl_entries.append(self.get_gl_dict(gl_entry, item=item))
+
 
 def repost_required_for_queue(doc: StockController) -> bool:
 	"""check if stock document contains repeated item-warehouse with queue based valuation.
@@ -774,6 +859,8 @@ def is_reposting_pending():
 
 def future_sle_exists(args, sl_entries=None):
 	key = (args.voucher_type, args.voucher_no)
+	if not hasattr(frappe.local, "future_sle"):
+		frappe.local.future_sle = {}
 
 	if validate_future_sle_not_exists(args, key, sl_entries):
 		return False
@@ -807,6 +894,9 @@ def future_sle_exists(args, sl_entries=None):
 	)
 
 	for d in data:
+		if key not in frappe.local.future_sle:
+			frappe.local.future_sle[key] = frappe._dict({})
+
 		frappe.local.future_sle[key][(d.item_code, d.warehouse)] = d.total_row
 
 	return len(data)
@@ -818,6 +908,9 @@ def validate_future_sle_not_exists(args, key, sl_entries=None):
 		item_key = (args.get("item_code"), args.get("warehouse"))
 
 	if not sl_entries and hasattr(frappe.local, "future_sle"):
+		if key not in frappe.local.future_sle:
+			return False
+
 		if not frappe.local.future_sle.get(key) or (
 			item_key and item_key not in frappe.local.future_sle.get(key)
 		):
@@ -825,11 +918,8 @@ def validate_future_sle_not_exists(args, key, sl_entries=None):
 
 
 def get_cached_data(args, key):
-	if not hasattr(frappe.local, "future_sle"):
-		frappe.local.future_sle = {}
-
 	if key not in frappe.local.future_sle:
-		frappe.local.future_sle[key] = frappe._dict({})
+		return False
 
 	if args.get("item_code"):
 		item_key = (args.get("item_code"), args.get("warehouse"))

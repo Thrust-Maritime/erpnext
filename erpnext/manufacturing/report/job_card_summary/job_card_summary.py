@@ -78,6 +78,7 @@ def get_data(filters):
 
 	return res
 
+
 def get_chart_data(job_card_details, filters):
 	labels, periodic_data = prepare_chart_data(job_card_details, filters)
 
@@ -88,8 +89,8 @@ def get_chart_data(job_card_details, filters):
 		open_job_cards.append(periodic_data.get("Open").get(d))
 		completed.append(periodic_data.get("Completed").get(d))
 
-	datasets.append({"name": "Open", "values": open_job_cards})
-	datasets.append({"name": "Completed", "values": completed})
+	datasets.append({"name": _("Open"), "values": open_job_cards})
+	datasets.append({"name": _("Completed"), "values": completed})
 
 	chart = {"data": {"labels": labels, "datasets": datasets}, "type": "bar"}
 
@@ -119,6 +120,7 @@ def prepare_chart_data(job_card_details, filters):
 					periodic_data[status][period] = 1
 
 	return labels, periodic_data
+
 
 def get_columns(filters):
 	columns = [

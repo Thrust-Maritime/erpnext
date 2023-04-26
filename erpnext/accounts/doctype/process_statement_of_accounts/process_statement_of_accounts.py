@@ -130,8 +130,7 @@ def get_report_pdf(doc, consolidated=True):
 	if not bool(statement_dict):
 		return False
 	elif consolidated:
-		delimiter = '<div style="page-break-before: always;"></div>' if doc.include_break else ""
-		result = delimiter.join(list(statement_dict.values()))
+		result = "".join(list(statement_dict.values()))
 		return get_pdf(result, {"orientation": doc.orientation})
 	else:
 		for customer, statement_html in statement_dict.items():
@@ -202,6 +201,7 @@ def get_recipients_and_cc(customer, doc):
 
 	return recipients, cc
 
+
 def get_context(customer, doc):
 	template_doc = copy.deepcopy(doc)
 	del template_doc.customers
@@ -242,6 +242,8 @@ def fetch_customers(customer_collection, collection_name, primary_mandatory):
 		if int(primary_mandatory):
 			if primary_email == "":
 				continue
+		elif (billing_email == "") and (primary_email == ""):
+			continue
 
 		customer_list.append(
 			{
@@ -278,12 +280,8 @@ def get_customer_emails(customer_name, primary_mandatory, billing_and_primary=Tr
 			link.link_doctype='Customer'
 			and link.link_name=%s
 			and contact.is_billing_contact=1
-			{mcond}
 		ORDER BY
-			contact.creation desc
-		""".format(
-			mcond=get_match_cond("Contact")
-		),
+			contact.creation desc""",
 		customer_name,
 	)
 

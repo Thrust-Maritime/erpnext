@@ -44,10 +44,12 @@ class Shipment(Document):
 			value_of_goods += flt(entry.get("grand_total"))
 		self.value_of_goods = value_of_goods if value_of_goods else self.value_of_goods
 
+
 @frappe.whitelist()
 def get_address_name(ref_doctype, docname):
 	# Return address name
 	return get_party_shipping_address(ref_doctype, docname)
+
 
 @frappe.whitelist()
 def get_contact_name(ref_doctype, docname):

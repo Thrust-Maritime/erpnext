@@ -39,8 +39,6 @@ def get_tasks(project, start=0, search=None, item_status=None):
 	filters = {"project": project}
 	if search:
 		filters["subject"] = ("like", "%{0}%".format(search))
-	# if item_status:
-	# 		filters["status"] = item_status
 	tasks = frappe.get_all(
 		"Task",
 		filters=filters,
@@ -102,7 +100,6 @@ def get_timesheets(project, start=0, search=None):
 			limit_start=start,
 			limit_page_length=10,
 		)
-
 		if len(info):
 			timesheet.update(info[0])
 	return timesheets

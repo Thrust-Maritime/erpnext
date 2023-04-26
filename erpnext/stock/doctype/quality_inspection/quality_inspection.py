@@ -204,6 +204,7 @@ class QualityInspection(Document):
 	def calculate_mean(self, reading):
 		"""Calculate mean of all non-empty readings."""
 		from statistics import mean
+
 		readings_list = []
 
 		for i in range(1, 11):
@@ -213,6 +214,7 @@ class QualityInspection(Document):
 
 		actual_mean = mean(readings_list) if readings_list else 0
 		return actual_mean
+
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
