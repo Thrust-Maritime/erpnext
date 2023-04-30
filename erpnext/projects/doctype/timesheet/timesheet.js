@@ -18,7 +18,11 @@ frappe.ui.form.on("Timesheet", {
 			return{
 				filters: {
 					'project': child.project,
-					'status': ["!=", "Cancelled"]
+					'type': ["=", "Timesheet"],
+					'status': ["!=", "Completed"]
+					//'status': ["!=", "Cancelled"],
+					//'status': ["!=", "Completed"],
+					//'status': ["!=", "Hold"]
 				}
 			};
 		};
