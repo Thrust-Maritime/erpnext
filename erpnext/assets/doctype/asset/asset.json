@@ -524,13 +524,12 @@
    "link_fieldname": "asset"
   },
   {
-   "group": "Journal Entry",
-   "link_doctype": "Journal Entry",
-   "link_fieldname": "reference_name",
-   "table_fieldname": "accounts"
+   "group": "Maintenance",
+   "link_doctype": "Asset Maintenance Log",
+   "link_fieldname": "asset_name"
   }
  ],
- "modified": "2023-03-30 15:07:41.542374",
+ "modified": "2023-04-02 10:53:44.098954",
  "modified_by": "Administrator",
  "module": "Assets",
  "name": "Asset",

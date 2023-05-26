@@ -1,0 +1,283 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": ".########",
+ "creation": "2022-06-07 20:37:54.139561",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "deliverables_section",
+  "description",
+  "deliv_title",
+  "dwg_no",
+  "revision",
+  "note_comment",
+  "folder",
+  "column_break_6",
+  "project",
+  "project_number",
+  "type",
+  "level_1",
+  "fully_complete",
+  "not_complete",
+  "progress",
+  "engineering_section",
+  "eng_status",
+  "eng_start_d",
+  "column_break_12",
+  "engineer",
+  "eng_complete_date",
+  "section_break_14",
+  "production_section",
+  "prod_status",
+  "prod_start_date",
+  "column_break_17",
+  "change",
+  "prod_complete_date",
+  "section_break_19",
+  "sub_deliverables",
+  "procurement_notes",
+  "color"
+ ],
+ "fields": [
+  {
+   "fieldname": "deliverables_section",
+   "fieldtype": "Section Break",
+   "label": "Deliverables"
+  },
+  {
+   "columns": 2,
+   "fieldname": "deliv_title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "read_only": 1
+  },
+  {
+   "columns": 3,
+   "fieldname": "dwg_no",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Dwg no"
+  },
+  {
+   "columns": 1,
+   "fieldname": "revision",
+   "fieldtype": "Data",
+   "label": "Latest Revision"
+  },
+  {
+   "fieldname": "note_comment",
+   "fieldtype": "Data",
+   "label": "Note / Comment"
+  },
+  {
+   "fieldname": "folder",
+   "fieldtype": "Data",
+   "label": "Folder",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Project",
+   "options": "Project",
+   "reqd": 1
+  },
+  {
+   "default": "Non-physical",
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "In-house\nSubcontract\nNon-physical"
+  },
+  {
+   "default": "0",
+   "fieldname": "level_1",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Top Level"
+  },
+  {
+   "default": "0",
+   "fieldname": "fully_complete",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Fully Complete",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "not_complete",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Not Complete",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engineering_section",
+   "fieldtype": "Section Break",
+   "label": "Engineering"
+  },
+  {
+   "columns": 1,
+   "fieldname": "eng_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Eng Status",
+   "options": "Planned\nEIP\nReview/Approve\nComplete\nHold"
+  },
+  {
+   "fieldname": "column_break_12",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "engineer",
+   "fieldtype": "Link",
+   "label": "Engineer",
+   "options": "User"
+  },
+  {
+   "columns": 1,
+   "fieldname": "eng_complete_date",
+   "fieldtype": "Date",
+   "label": "Eng Complete Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_14",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "production_section",
+   "fieldtype": "Section Break",
+   "label": "Production"
+  },
+  {
+   "columns": 1,
+   "fieldname": "prod_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Prod Status",
+   "options": "Waiting on Eng\nProduction Ready\nProduction in Progress\nComplete\nHold"
+  },
+  {
+   "fieldname": "prod_start_date",
+   "fieldtype": "Date",
+   "label": "Prod Start Date"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "If ticked then there are New changes. \nProduction Only to untick.",
+   "fieldname": "change",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Change"
+  },
+  {
+   "fieldname": "prod_complete_date",
+   "fieldtype": "Date",
+   "label": "Prod Complete Date"
+  },
+  {
+   "fieldname": "section_break_19",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sub_deliverables",
+   "fieldtype": "Table",
+   "label": "Sub Deliverables",
+   "options": "Deliverables Child Table"
+  },
+  {
+   "fieldname": "procurement_notes",
+   "fieldtype": "Text Editor",
+   "label": "Procurement Notes"
+  },
+  {
+   "fieldname": "color",
+   "fieldtype": "Color",
+   "hidden": 1,
+   "label": "color"
+  },
+  {
+   "fieldname": "eng_start_d",
+   "fieldtype": "Date",
+   "label": "Eng Start Date",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "project.project_number",
+   "fieldname": "project_number",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Project Number"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description",
+   "reqd": 1
+  },
+  {
+   "fieldname": "progress",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Progress %"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-11-14 20:11:32.861272",
+ "modified_by": "Administrator",
+ "module": "Projects",
+ "name": "Deliverables",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Projects User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "dwg_no, project",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "deliv_title",
+ "track_changes": 1
+}
