@@ -20,9 +20,11 @@
   "currency",
   "section_break_10",
   "description",
-  "section_break_14",
   "reference_number",
+  "column_break_10",
   "transaction_id",
+  "transaction_type",
+  "section_break_14",
   "payment_entries",
   "section_break_18",
   "allocated_amount",
@@ -134,7 +136,8 @@
   {
    "fieldname": "allocated_amount",
    "fieldtype": "Currency",
-   "label": "Allocated Amount"
+   "label": "Allocated Amount",
+   "options": "currency"
   },
   {
    "fieldname": "amended_from",
@@ -152,7 +155,8 @@
   {
    "fieldname": "unallocated_amount",
    "fieldtype": "Currency",
-   "label": "Unallocated Amount"
+   "label": "Unallocated Amount",
+   "options": "currency"
   },
   {
    "fieldname": "party_section",
@@ -188,14 +192,25 @@
    "label": "Withdrawal",
    "oldfieldname": "credit",
    "options": "currency"
+  },
+  {
+   "fieldname": "column_break_10",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transaction_type",
+   "fieldtype": "Data",
+   "label": "Transaction Type",
+   "length": 50
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2021-04-14 17:31:58.963529",
+ "modified": "2022-05-29 18:36:50.475964",
  "modified_by": "Administrator",
  "module": "Accounts",
  "name": "Bank Transaction",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -242,6 +257,7 @@
  ],
  "sort_field": "date",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "bank_account",
  "track_changes": 1
 }

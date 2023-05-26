@@ -13,6 +13,7 @@ def execute(filters=None):
 	data = get_ordered_to_be_billed_data(args)
 	return columns, data
 
+
 def get_column():
 	return [
 		{

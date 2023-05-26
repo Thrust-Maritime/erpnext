@@ -45,6 +45,7 @@ def execute(filters=None):
 
 	return columns, data
 
+
 def get_columns(filters):
 	columns = [
 		_("Shareholder") + ":Link/Shareholder:150",

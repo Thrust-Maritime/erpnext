@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
@@ -37,9 +38,7 @@ class WebsiteItem(WebsiteGenerator):
 
 	def autoname(self):
 		# use naming series to accomodate items with same name (different item code)
-		from frappe.model.naming import make_autoname
-
-		from erpnext.setup.doctype.naming_series.naming_series import get_default_naming_series
+		from frappe.model.naming import get_default_naming_series, make_autoname
 
 		naming_series = get_default_naming_series("Website Item")
 		if not self.name and naming_series:
@@ -60,19 +59,19 @@ class WebsiteItem(WebsiteGenerator):
 		self.publish_unpublish_desk_item(publish=True)
 
 		if not self.get("__islocal"):
-			self.old_website_item_groups = frappe.db.sql_list(
-				"""
-				select
-					item_group
-				from
-					`tabWebsite Item Group`
-				where
-					parentfield='website_item_groups'
-					and parenttype='Website Item'
-					and parent=%s
-				""",
-				self.name,
+			wig = frappe.qb.DocType("Website Item Group")
+			query = (
+				frappe.qb.from_(wig)
+				.select(wig.item_group)
+				.where(
+					(wig.parentfield == "website_item_groups")
+					& (wig.parenttype == "Website Item")
+					& (wig.parent == self.name)
+				)
 			)
+			result = query.run(as_list=True)
+
+			self.old_website_item_groups = [x[0] for x in result]
 
 	def on_update(self):
 		invalidate_cache_for_web_item(self)
@@ -115,11 +114,10 @@ class WebsiteItem(WebsiteGenerator):
 					make_website_item(template_item)
 
 	def validate_website_image(self):
-		"""Validate if the website image is a public file"""
-
 		if frappe.flags.in_import:
 			return
 
+		"""Validate if the website image is a public file"""
 		if not self.website_image:
 			return
 
@@ -351,21 +349,18 @@ class WebsiteItem(WebsiteGenerator):
 		return tab_values
 
 	def get_recommended_items(self, settings):
-		items = frappe.db.sql(
-			f"""
-			select
-				ri.website_item_thumbnail, ri.website_item_name,
-				ri.route, ri.item_code
-			from
-				`tabRecommended Items` ri, `tabWebsite Item` wi
-			where
-				ri.item_code = wi.item_code
-				and ri.parent = '{self.name}'
-				and wi.published = 1
-			order by ri.idx
-		""",
-			as_dict=1,
+		ri = frappe.qb.DocType("Recommended Items")
+		wi = frappe.qb.DocType("Website Item")
+
+		query = (
+			frappe.qb.from_(ri)
+			.join(wi)
+			.on(ri.item_code == wi.item_code)
+			.select(ri.item_code, ri.route, ri.website_item_name, ri.website_item_thumbnail)
+			.where((ri.parent == self.name) & (wi.published == 1))
+			.orderby(ri.idx)
 		)
+		items = query.run(as_dict=True)
 
 		if settings.show_price:
 			is_guest = frappe.session.user == "Guest"
@@ -407,8 +402,6 @@ def on_doctype_update():
 	# since route is a Text column, it needs a length for indexing
 	frappe.db.add_index("Website Item", ["route(500)"])
 
-	frappe.db.add_index("Website Item", ["item_group"])
-	frappe.db.add_index("Website Item", ["brand"])
 
 def check_if_user_is_customer(user=None):
 	from frappe.contacts.doctype.contact.contact import get_contact_name

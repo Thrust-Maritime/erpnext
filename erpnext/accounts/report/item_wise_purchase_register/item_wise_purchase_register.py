@@ -346,6 +346,7 @@ def get_items(filters, additional_query_columns):
 def get_aii_accounts():
 	return dict(frappe.db.sql("select name, stock_received_but_not_billed from tabCompany"))
 
+
 def get_purchase_receipts_against_purchase_order(item_list):
 	po_pr_map = frappe._dict()
 	po_item_rows = list(set(d.po_detail for d in item_list))

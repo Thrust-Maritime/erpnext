@@ -11,6 +11,7 @@ def execute():
 	set_priorities_service_level()
 	set_priorities_service_level_agreement()
 
+
 def set_issue_priority():
 	# Adds priority from issue to Issue Priority DocType as Priority is a new DocType.
 	for priority in frappe.get_meta("Issue").get_field("priority").options.split("\n"):
@@ -25,6 +26,7 @@ def set_priority_for_issue():
 
 	for issue in issue_priority:
 		frappe.db.set_value("Issue", issue.name, "priority", issue.priority)
+
 
 def set_priorities_service_level():
 	# Migrates "priority", "response_time", "response_time_period", "resolution_time", "resolution_time_period" to Child Table
@@ -65,6 +67,7 @@ def set_priorities_service_level():
 					doc.save(ignore_permissions=True)
 	except frappe.db.TableMissingError:
 		frappe.reload_doc("support", "doctype", "service_level")
+
 
 def set_priorities_service_level_agreement():
 	# Migrates "priority", "response_time", "response_time_period", "resolution_time", "resolution_time_period" to Child Table

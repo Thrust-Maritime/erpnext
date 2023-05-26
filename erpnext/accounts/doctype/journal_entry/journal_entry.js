@@ -8,7 +8,7 @@ frappe.provide("erpnext.journal_entry");
 frappe.ui.form.on("Journal Entry", {
 	setup: function(frm) {
 		frm.add_fetch("bank_account", "account", "account");
-		frm.ignore_doctypes_on_cancel_all = ['Sales Invoice', 'Purchase Invoice', 'Asset', 'Asset Movement'];
+		frm.ignore_doctypes_on_cancel_all = ['Sales Invoice', 'Purchase Invoice', 'Journal Entry', "Repost Payment Ledger", 'Asset', 'Asset Movement'];
 	},
 
 	refresh: function(frm) {
@@ -179,19 +179,19 @@ var update_jv_details = function(doc, r) {
 	refresh_field("accounts");
 }
 
-erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
-	onload: function() {
+erpnext.accounts.JournalEntry = class JournalEntry extends frappe.ui.form.Controller {
+	onload() {
 		this.load_defaults();
 		this.setup_queries();
 		this.setup_balance_formatter();
 		erpnext.accounts.dimensions.setup_dimension_filters(this.frm, this.frm.doctype);
-	},
+	}
 
-	onload_post_render: function() {
+	onload_post_render() {
 		cur_frm.get_field("accounts").grid.set_multiple_add("account");
-	},
+	}
 
-	load_defaults: function() {
+	load_defaults() {
 		//this.frm.show_print_first = true;
 		if(this.frm.doc.__islocal && this.frm.doc.company) {
 			frappe.model.set_default_values(this.frm.doc);
@@ -201,9 +201,9 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 			var posting_date = this.frm.doc.posting_date;
 			if(!this.frm.doc.amended_from) this.frm.set_value('posting_date', posting_date || frappe.datetime.get_today());
 		}
-	},
+	}
 
-	setup_queries: function() {
+	setup_queries() {
 		var me = this;
 
 		me.frm.set_query("account", "accounts", function(doc, cdt, cdn) {
@@ -224,25 +224,6 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 		me.frm.set_query("reference_name", "accounts", function(doc, cdt, cdn) {
 			var jvd = frappe.get_doc(cdt, cdn);
 
-			// expense claim
-			if(jvd.reference_type==="Expense Claim") {
-				return {
-					filters: {
-						'total_sanctioned_amount': ['>', 0],
-						'status': ['!=', 'Paid'],
-						'docstatus': 1
-					}
-				};
-			}
-
-			if(jvd.reference_type==="Employee Advance") {
-				return {
-					filters: {
-						'docstatus': 1
-					}
-				};
-			}
-
 			// journal entry
 			if(jvd.reference_type==="Journal Entry") {
 				frappe.model.validate_missing(jvd, "account");
@@ -252,13 +233,6 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 						account: jvd.account,
 						party: jvd.party
 					}
-				};
-			}
-
-			// payroll entry
-			if(jvd.reference_type==="Payroll Entry") {
-				return {
-					query: "erpnext.payroll.doctype.payroll_entry.payroll_entry.get_payroll_entries_for_jv",
 				};
 			}
 
@@ -279,9 +253,6 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 				var party_account_field = jvd.reference_type==="Sales Invoice" ? "debit_to": "credit_to";
 				out.filters.push([jvd.reference_type, party_account_field, "=", jvd.account]);
 
-				if (in_list(['Debit Note', 'Credit Note'], doc.voucher_type)) {
-					out.filters.push([jvd.reference_type, "is_return", "=", 1]);
-				}
 			}
 
 			if(in_list(["Sales Order", "Purchase Order"], jvd.reference_type)) {
@@ -309,9 +280,9 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 		});
 
 
-	},
+	}
 
-	setup_balance_formatter: function() {
+	setup_balance_formatter() {
 		const formatter = function(value, df, options, doc) {
 			var currency = frappe.meta.get_field_currency(df, doc);
 			var dr_or_cr = value ? ('<label>' + (value > 0.0 ? __("Dr") : __("Cr")) + '</label>') : "";
@@ -322,9 +293,9 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 		};
 		this.frm.fields_dict.accounts.grid.update_docfield_property('balance', 'formatter', formatter);
 		this.frm.fields_dict.accounts.grid.update_docfield_property('party_balance', 'formatter', formatter);
-	},
+	}
 
-	reference_name: function(doc, cdt, cdn) {
+	reference_name(doc, cdt, cdn) {
 		var d = frappe.get_doc(cdt, cdn);
 
 		if(d.reference_name) {
@@ -336,10 +307,9 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 				this.get_outstanding('Journal Entry', d.reference_name, doc.company, d);
 			}
 		}
-	},
+	}
 
-	get_outstanding: function(doctype, docname, company, child, due_date) {
-		var me = this;
+	get_outstanding(doctype, docname, company, child) {
 		var args = {
 			"doctype": doctype,
 			"docname": docname,
@@ -360,9 +330,9 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 				}
 			}
 		});
-	},
+	}
 
-	accounts_add: function(doc, cdt, cdn) {
+	accounts_add(doc, cdt, cdn) {
 		var row = frappe.get_doc(cdt, cdn);
 		$.each(doc.accounts, function(i, d) {
 			if(d.account && d.party && d.party_type) {
@@ -385,9 +355,9 @@ erpnext.accounts.JournalEntry = frappe.ui.form.Controller.extend({
 		cur_frm.cscript.update_totals(doc);
 
 		erpnext.accounts.dimensions.copy_dimension_from_first_row(this.frm, cdt, cdn, 'accounts');
-	},
+	}
 
-});
+};
 
 cur_frm.script_manager.make(erpnext.accounts.JournalEntry);
 

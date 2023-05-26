@@ -8,12 +8,16 @@ from erpnext import get_default_cost_center
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 from erpnext.accounts.doctype.sales_invoice.test_sales_invoice import create_sales_invoice
 from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
+from erpnext.selling.doctype.sales_order.test_sales_order import make_sales_order
 
 
-class TestAccountsReceivable(unittest.TestCase):
+class TestAccountsReceivable(FrappeTestCase):
 	def setUp(self):
 		frappe.db.sql("delete from `tabSales Invoice` where company='_Test Company 2'")
+		frappe.db.sql("delete from `tabSales Order` where company='_Test Company 2'")
+		frappe.db.sql("delete from `tabPayment Entry` where company='_Test Company 2'")
 		frappe.db.sql("delete from `tabGL Entry` where company='_Test Company 2'")
+		frappe.db.sql("delete from `tabPayment Ledger Entry` where company='_Test Company 2'")
 		frappe.db.sql("delete from `tabJournal Entry` where company='_Test Company 2'")
 		frappe.db.sql("delete from `tabExchange Rate Revaluation` where company='_Test Company 2'")
 
@@ -98,6 +102,50 @@ class TestAccountsReceivable(unittest.TestCase):
 			],
 		)
 
+	def test_payment_againt_po_in_receivable_report(self):
+		"""
+		Payments made against Purchase Order will show up as outstanding amount
+		"""
+
+		so = make_sales_order(
+			company="_Test Company 2",
+			customer="_Test Customer 2",
+			warehouse="Finished Goods - _TC2",
+			currency="EUR",
+			debit_to="Debtors - _TC2",
+			income_account="Sales - _TC2",
+			expense_account="Cost of Goods Sold - _TC2",
+			cost_center="Main - _TC2",
+		)
+
+		pe = get_payment_entry(so.doctype, so.name)
+		pe = pe.save().submit()
+
+		filters = {
+			"company": "_Test Company 2",
+			"based_on_payment_terms": 0,
+			"report_date": today(),
+			"range1": 30,
+			"range2": 60,
+			"range3": 90,
+			"range4": 120,
+		}
+
+		report = execute(filters)
+
+		expected_data_after_payment = [0, 1000, 0, -1000]
+
+		row = report[1][0]
+		self.assertEqual(
+			expected_data_after_payment,
+			[
+				row.invoiced,
+				row.paid,
+				row.credit_note,
+				row.outstanding,
+			],
+		)
+
 	@change_settings(
 		"Accounts Settings", {"allow_multi_currency_invoices_against_single_party_account": 1}
 	)
@@ -136,11 +184,9 @@ class TestAccountsReceivable(unittest.TestCase):
 		err = err.save().submit()
 
 		# Submit JV for ERR
-		jv = frappe.get_doc(err.make_jv_entry())
-		jv = jv.save()
-		for x in jv.accounts:
-			x.cost_center = get_default_cost_center(jv.company)
-		jv.submit()
+		err_journals = err.make_jv_entries()
+		je = frappe.get_doc("Journal Entry", err_journals.get("revaluation_jv"))
+		je = je.submit()
 
 		filters = {
 			"company": company,
@@ -153,7 +199,7 @@ class TestAccountsReceivable(unittest.TestCase):
 		report = execute(filters)
 
 		expected_data_for_err = [0, -5, 0, 5]
-		row = [x for x in report[1] if x.voucher_type == jv.doctype and x.voucher_no == jv.name][0]
+		row = [x for x in report[1] if x.voucher_type == je.doctype and x.voucher_no == je.name][0]
 		self.assertEqual(
 			expected_data_for_err,
 			[
@@ -200,6 +246,7 @@ def make_sales_invoice(no_payment_schedule=False, do_not_submit=False):
 		si = si.submit()
 
 	return si
+
 
 def make_payment(docname):
 	pe = get_payment_entry("Sales Invoice", docname, bank_account="Cash - _TC2", party_amount=40)

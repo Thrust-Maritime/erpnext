@@ -140,6 +140,7 @@ def get_timesheet_details(filters, timesheet_list):
 
 	return timesheet_details_map
 
+
 def get_billable_and_total_duration(activity, start_time, end_time):
 	precision = frappe.get_precision("Timesheet Detail", "hours")
 	activity_duration = time_diff_in_hours(end_time, start_time)

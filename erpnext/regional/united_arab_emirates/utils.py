@@ -1,11 +1,10 @@
 import frappe
 from frappe import _
 from frappe.utils import flt, money_in_words, round_based_on_smallest_currency_fraction
-from six import iteritems
 
 import erpnext
 from erpnext.controllers.taxes_and_totals import get_itemised_tax
-from six import iteritems
+
 
 
 def update_itemised_tax_data(doc):
@@ -24,7 +23,7 @@ def update_itemised_tax_data(doc):
 		# First check if tax rate is present
 		# If not then look up in item_wise_tax_detail
 		if item_tax_rate:
-			for account, rate in iteritems(item_tax_rate):
+			for account, rate in item_tax_rate.items():
 				tax_rate += rate
 		elif row.item_code and itemised_tax.get(row.item_code):
 			tax_rate = sum([tax.get("tax_rate", 0) for d, tax in itemised_tax.get(row.item_code).items()])
@@ -100,6 +99,7 @@ def update_grand_total_for_rcm(doc, method):
 		doc.base_total_taxes_and_charges -= base_vat_tax
 
 		update_totals(vat_tax, base_vat_tax, doc)
+
 
 def update_totals(vat_tax, base_vat_tax, doc):
 	"""Update the grand total values in the form."""

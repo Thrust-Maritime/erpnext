@@ -12,14 +12,13 @@ def execute():
 	for email_digest in email_digests:
 		if email_digest.recipient_list:
 			for recipient in email_digest.recipient_list.split("\n"):
-				if frappe.db.exists("User", recipient):
-					doc = frappe.get_doc(
-						{
-							"doctype": "Email Digest Recipient",
-							"parenttype": "Email Digest",
-							"parentfield": "recipients",
-							"parent": email_digest.name,
-							"recipient": recipient,
-						}
-					)
-					doc.insert()
+				doc = frappe.get_doc(
+					{
+						"doctype": "Email Digest Recipient",
+						"parenttype": "Email Digest",
+						"parentfield": "recipients",
+						"parent": email_digest.name,
+						"recipient": recipient,
+					}
+				)
+				doc.insert()

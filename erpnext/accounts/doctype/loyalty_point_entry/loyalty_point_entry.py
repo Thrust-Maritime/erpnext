@@ -8,6 +8,7 @@ from frappe.utils import today
 
 exclude_from_linked_with = True
 
+
 class LoyaltyPointEntry(Document):
 	pass
 

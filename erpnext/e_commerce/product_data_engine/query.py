@@ -163,7 +163,6 @@ class ProductQuery:
 			# handle multiselect fields in filter addition
 			meta = frappe.get_meta("Website Item", cached=True)
 			df = meta.get_field(field)
-
 			if df.fieldtype == "Table MultiSelect":
 				child_doctype = df.options
 				child_meta = frappe.get_meta(child_doctype, cached=True)

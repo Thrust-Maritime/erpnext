@@ -10,8 +10,10 @@ from frappe.utils import flt
 from six import iteritems
 
 
+
 def execute(filters=None):
 	return IssueSummary(filters).run()
+
 
 class IssueSummary(object):
 	def __init__(self, filters=None):
@@ -79,7 +81,8 @@ class IssueSummary(object):
 		self.sla_status_map = {
 			"SLA Failed": "failed",
 			"SLA Fulfilled": "fulfilled",
-			"SLA Ongoing": "ongoing",
+			"First Response Due": "first_response_due",
+			"Resolution Due": "resolution_due",
 		}
 
 		for label, fieldname in self.sla_status_map.items():
@@ -147,7 +150,7 @@ class IssueSummary(object):
 		self.data = []
 		self.get_summary_data()
 
-		for entity, data in iteritems(self.issue_summary_data):
+		for entity, data in self.issue_summary_data.items():
 			if self.filters.based_on == "Customer":
 				row = {"customer": entity}
 			elif self.filters.based_on == "Assigned To":

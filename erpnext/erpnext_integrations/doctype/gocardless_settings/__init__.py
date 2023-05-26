@@ -31,6 +31,7 @@ def set_status(event):
 	if resource_type == "mandates":
 		set_mandate_status(event)
 
+
 def set_mandate_status(event):
 	mandates = []
 	if isinstance(event["links"], (list,)):
@@ -51,6 +52,7 @@ def set_mandate_status(event):
 
 	for mandate in mandates:
 		frappe.db.set_value("GoCardless Mandate", mandate, "disabled", disabled)
+
 
 def authenticate_signature(r):
 	"""Returns True if the received signature matches the generated signature"""
@@ -81,6 +83,7 @@ def get_webhook_keys():
 		return webhook_keys
 
 	return frappe.cache().get_value("gocardless_webhooks_secret", _get_webhook_keys)
+
 
 def clear_cache():
 	frappe.cache().delete_value("gocardless_webhooks_secret")

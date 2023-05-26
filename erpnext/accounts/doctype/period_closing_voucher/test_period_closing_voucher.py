@@ -115,7 +115,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			(pcv.name),
 		)
 
-		self.assertEqual(pcv_gle, expected_gle)
+		self.assertSequenceEqual(pcv_gle, expected_gle)
 
 		pcv.reload()
 		pcv.cancel()
@@ -176,7 +176,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			(pcv.name),
 		)
 
-		self.assertEqual(pcv_gle, expected_gle)
+		self.assertSequenceEqual(pcv_gle, expected_gle)
 
 	def make_period_closing_voucher(self, submit=True):
 		surplus_account = create_account()

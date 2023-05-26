@@ -10,6 +10,7 @@ def execute(filters=None):
 	columns, data = get_columns(), get_data(filters)
 	return columns, data
 
+
 def get_columns():
 	columns = [
 		{
@@ -60,13 +61,6 @@ def get_columns():
 			"options": "Territory",
 			"width": 150,
 		},
-		{
-			"label": _("Next Contact By"),
-			"fieldname": "contact_by",
-			"fieldtype": "Link",
-			"options": "User",
-			"width": 150,
-		},
 	]
 	return columns
 
@@ -80,7 +74,6 @@ def get_data(filters):
 			`tabOpportunity`.party_name,
 			`tabOpportunity`.customer_name,
 			`tabOpportunity`.opportunity_type,
-			`tabOpportunity`.contact_by,
 			GROUP_CONCAT(`tabOpportunity Lost Reason Detail`.lost_reason separator ', ') lost_reason,
 			`tabOpportunity`.sales_stage,
 			`tabOpportunity`.territory
@@ -114,10 +107,8 @@ def get_conditions(filters):
 	if filters.get("party_name"):
 		conditions.append(" and `tabOpportunity`.party_name=%(party_name)s")
 
-	if filters.get("contact_by"):
-		conditions.append(" and `tabOpportunity`.contact_by=%(contact_by)s")
-
 	return " ".join(conditions) if conditions else ""
+
 
 def get_join(filters):
 	join = """LEFT JOIN `tabOpportunity Lost Reason Detail`

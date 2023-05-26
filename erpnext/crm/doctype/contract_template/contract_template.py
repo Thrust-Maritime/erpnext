@@ -7,7 +7,6 @@ import json
 import frappe
 from frappe.model.document import Document
 from frappe.utils.jinja import validate_template
-from six import string_types
 
 
 class ContractTemplate(Document):
@@ -15,9 +14,10 @@ class ContractTemplate(Document):
 		if self.contract_terms:
 			validate_template(self.contract_terms)
 
+
 @frappe.whitelist()
 def get_contract_template(template_name, doc):
-	if isinstance(doc, string_types):
+	if isinstance(doc, str):
 		doc = json.loads(doc)
 
 	contract_template = frappe.get_doc("Contract Template", template_name)

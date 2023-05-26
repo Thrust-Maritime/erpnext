@@ -3,13 +3,18 @@
 
 
 import json
+from typing import Dict, Optional
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import CombineDatetime, IfNull, Sum
 from frappe.utils import cstr, flt, get_link_to_form, nowdate, nowtime
-from six import string_types
 
 import erpnext
+from erpnext.stock.doctype.warehouse.warehouse import get_child_warehouses
+from erpnext.stock.valuation import FIFOValuation, LIFOValuation
+
+BarcodeScanResult = Dict[str, Optional[str]]
 
 
 class InvalidWarehouseCompany(frappe.ValidationError):
@@ -49,50 +54,37 @@ def get_stock_value_from_bin(warehouse=None, item_code=None):
 	return stock_value
 
 
-def get_stock_value_on(warehouse=None, posting_date=None, item_code=None):
+def get_stock_value_on(
+	warehouses: list | str = None, posting_date: str = None, item_code: str = None
+) -> float:
 	if not posting_date:
 		posting_date = nowdate()
 
-	values, condition = [posting_date], ""
-
-	if warehouse:
-
-		lft, rgt, is_group = frappe.db.get_value("Warehouse", warehouse, ["lft", "rgt", "is_group"])
-
-		if is_group:
-			values.extend([lft, rgt])
-			condition += "and exists (\
-				select name from `tabWarehouse` wh where wh.name = sle.warehouse\
-				and wh.lft >= %s and wh.rgt <= %s)"
-
-		else:
-			values.append(warehouse)
-			condition += " AND warehouse = %s"
-
-	if item_code:
-		values.append(item_code)
-		condition += " AND item_code = %s"
-
-	stock_ledger_entries = frappe.db.sql(
-		"""
-		SELECT item_code, stock_value, name, warehouse
-		FROM `tabStock Ledger Entry` sle
-		WHERE posting_date <= %s {0}
-			and is_cancelled = 0
-		ORDER BY timestamp(posting_date, posting_time) DESC, creation DESC
-	""".format(
-			condition
-		),
-		values,
-		as_dict=1,
+	sle = frappe.qb.DocType("Stock Ledger Entry")
+	query = (
+		frappe.qb.from_(sle)
+		.select(IfNull(Sum(sle.stock_value_difference), 0))
+		.where((sle.posting_date <= posting_date) & (sle.is_cancelled == 0))
+		.orderby(CombineDatetime(sle.posting_date, sle.posting_time), order=frappe.qb.desc)
+		.orderby(sle.creation, order=frappe.qb.desc)
 	)
 
-	sle_map = {}
-	for sle in stock_ledger_entries:
-		if not (sle.item_code, sle.warehouse) in sle_map:
-			sle_map[(sle.item_code, sle.warehouse)] = flt(sle.stock_value)
+	if warehouses:
+		if isinstance(warehouses, str):
+			warehouses = [warehouses]
 
-	return sum(sle_map.values())
+		warehouses = set(warehouses)
+		for wh in list(warehouses):
+			if frappe.db.get_value("Warehouse", wh, "is_group"):
+				warehouses.update(get_child_warehouses(wh))
+
+		query = query.where(sle.warehouse.isin(warehouses))
+
+	if item_code:
+		query = query.where(sle.item_code == item_code)
+
+	return query.run(as_list=True)[0][0]
+
 
 
 @frappe.whitelist()
@@ -142,12 +134,10 @@ def get_stock_balance(
 
 
 def get_serial_nos_data_after_transactions(args):
-	from pypika import CustomFunction
 
 	serial_nos = set()
 	args = frappe._dict(args)
 	sle = frappe.qb.DocType("Stock Ledger Entry")
-	Timestamp = CustomFunction("timestamp", ["date", "time"])
 
 	stock_ledger_entries = (
 		frappe.qb.from_(sle)
@@ -156,7 +146,8 @@ def get_serial_nos_data_after_transactions(args):
 			(sle.item_code == args.item_code)
 			& (sle.warehouse == args.warehouse)
 			& (
-				Timestamp(sle.posting_date, sle.posting_time) < Timestamp(args.posting_date, args.posting_time)
+				CombineDatetime(sle.posting_date, sle.posting_time)
+				< CombineDatetime(args.posting_date, args.posting_time)
 			)
 			& (sle.is_cancelled == 0)
 		)
@@ -254,41 +245,48 @@ def _create_bin(item_code, warehouse):
 	return bin_obj
 
 
-def update_bin(args, allow_negative_stock=False, via_landed_cost_voucher=False):
-	"""WARNING: This function is deprecated. Inline this function instead of using it."""
-	from erpnext.stock.doctype.bin.bin import update_stock
-
-	is_stock_item = frappe.get_cached_value("Item", args.get("item_code"), "is_stock_item")
-	if is_stock_item:
-		bin_name = get_or_make_bin(args.get("item_code"), args.get("warehouse"))
-		update_stock(bin_name, args, allow_negative_stock, via_landed_cost_voucher)
-	else:
-		frappe.msgprint(_("Item {0} ignored since it is not a stock item").format(args.get("item_code")))
-
 @frappe.whitelist()
 def get_incoming_rate(args, raise_error_if_no_rate=True):
 	"""Get Incoming Rate based on valuation method"""
-	from erpnext.stock.stock_ledger import get_previous_sle, get_valuation_rate
-	if isinstance(args, string_types):
+	from erpnext.stock.stock_ledger import (
+		get_batch_incoming_rate,
+		get_previous_sle,
+		get_valuation_rate,
+	)
+
+	if isinstance(args, str):
 		args = json.loads(args)
 
-	in_rate = 0
+	voucher_no = args.get("voucher_no") or args.get("name")
+
+	in_rate = None
 	if (args.get("serial_no") or "").strip():
 		in_rate = get_avg_purchase_rate(args.get("serial_no"))
+	elif args.get("batch_no") and frappe.db.get_value(
+		"Batch", args.get("batch_no"), "use_batchwise_valuation", cache=True
+	):
+		in_rate = get_batch_incoming_rate(
+			item_code=args.get("item_code"),
+			warehouse=args.get("warehouse"),
+			batch_no=args.get("batch_no"),
+			posting_date=args.get("posting_date"),
+			posting_time=args.get("posting_time"),
+		)
 	else:
 		valuation_method = get_valuation_method(args.get("item_code"))
 		previous_sle = get_previous_sle(args)
-		if valuation_method == "FIFO":
+		if valuation_method in ("FIFO", "LIFO"):
 			if previous_sle:
 				previous_stock_queue = json.loads(previous_sle.get("stock_queue", "[]") or "[]")
 				in_rate = (
-					get_fifo_rate(previous_stock_queue, args.get("qty") or 0) if previous_stock_queue else 0
+					_get_fifo_lifo_rate(previous_stock_queue, args.get("qty") or 0, valuation_method)
+					if previous_stock_queue
+					else 0
 				)
 		elif valuation_method == "Moving Average":
 			in_rate = previous_sle.get("valuation_rate") or 0
 
-	if not in_rate:
-		voucher_no = args.get("voucher_no") or args.get("name")
+	if in_rate is None:
 		in_rate = get_valuation_rate(
 			args.get("item_code"),
 			args.get("warehouse"),
@@ -298,6 +296,7 @@ def get_incoming_rate(args, raise_error_if_no_rate=True):
 			currency=erpnext.get_company_currency(args.get("company")),
 			company=args.get("company"),
 			raise_error_if_no_rate=raise_error_if_no_rate,
+			batch_no=args.get("batch_no"),
 		)
 
 	return flt(in_rate)
@@ -321,34 +320,34 @@ def get_valuation_method(item_code):
 	"""get valuation method from item or default"""
 	val_method = frappe.db.get_value("Item", item_code, "valuation_method", cache=True)
 	if not val_method:
-		val_method = frappe.db.get_value("Stock Settings", None, "valuation_method") or "FIFO"
+		val_method = (
+			frappe.db.get_value("Stock Settings", None, "valuation_method", cache=True) or "FIFO"
+		)
 	return val_method
+
 
 def get_fifo_rate(previous_stock_queue, qty):
 	"""get FIFO (average) Rate from Queue"""
-	if flt(qty) >= 0:
-		total = sum(f[0] for f in previous_stock_queue)
-		return sum(flt(f[0]) * flt(f[1]) for f in previous_stock_queue) / flt(total) if total else 0.0
-	else:
-		available_qty_for_outgoing, outgoing_cost = 0, 0
-		qty_to_pop = abs(flt(qty))
-		while qty_to_pop and previous_stock_queue:
-			batch = previous_stock_queue[0]
-			if 0 < batch[0] <= qty_to_pop:
-				# if batch qty > 0
-				# not enough or exactly same qty in current batch, clear batch
-				available_qty_for_outgoing += flt(batch[0])
-				outgoing_cost += flt(batch[0]) * flt(batch[1])
-				qty_to_pop -= batch[0]
-				previous_stock_queue.pop(0)
-			else:
-				# all from current batch
-				available_qty_for_outgoing += flt(qty_to_pop)
-				outgoing_cost += flt(qty_to_pop) * flt(batch[1])
-				batch[0] -= qty_to_pop
-				qty_to_pop = 0
+	return _get_fifo_lifo_rate(previous_stock_queue, qty, "FIFO")
 
-		return outgoing_cost / available_qty_for_outgoing
+
+def get_lifo_rate(previous_stock_queue, qty):
+	"""get LIFO (average) Rate from Queue"""
+	return _get_fifo_lifo_rate(previous_stock_queue, qty, "LIFO")
+
+
+def _get_fifo_lifo_rate(previous_stock_queue, qty, method):
+	ValuationKlass = LIFOValuation if method == "LIFO" else FIFOValuation
+
+	stock_queue = ValuationKlass(previous_stock_queue)
+	if flt(qty) >= 0:
+		total_qty, total_value = stock_queue.get_total_stock_and_value()
+		return total_value / total_qty if total_qty else 0.0
+	else:
+		popped_bins = stock_queue.remove_stock(abs(flt(qty)))
+
+		total_qty, total_value = ValuationKlass(popped_bins).get_total_stock_and_value()
+		return total_value / total_qty if total_qty else 0.0
 
 
 def get_valid_serial_nos(sr_nos, qty=0, item_code=""):
@@ -490,7 +489,7 @@ def add_additional_uom_columns(columns, result, include_uom, conversion_factors)
 
 def get_incoming_outgoing_rate_for_cancel(item_code, voucher_type, voucher_no, voucher_detail_no):
 	outgoing_rate = frappe.db.sql(
-		"""SELECT abs(stock_value_difference / actual_qty)
+		"""SELECT CASE WHEN actual_qty = 0 THEN 0 ELSE abs(stock_value_difference / actual_qty) END
 		FROM `tabStock Ledger Entry`
 		WHERE voucher_type = %s and voucher_no = %s
 			and item_code = %s and voucher_detail_no = %s
@@ -540,3 +539,66 @@ def check_pending_reposting(posting_date: str, throw_error: bool = True) -> bool
 		)
 
 	return bool(reposting_pending)
+
+
+@frappe.whitelist()
+def scan_barcode(search_value: str) -> BarcodeScanResult:
+	def set_cache(data: BarcodeScanResult):
+		frappe.cache().set_value(f"erpnext:barcode_scan:{search_value}", data, expires_in_sec=120)
+
+	def get_cache() -> Optional[BarcodeScanResult]:
+		if data := frappe.cache().get_value(f"erpnext:barcode_scan:{search_value}"):
+			return data
+
+	if scan_data := get_cache():
+		return scan_data
+
+	# search barcode no
+	barcode_data = frappe.db.get_value(
+		"Item Barcode",
+		{"barcode": search_value},
+		["barcode", "parent as item_code", "uom"],
+		as_dict=True,
+	)
+	if barcode_data:
+		_update_item_info(barcode_data)
+		set_cache(barcode_data)
+		return barcode_data
+
+	# search serial no
+	serial_no_data = frappe.db.get_value(
+		"Serial No",
+		search_value,
+		["name as serial_no", "item_code", "batch_no"],
+		as_dict=True,
+	)
+	if serial_no_data:
+		_update_item_info(serial_no_data)
+		set_cache(serial_no_data)
+		return serial_no_data
+
+	# search batch no
+	batch_no_data = frappe.db.get_value(
+		"Batch",
+		search_value,
+		["name as batch_no", "item as item_code"],
+		as_dict=True,
+	)
+	if batch_no_data:
+		_update_item_info(batch_no_data)
+		set_cache(batch_no_data)
+		return batch_no_data
+
+	return {}
+
+
+def _update_item_info(scan_result: Dict[str, Optional[str]]) -> Dict[str, Optional[str]]:
+	if item_code := scan_result.get("item_code"):
+		if item_info := frappe.get_cached_value(
+			"Item",
+			item_code,
+			["has_batch_no", "has_serial_no"],
+			as_dict=True,
+		):
+			scan_result.update(item_info)
+	return scan_result

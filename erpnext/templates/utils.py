@@ -33,7 +33,6 @@ def send_message(sender, message, subject="Website Query"):
 			status="Open",
 			title=subject,
 			contact_email=sender,
-			to_discuss=message,
 		)
 	)
 

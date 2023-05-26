@@ -12,11 +12,13 @@ def execute(filters=None):
 	data = get_data(filters.warehouse)
 	return columns, data
 
+
 def validate_warehouse(filters):
 	company = filters.company
 	warehouse = filters.warehouse
 	if not frappe.db.exists("Warehouse", {"name": warehouse, "company": company}):
 		frappe.throw(_("Warehouse: {0} does not belong to {1}").format(warehouse, company))
+
 
 def get_columns():
 	columns = [

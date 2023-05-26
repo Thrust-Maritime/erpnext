@@ -11,7 +11,6 @@ from frappe.utils import flt
 import erpnext
 from erpnext.controllers.taxes_and_totals import init_landed_taxes_and_totals
 from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
-from erpnext.accounts.doctype.account.account import get_account_currency
 
 
 class LandedCostVoucher(Document):
@@ -100,14 +99,6 @@ class LandedCostVoucher(Document):
 				frappe.throw(
 					_("Row {0}: Cost center is required for an item {1}").format(item.idx, item.item_code)
 				)
-
-	def validate_expense_accounts(self):
-		company_currency = erpnext.get_company_currency(self.company)
-		for account in self.taxes:
-			if get_account_currency(account.expense_account) != company_currency:
-				frappe.throw(msg=_(""" Row {0}: Expense account currency should be same as company's default currency.
-					Please select expense account with account currency as {1}""")
-					.format(account.idx, frappe.bold(company_currency)), title=_("Invalid Account Currency"))
 
 	def set_total_taxes_and_charges(self):
 		self.total_taxes_and_charges = sum(flt(d.base_amount) for d in self.get("taxes"))

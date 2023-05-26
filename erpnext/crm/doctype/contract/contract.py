@@ -5,7 +5,6 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.model.naming import set_name_by_naming_series
 from frappe.utils import getdate, nowdate
 
 

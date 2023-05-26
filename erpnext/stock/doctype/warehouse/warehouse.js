@@ -95,4 +95,3 @@ function convert_to_group_or_ledger(frm) {
 		},
 	});
 }
-

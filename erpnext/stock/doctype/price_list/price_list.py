@@ -68,6 +68,7 @@ class PriceList(Document):
 	def delete_price_list_details_key(self):
 		frappe.cache().hdel("price_list_details", self.name)
 
+
 def get_price_list_details(price_list):
 	price_list_details = frappe.cache().hget("price_list_details", price_list)
 

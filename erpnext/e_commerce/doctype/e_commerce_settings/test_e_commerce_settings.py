@@ -1,6 +1,5 @@
 # Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
-
 import unittest
 
 import frappe
@@ -16,6 +15,7 @@ class TestECommerceSettings(unittest.TestCase):
 
 	def test_tax_rule_validation(self):
 		frappe.db.sql("update `tabTax Rule` set use_for_shopping_cart = 0")
+		frappe.db.commit()  # nosemgrep
 
 		cart_settings = frappe.get_doc("E Commerce Settings")
 		cart_settings.enabled = 1

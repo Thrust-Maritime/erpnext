@@ -97,7 +97,7 @@ class Task(NestedSet):
 				if frappe.db.get_value("Task", d.task, "status") not in ("Completed", "Cancelled"):
 					frappe.throw(
 						_(
-							"Cannot complete task {0} as its dependant task {1} are not ccompleted / cancelled."
+							"Cannot complete task {0} as its dependant task {1} are not completed / cancelled."
 						).format(frappe.bold(self.name), frappe.bold(d.task))
 					)
 
@@ -155,13 +155,6 @@ class Task(NestedSet):
 			close_all_assignments(self.doctype, self.name)
 		if self.status == "Cancelled":
 			clear(self.doctype, self.name)
-
-	def update_total_expense_claim(self):
-		self.total_expense_claim = frappe.db.sql(
-			"""select sum(total_sanctioned_amount) from `tabExpense Claim`
-			where project = %s and task = %s and docstatus=1""",
-			(self.project, self.name),
-		)[0][0]
 
 	def update_time_and_costing(self):
 		tl = frappe.db.sql(
@@ -288,7 +281,7 @@ def get_project(doctype, txt, searchfield, start, page_len, filters):
 			%(mcond)s
 			{search_condition}
 		order by name
-		limit %(start)s, %(page_len)s""".format(
+		limit %(page_len)s offset %(start)s""".format(
 			search_columns=search_columns, search_condition=search_cond
 		),
 		{

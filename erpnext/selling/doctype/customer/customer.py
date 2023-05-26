@@ -6,7 +6,7 @@ import json
 
 import frappe
 import frappe.defaults
-from frappe import _, msgprint
+from frappe import _, msgprint, qb
 from frappe.contacts.address_and_contact import (
 	delete_contact_and_address,
 	load_address_and_contact,
@@ -236,11 +236,20 @@ class Customer(TransactionBase):
 	def validate_credit_limit_on_change(self):
 		if self.get("__islocal") or not self.credit_limits:
 			return
-		
-		past_credit_limits = [d.credit_limit
-			for d in frappe.db.get_all("Customer Credit Limit", filters={'parent': self.name}, fields=["credit_limit"], order_by="company")]
-		
-		current_credit_limits = [d.credit_limit for d in sorted(self.credit_limits, key=lambda k: k.company)]
+
+		past_credit_limits = [
+			d.credit_limit
+			for d in frappe.db.get_all(
+				"Customer Credit Limit",
+				filters={"parent": self.name},
+				fields=["credit_limit"],
+				order_by="company",
+			)
+		]
+
+		current_credit_limits = [
+			d.credit_limit for d in sorted(self.credit_limits, key=lambda k: k.company)
+		]
 
 		if past_credit_limits == current_credit_limits:
 			return
@@ -293,7 +302,7 @@ class Customer(TransactionBase):
 
 	def after_rename(self, olddn, newdn, merge=False):
 		if frappe.defaults.get_global_default("cust_master_name") == "Customer Name":
-			frappe.db.set(self, "customer_name", newdn)
+			self.db_set("customer_name", newdn)
 
 	def set_loyalty_program(self):
 		if self.loyalty_program:
@@ -357,6 +366,7 @@ def make_quotation(source_name, target_doc=None):
 
 	return target_doc
 
+
 @frappe.whitelist()
 def make_opportunity(source_name, target_doc=None):
 	def set_missing_values(source, target):
@@ -410,67 +420,6 @@ def _set_missing_values(source, target):
 	if contact:
 		target.contact_person = contact[0].parent
 
-@frappe.whitelist()
-def make_quotation(source_name, target_doc=None):
-
-	def set_missing_values(source, target):
-		_set_missing_values(source, target)
-
-	target_doc = get_mapped_doc("Customer", source_name,
-		{"Customer": {
-			"doctype": "Quotation",
-			"field_map": {
-				"name":"party_name"
-			}
-		}}, target_doc, set_missing_values)
-
-	target_doc.quotation_to = "Customer"
-	target_doc.run_method("set_missing_values")
-	target_doc.run_method("set_other_charges")
-	target_doc.run_method("calculate_taxes_and_totals")
-
-	price_list, currency = frappe.db.get_value("Customer", source_name, ['default_price_list', 'default_currency'])
-	if price_list:
-		target_doc.selling_price_list = price_list
-	if currency:
-		target_doc.currency = currency
-
-	return target_doc
-
-@frappe.whitelist()
-def make_opportunity(source_name, target_doc=None):
-	def set_missing_values(source, target):
-		_set_missing_values(source, target)
-
-	target_doc = get_mapped_doc("Customer", source_name,
-		{"Customer": {
-			"doctype": "Opportunity",
-			"field_map": {
-				"name": "party_name",
-				"doctype": "opportunity_from",
-			}
-		}}, target_doc, set_missing_values)
-
-	return target_doc
-
-def _set_missing_values(source, target):
-	address = frappe.get_all('Dynamic Link', {
-			'link_doctype': source.doctype,
-			'link_name': source.name,
-			'parenttype': 'Address',
-		}, ['parent'], limit=1)
-
-	contact = frappe.get_all('Dynamic Link', {
-			'link_doctype': source.doctype,
-			'link_name': source.name,
-			'parenttype': 'Contact',
-		}, ['parent'], limit=1)
-
-	if address:
-		target.customer_address = address[0].parent
-
-	if contact:
-		target.contact_person = contact[0].parent
 
 @frappe.whitelist()
 def get_loyalty_programs(doc):
@@ -505,6 +454,7 @@ def get_loyalty_programs(doc):
 
 	return lp_details
 
+
 def get_nested_links(link_doctype, link_name, ignore_permissions=False):
 	from frappe.desk.treeview import _get_children
 
@@ -514,10 +464,18 @@ def get_nested_links(link_doctype, link_name, ignore_permissions=False):
 
 	return links
 
+
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_customer_list(doctype, txt, searchfield, start, page_len, filters=None):
+	from frappe.utils.deprecations import deprecation_warning
+
 	from erpnext.controllers.queries import get_fields
+
+	deprecation_warning(
+		"`get_customer_list` is deprecated and will be removed in version 15. Use `erpnext.controllers.queries.customer_query` instead."
+	)
+
 	fields = ["name", "customer_name", "customer_group", "territory"]
 
 	if frappe.db.get_default("cust_master_name") == "Customer Name":
@@ -585,10 +543,13 @@ def check_credit_limit(customer, company, ignore_outstanding_sales_order=False, 
 					_("Please contact your administrator to extend the credit limits for {0}.").format(customer)
 				)
 
-			message = """Please contact any of the following users to extend the credit limits for {0}:
-				<br><br><ul><li>{1}</li></ul>""".format(
-				customer, "<li>".join(credit_controller_users_formatted)
+			user_list = "<br><br><ul><li>{0}</li></ul>".format(
+				"<li>".join(credit_controller_users_formatted)
 			)
+
+			message = _(
+				"Please contact any of the following users to extend the credit limits for {0}: {1}"
+			).format(customer, user_list)
 
 			# if the current user does not have permissions to override credit limit,
 			# prompt them to send out an email to the controller users
@@ -787,12 +748,15 @@ def make_address(args, is_primary_address=1):
 @frappe.validate_and_sanitize_search_inputs
 def get_customer_primary_contact(doctype, txt, searchfield, start, page_len, filters):
 	customer = filters.get("customer")
-	return frappe.db.sql(
-		"""
-		select `tabContact`.name from `tabContact`, `tabDynamic Link`
-			where `tabContact`.name = `tabDynamic Link`.parent and `tabDynamic Link`.link_name = %(customer)s
-			and `tabDynamic Link`.link_doctype = 'Customer'
-			and `tabContact`.name like %(txt)s
-		""",
-		{"customer": customer, "txt": "%%%s%%" % txt},
+
+	con = qb.DocType("Contact")
+	dlink = qb.DocType("Dynamic Link")
+
+	return (
+		qb.from_(con)
+		.join(dlink)
+		.on(con.name == dlink.parent)
+		.select(con.name, con.email_id)
+		.where((dlink.link_name == customer) & (con.name.like(f"%{txt}%")))
+		.run()
 	)

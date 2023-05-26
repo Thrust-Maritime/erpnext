@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
@@ -163,12 +164,7 @@ def validate_cart_settings(doc=None, method=None):
 
 
 def get_shopping_cart_settings():
-	if not getattr(frappe.local, "shopping_cart_settings", None):
-		frappe.local.shopping_cart_settings = frappe.get_doc(
-			"E Commerce Settings", "E Commerce Settings"
-		)
-
-	return frappe.local.shopping_cart_settings
+	return frappe.get_cached_doc("E Commerce Settings")
 
 
 @frappe.whitelist(allow_guest=True)

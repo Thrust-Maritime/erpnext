@@ -12,7 +12,6 @@ from frappe import _, msgprint
 from frappe.model.mapper import get_mapped_doc
 from frappe.query_builder.functions import Sum
 from frappe.utils import cint, cstr, flt, get_link_to_form, getdate, new_line_sep, nowdate
-from six import string_types
 
 from erpnext.buying.utils import check_on_hold_or_closed_status, validate_for_items
 from erpnext.controllers.buying_controller import BuyingController
@@ -122,7 +121,6 @@ class MaterialRequest(BuyingController):
 			self.title = _("{0} Request for {1}").format(self.material_request_type, items)[:100]
 
 	def on_submit(self):
-		# frappe.db.set(self, 'status', 'Submitted')
 		self.update_requested_qty()
 		self.update_requested_qty_in_production_plan()
 		if self.material_request_type == "Purchase":
@@ -234,16 +232,14 @@ class MaterialRequest(BuyingController):
 						if d.ordered_qty and d.ordered_qty > allowed_qty:
 							frappe.throw(
 								_(
-									"The total Issue / Transfer quantity {0} in Material Request {1}  \
-								cannot be greater than allowed requested quantity {2} for Item {3}"
+									"The total Issue / Transfer quantity {0} in Material Request {1}  cannot be greater than allowed requested quantity {2} for Item {3}"
 								).format(d.ordered_qty, d.parent, allowed_qty, d.item_code)
 							)
 
 					elif d.ordered_qty and d.ordered_qty > d.stock_qty:
 						frappe.throw(
 							_(
-								"The total Issue / Transfer quantity {0} in Material Request {1}  \
-							cannot be greater than requested quantity {2} for Item {3}"
+								"The total Issue / Transfer quantity {0} in Material Request {1} cannot be greater than requested quantity {2} for Item {3}"
 							).format(d.ordered_qty, d.parent, d.qty, d.item_code)
 						)
 
@@ -363,7 +359,7 @@ def update_status(name, status):
 def make_purchase_order(source_name, target_doc=None, args=None):
 	if args is None:
 		args = {}
-	if isinstance(args, string_types):
+	if isinstance(args, str):
 		args = json.loads(args)
 
 	def postprocess(source, target_doc):
@@ -555,20 +551,6 @@ def get_default_supplier_query(doctype, txt, searchfield, start, page_len, filte
 
 
 @frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def get_default_supplier_query(doctype, txt, searchfield, start, page_len, filters):
-	doc = frappe.get_doc("Material Request", filters.get("doc"))
-	item_list = []
-	for d in doc.items:
-		item_list.append(d.item_code)
-
-	return frappe.db.sql("""select default_supplier
-		from `tabItem Default`
-		where parent in ({0}) and
-		default_supplier IS NOT NULL
-		""".format(', '.join(['%s']*len(item_list))),tuple(item_list))
-
-@frappe.whitelist()
 def make_supplier_quotation(source_name, target_doc=None):
 	def postprocess(source, target_doc):
 		set_missing_values(source, target_doc)
@@ -634,8 +616,10 @@ def make_stock_entry(source_name, target_doc=None):
 		if source.material_request_type == "Customer Provided":
 			target.purpose = "Material Receipt"
 
-		target.set_missing_values()
-		target.set_stock_entry_type()
+		target.set_transfer_qty()
+		target.set_actual_qty()
+		target.calculate_rate_and_amount(raise_error_if_no_rate=False)
+		target.stock_entry_type = target.purpose
 		target.set_job_card_data()
 
 	doclist = get_mapped_doc(
@@ -755,3 +739,15 @@ def create_pick_list(source_name, target_doc=None):
 	doc.set_item_locations()
 
 	return doc
+
+
+@frappe.whitelist()
+def make_in_transit_stock_entry(source_name, in_transit_warehouse):
+	ste_doc = make_stock_entry(source_name)
+	ste_doc.add_to_transit = 1
+	ste_doc.to_warehouse = in_transit_warehouse
+
+	for row in ste_doc.items:
+		row.t_warehouse = in_transit_warehouse
+
+	return ste_doc

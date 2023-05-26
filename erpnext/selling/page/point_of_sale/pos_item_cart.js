@@ -524,8 +524,7 @@ erpnext.PointOfSale.ItemCart = class {
 			const currency = this.events.get_frm().doc.currency;
 			const taxes_html = taxes.map(t => {
 				if (t.tax_amount_after_discount_amount == 0.0) return;
-				// if tax rate is 0, don't print it.
-				const description = /[0-9]+/.test(t.description) ? t.description : ((t.rate != 0) ? `${t.description} @ ${t.rate}%`: t.description);
+				const description = /[0-9]+/.test(t.description) ? t.description : `${t.description} @ ${t.rate}%`;
 				return `<div class="tax-row">
 					<div class="tax-label">${description}</div>
 					<div class="tax-value">${format_currency(t.tax_amount_after_discount_amount, currency)}</div>

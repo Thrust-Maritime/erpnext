@@ -42,7 +42,6 @@
   "act_end_date",
   "sb_costing",
   "total_costing_amount",
-  "total_expense_claim",
   "column_break_20",
   "total_billing_amount",
   "sb_more_info",
@@ -249,7 +248,7 @@
   {
    "fieldname": "actual_time",
    "fieldtype": "Float",
-   "label": "Actual Time (in hours)",
+   "label": "Actual Time (in Hours via Time Sheet)",
    "read_only": 1
   },
   {
@@ -276,13 +275,6 @@
    "label": "Total Costing Amount (via Time Sheet)",
    "oldfieldname": "actual_budget",
    "oldfieldtype": "Currency",
-   "options": "Company:company:default_currency",
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_expense_claim",
-   "fieldtype": "Currency",
-   "label": "Total Expense Claim (via Expense Claim)",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -397,10 +389,11 @@
  "is_tree": 1,
  "links": [],
  "max_attachments": 5,
- "modified": "2021-10-02 11:39:52.699790",
+ "modified": "2022-06-23 16:58:47.005241",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Task",
+ "naming_rule": "Expression (old style)",
  "nsm_parent_field": "parent_task",
  "owner": "Administrator",
  "permissions": [
@@ -421,6 +414,7 @@
  "show_preview_popup": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "timeline_field": "project",
  "title_field": "subject",
  "track_seen": 1

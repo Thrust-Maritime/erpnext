@@ -52,6 +52,7 @@ class BlanketOrder(Document):
 		for d in self.items:
 			d.db_set("ordered_qty", item_ordered_qty.get(d.item_code, 0))
 
+
 @frappe.whitelist()
 def make_order(source_name):
 	doctype = frappe.flags.args.doctype

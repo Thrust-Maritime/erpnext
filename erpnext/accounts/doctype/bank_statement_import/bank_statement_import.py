@@ -15,7 +15,6 @@ from frappe.utils.background_jobs import enqueue
 from frappe.utils.xlsxutils import ILLEGAL_CHARACTERS_RE, handle_html
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
-from six import string_types
 
 INVALID_VALUES = ("", None)
 
@@ -81,15 +80,18 @@ class BankStatementImport(DataImport):
 
 		return False
 
+
 @frappe.whitelist()
 def get_preview_from_template(data_import, import_file=None, google_sheets_url=None):
 	return frappe.get_doc("Bank Statement Import", data_import).get_preview_from_template(
 		import_file, google_sheets_url
 	)
 
+
 @frappe.whitelist()
 def form_start_import(data_import):
 	return frappe.get_doc("Bank Statement Import", data_import).start_import()
+
 
 @frappe.whitelist()
 def download_errored_template(data_import_name):
@@ -134,11 +136,12 @@ def start_import(
 	except Exception:
 		frappe.db.rollback()
 		data_import.db_set("status", "Error")
-		frappe.log_error(title=data_import.name)
+		data_import.log_error("Bank Statement Import failed")
 	finally:
 		frappe.flags.in_import = False
 
 	frappe.publish_realtime("data_import_refresh", {"data_import": data_import.name})
+
 
 def update_mapping_db(bank, template_options):
 	bank = frappe.get_doc("Bank", bank)
@@ -165,6 +168,7 @@ def add_bank_account(data, bank_account):
 			row[bank_account_loc] = bank_account
 		else:
 			row.append(bank_account)
+
 
 def write_files(import_file, data):
 	full_file_path = import_file.file_doc.get_full_path()
@@ -198,14 +202,12 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 	for row in data:
 		clean_row = []
 		for item in row:
-			if isinstance(item, string_types) and (
-				sheet_name not in ["Data Import Template", "Data Export"]
-			):
+			if isinstance(item, str) and (sheet_name not in ["Data Import Template", "Data Export"]):
 				value = handle_html(item)
 			else:
 				value = item
 
-			if isinstance(item, string_types) and next(ILLEGAL_CHARACTERS_RE.finditer(value), None):
+			if isinstance(item, str) and next(ILLEGAL_CHARACTERS_RE.finditer(value), None):
 				# Remove illegal characters from the string
 				value = re.sub(ILLEGAL_CHARACTERS_RE, "", value)
 
@@ -215,6 +217,7 @@ def write_xlsx(data, sheet_name, wb=None, column_widths=None, file_path=None):
 
 	wb.save(file_path)
 	return True
+
 
 @frappe.whitelist()
 def upload_bank_statement(**args):

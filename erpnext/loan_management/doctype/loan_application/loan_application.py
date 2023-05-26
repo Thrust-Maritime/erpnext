@@ -10,7 +10,17 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import cint, flt, rounded
-from six import string_types
+
+from erpnext.loan_management.doctype.loan.loan import (
+	get_monthly_repayment_amount,
+	get_sanctioned_amount_limit,
+	get_total_loan_amount,
+	validate_repayment_method,
+)
+from erpnext.loan_management.doctype.loan_security_price.loan_security_price import (
+	get_loan_security_price,
+)
+
 
 from erpnext.loan_management.doctype.loan.loan import (
 	get_monthly_repayment_amount,
@@ -192,6 +202,7 @@ def create_loan(source_name, target_doc=None, submit=0):
 
 	return doclist
 
+
 @frappe.whitelist()
 def create_pledge(loan_application, loan=None):
 	loan_application_doc = frappe.get_doc("Loan Application", loan_application)
@@ -229,7 +240,7 @@ def create_pledge(loan_application, loan=None):
 # This is a sandbox method to get the proposed pledges
 @frappe.whitelist()
 def get_proposed_pledge(securities):
-	if isinstance(securities, string_types):
+	if isinstance(securities, str):
 		securities = json.loads(securities)
 
 	proposed_pledges = {"securities": []}

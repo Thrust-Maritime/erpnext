@@ -1,4 +1,6 @@
 import frappe
+from frappe.utils.verified_command import verify_request
+
 
 def get_context(context):
 	if not verify_request():

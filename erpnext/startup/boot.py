@@ -14,7 +14,6 @@ def boot_session(bootinfo):
 	if frappe.session["user"] != "Guest":
 		update_page_info(bootinfo)
 
-		load_country_and_currency(bootinfo)
 		bootinfo.sysdefaults.territory = frappe.db.get_single_value("Selling Settings", "territory")
 		bootinfo.sysdefaults.customer_group = frappe.db.get_single_value(
 			"Selling Settings", "customer_group"
@@ -23,7 +22,7 @@ def boot_session(bootinfo):
 			frappe.db.get_single_value("Accounts Settings", "allow_stale")
 		)
 		bootinfo.sysdefaults.quotation_valid_till = cint(
-			frappe.db.get_single_value("Selling Settings", "default_valid_till")
+			frappe.db.get_single_value("CRM Settings", "default_valid_till")
 		)
 
 		bootinfo.sysdefaults.allow_sales_order_creation_for_expired_quotation = cint(
@@ -57,20 +56,6 @@ def boot_session(bootinfo):
 			""" select name, ifnull(account_type, '') from `tabParty Type`"""
 		)
 		bootinfo.party_account_types = frappe._dict(party_account_types)
-
-
-def load_country_and_currency(bootinfo):
-	country = frappe.db.get_default("country")
-	if country and frappe.db.exists("Country", country):
-		bootinfo.docs += [frappe.get_doc("Country", country)]
-
-	bootinfo.docs += frappe.db.sql(
-		"""select name, fraction, fraction_units,
-		number_format, smallest_currency_fraction_value, symbol from tabCurrency
-		where enabled=1""",
-		as_dict=1,
-		update={"doctype": ":Currency"},
-	)
 
 
 def update_page_info(bootinfo):

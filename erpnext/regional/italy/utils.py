@@ -5,7 +5,6 @@ import frappe
 from frappe import _
 from frappe.utils import cstr, flt
 from frappe.utils.file_manager import remove_file
-from six import string_types
 
 from erpnext.controllers.taxes_and_totals import get_itemised_tax
 from erpnext.regional.italy import state_codes
@@ -102,6 +101,7 @@ def prepare_invoice(invoice, progressive_number):
 
 	return invoice
 
+
 def get_conditions(filters):
 	filters = json.loads(filters)
 
@@ -173,7 +173,7 @@ def get_invoice_summary(items, taxes):
 		if tax.rate == 0:
 			for item in items:
 				item_tax_rate = item.item_tax_rate
-				if isinstance(item.item_tax_rate, string_types):
+				if isinstance(item.item_tax_rate, str):
 					item_tax_rate = json.loads(item.item_tax_rate)
 
 				if item_tax_rate and tax.account_head in item_tax_rate:
@@ -441,6 +441,7 @@ def get_e_invoice_attachments(invoices):
 
 	return out
 
+
 def validate_address(address_name):
 	fields = ["pincode", "city", "country_code"]
 	data = frappe.get_cached_value("Address", address_name, fields, as_dict=1) or {}
@@ -463,6 +464,7 @@ def get_unamended_name(doc):
 		return "-".join(doc.name.split("-")[:-1])
 	else:
 		return doc.name
+
 
 def get_progressive_name_and_number(doc, replace=False):
 	if replace:

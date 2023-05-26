@@ -58,6 +58,7 @@ def get_variables(criteria_name):
 	criteria = frappe.get_doc("Supplier Scorecard Criteria", criteria_name)
 	return _get_variables(criteria)
 
+
 def _get_variables(criteria):
 	my_variables = []
 	regex = r"\{(.*?)\}"
@@ -79,6 +80,6 @@ def _get_variables(criteria):
 				)[0]
 				my_variables.append(var)
 			except Exception:
-				frappe.throw(_("Unable to find variable: ") + str(match.group(1)), InvalidFormulaVariable)
+				frappe.throw(_("Unable to find variable:") + " " + str(match.group(1)), InvalidFormulaVariable)
 
 	return my_variables

@@ -1,5 +1,6 @@
 import frappe
 
+
 def execute():
 	items = []
 	items = frappe.db.sql(

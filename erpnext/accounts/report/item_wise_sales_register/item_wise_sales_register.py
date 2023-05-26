@@ -19,12 +19,7 @@ def execute(filters=None):
 	return _execute(filters)
 
 
-def _execute(
-	filters=None,
-	additional_table_columns=None,
-	additional_query_columns=None,
-	additional_conditions=None,
-):
+def _execute(filters=None, additional_table_columns=None, additional_query_columns=None):
 	if not filters:
 		filters = {}
 	columns = get_columns(additional_table_columns, filters)
@@ -333,7 +328,7 @@ def get_columns(additional_table_columns, filters):
 	return columns
 
 
-def get_conditions(filters, additional_conditions=None):
+def get_conditions(filters):
 	conditions = ""
 
 	for opts in (
@@ -345,9 +340,6 @@ def get_conditions(filters, additional_conditions=None):
 	):
 		if filters.get(opts[0]):
 			conditions += opts[1]
-
-	if additional_conditions:
-		conditions += additional_conditions
 
 	if filters.get("mode_of_payment"):
 		conditions += """ and exists(select name from `tabSales Invoice Payment`

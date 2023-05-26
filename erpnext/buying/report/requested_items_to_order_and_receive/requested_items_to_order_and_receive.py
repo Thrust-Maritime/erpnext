@@ -24,6 +24,7 @@ def execute(filters=None):
 
 	return columns, data, None, chart_data
 
+
 def validate_filters(filters):
 	from_date, to_date = filters.get("from_date"), filters.get("to_date")
 
@@ -99,6 +100,7 @@ def update_qty_columns(row_to_update, data_row):
 	for field in fields:
 		row_to_update[field] += flt(data_row[field])
 
+
 def prepare_data(data, filters):
 	"""Prepare consolidated Report data and Chart data"""
 	material_request_map, item_qty_map = {}, {}
@@ -140,6 +142,7 @@ def prepare_data(data, filters):
 
 	return data, chart_data
 
+
 def prepare_chart_data(item_data):
 	labels, qty_to_order, ordered_qty, received_qty, qty_to_receive = [], [], [], [], []
 
@@ -169,6 +172,7 @@ def prepare_chart_data(item_data):
 	}
 
 	return chart_data
+
 
 def get_columns(filters):
 	columns = [

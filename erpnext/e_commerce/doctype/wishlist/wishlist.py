@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2021, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
-
 
 import frappe
 from frappe.model.document import Document
@@ -61,7 +61,7 @@ def add_to_wishlist(item_code):
 def remove_from_wishlist(item_code):
 	if frappe.db.exists("Wishlist Item", {"item_code": item_code, "parent": frappe.session.user}):
 		frappe.db.delete("Wishlist Item", {"item_code": item_code, "parent": frappe.session.user})
-		frappe.db.commit()
+		frappe.db.commit()  # nosemgrep
 
 		wishlist_items = frappe.db.get_values("Wishlist Item", filters={"parent": frappe.session.user})
 

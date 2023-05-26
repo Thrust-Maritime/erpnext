@@ -127,6 +127,7 @@ def _execute(filters, additional_table_columns=None, additional_query_columns=No
 
 	return columns, data
 
+
 def get_columns(invoice_list, additional_table_columns):
 	"""return columns based on filters"""
 	columns = [
@@ -159,6 +160,7 @@ def get_columns(invoice_list, additional_table_columns):
 			"options": "Customer Group",
 			"width": 120,
 		},
+		{"label": _("Tax Id"), "fieldname": "tax_id", "fieldtype": "Data", "width": 120},
 		{
 			"label": _("Territory"),
 			"fieldname": "territory",

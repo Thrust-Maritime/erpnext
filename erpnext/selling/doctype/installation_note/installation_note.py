@@ -35,6 +35,7 @@ class InstallationNote(TransactionBase):
 		self.check_item_table()
 
 		from erpnext.controllers.selling_controller import set_default_income_account_for_item
+
 		set_default_income_account_for_item(self)
 
 	def is_serial_no_added(self, item_code, serial_no):
@@ -86,13 +87,13 @@ class InstallationNote(TransactionBase):
 			frappe.throw(_("Please pull items from Delivery Note"))
 
 	def on_update(self):
-		frappe.db.set(self, "status", "Draft")
+		self.db_set("status", "Draft")
 
 	def on_submit(self):
 		self.validate_serial_no()
 		self.update_prevdoc_status()
-		frappe.db.set(self, "status", "Submitted")
+		self.db_set("status", "Submitted")
 
 	def on_cancel(self):
 		self.update_prevdoc_status()
-		frappe.db.set(self, "status", "Cancelled")
+		self.db_set("status", "Cancelled")

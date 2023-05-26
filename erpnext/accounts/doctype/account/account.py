@@ -36,10 +36,12 @@ class Account(NestedSet):
 
 	def autoname(self):
 		from erpnext.accounts.utils import get_autoname_with_number
-		self.name = get_autoname_with_number(self.account_number, self.account_name, None, self.company)
+
+		self.name = get_autoname_with_number(self.account_number, self.account_name, self.company)
 
 	def validate(self):
 		from erpnext.accounts.utils import validate_field_number
+
 		if frappe.local.flags.allow_unverified_charts:
 			return
 		self.validate_parent()
@@ -320,9 +322,9 @@ def get_parent_account(doctype, txt, searchfield, start, page_len, filters):
 	return frappe.db.sql(
 		"""select name from tabAccount
 		where is_group = 1 and docstatus != 2 and company = %s
-		and %s like %s order by name limit %s, %s"""
+		and %s like %s order by name limit %s offset %s"""
 		% ("%s", searchfield, "%s", "%s", "%s"),
-		(filters["company"], "%%%s%%" % txt, start, page_len),
+		(filters["company"], "%%%s%%" % txt, page_len, start),
 		as_list=1,
 	)
 
@@ -391,7 +393,13 @@ def update_account_number(name, account_name, account_number=None, from_descenda
 
 	if ancestors and not allow_independent_account_creation:
 		for ancestor in ancestors:
-			if frappe.db.get_value("Account", {"account_name": old_acc_name, "company": ancestor}, "name"):
+			old_name = frappe.db.get_value(
+				"Account",
+				{"account_number": old_acc_number, "account_name": old_acc_name, "company": ancestor},
+				"name",
+			)
+
+			if old_name:
 				# same account in parent company exists
 				allow_child_account_creation = _("Allow Account Creation Against Child Company")
 
@@ -428,6 +436,7 @@ def update_account_number(name, account_name, account_number=None, from_descenda
 	if name != new_name:
 		frappe.rename_doc("Account", name, new_name, force=1)
 		return new_name
+
 
 @frappe.whitelist()
 def merge_account(old, new, is_group, root_type, company):

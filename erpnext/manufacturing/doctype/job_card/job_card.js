@@ -28,10 +28,15 @@ frappe.ui.form.on('Job Card', {
 		frappe.flags.resume_job = 0;
 		let has_items = frm.doc.items && frm.doc.items.length;
 
-		if (!frm.is_new() && frm.doc.__onload.work_order_stopped) {
+		if (!frm.is_new() && frm.doc.__onload.work_order_closed) {
 			frm.disable_save();
 			return;
 		}
+
+		let has_stock_entry = frm.doc.__onload &&
+			frm.doc.__onload.has_stock_entry ? true : false;
+
+		frm.toggle_enable("for_quantity", !has_stock_entry);
 
 		if (!frm.is_new() && has_items && frm.doc.docstatus < 2) {
 			let to_request = frm.doc.for_quantity > frm.doc.transferred_qty;
@@ -78,7 +83,7 @@ frappe.ui.form.on('Job Card', {
 			// and if stock mvt for WIP is required
 			if (frm.doc.work_order) {
 				frappe.db.get_value('Work Order', frm.doc.work_order, ['skip_transfer', 'status'], (result) => {
-					if (result.skip_transfer === 1 || result.status == 'In Process') {
+					if (result.skip_transfer === 1 || result.status == 'In Process' || frm.doc.transferred_qty > 0) {
 						frm.trigger("prepare_timer_buttons");
 					}
 				});

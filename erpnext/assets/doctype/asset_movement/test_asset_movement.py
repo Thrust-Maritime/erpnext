@@ -7,7 +7,7 @@ import frappe
 from frappe.utils import now
 
 from erpnext.assets.doctype.asset.test_asset import create_asset_data
-from erpnext.hr.doctype.employee.test_employee import make_employee
+from erpnext.setup.doctype.employee.test_employee import make_employee
 from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
 
 
@@ -127,6 +127,7 @@ class TestAssetMovement(unittest.TestCase):
 
 		movement1.cancel()
 		self.assertEqual(frappe.db.get_value("Asset", asset.name, "location"), "Test Location")
+
 
 def create_asset_movement(**args):
 	args = frappe._dict(args)

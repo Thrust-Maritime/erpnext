@@ -2,7 +2,6 @@ import json
 import unittest
 
 import frappe
-from six import string_types
 
 from erpnext.controllers.item_variant import copy_attributes_to_variant, make_variant_item_code
 from erpnext.stock.doctype.item.test_item import set_item_variant_settings
@@ -18,8 +17,9 @@ class TestItemVariant(unittest.TestCase):
 		variant = make_item_variant()
 		self.assertEqual(variant.get("quality_inspection_template"), "_Test QC Template")
 
+
 def create_variant_with_tables(item, args):
-	if isinstance(args, string_types):
+	if isinstance(args, str):
 		args = json.loads(args)
 
 	qc_name = make_quality_inspection_template()
@@ -40,6 +40,7 @@ def create_variant_with_tables(item, args):
 
 	return variant
 
+
 def make_item_variant():
 	frappe.delete_doc_if_exists("Item", "_Test Variant Item-XSL", force=1)
 	variant = create_variant_with_tables("_Test Variant Item", '{"Test Size": "Extra Small"}')
@@ -47,6 +48,7 @@ def make_item_variant():
 	variant.item_name = "_Test Variant Item-XSL"
 	variant.save()
 	return variant
+
 
 def make_quality_inspection_template():
 	qc_template = "_Test QC Template"

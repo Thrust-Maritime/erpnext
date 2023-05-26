@@ -79,6 +79,7 @@ class TestAccountingDimension(unittest.TestCase):
 	def tearDown(self):
 		disable_dimension()
 
+
 def create_dimension():
 	frappe.set_user("Administrator")
 
@@ -118,6 +119,7 @@ def create_dimension():
 		dimension1 = frappe.get_doc("Accounting Dimension", "Location")
 		dimension1.disabled = 0
 		dimension1.save()
+
 
 def disable_dimension():
 	dimension1 = frappe.get_doc("Accounting Dimension", "Department")

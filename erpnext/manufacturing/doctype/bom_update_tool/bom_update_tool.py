@@ -2,9 +2,7 @@
 # For license information, please see license.txt
 
 import json
-from typing import TYPE_CHECKING, Dict, Optional, Union
-
-from typing_extensions import Literal
+from typing import TYPE_CHECKING, Dict, Literal, Optional, Union
 
 if TYPE_CHECKING:
 	from erpnext.manufacturing.doctype.bom_update_log.bom_update_log import BOMUpdateLog

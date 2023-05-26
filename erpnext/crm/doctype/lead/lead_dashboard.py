@@ -4,6 +4,6 @@ def get_data():
 		"non_standard_fieldnames": {"Quotation": "party_name", "Opportunity": "party_name"},
 		"dynamic_links": {"party_name": ["Lead", "quotation_to"]},
 		"transactions": [
-			{"items": ["Opportunity", "Quotation"]},
+			{"items": ["Opportunity", "Quotation", "Prospect"]},
 		],
 	}
