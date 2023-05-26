@@ -1,0 +1,31 @@
+{
+ "add_total_row": 1,
+ "columns": [],
+ "creation": "2023-05-23 11:34:03.757421",
+ "disable_prepared_report": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "json": "{\"filters\":[[\"Opportunity\",\"status\",\"!=\",\"Lost\",false],[\"Opportunity\",\"status\",\"!=\",\"Closed\",false],[\"Opportunity\",\"status\",\"!=\",\"Converted\",false],[\"Opportunity\",\"probability\",\">\",80,false]],\"fields\":[[\"name\",\"Opportunity\"],[\"docstatus\",\"Opportunity\"],[\"title\",\"Opportunity\"],[\"customer_name\",\"Opportunity\"],[\"opportunity_type\",\"Opportunity\"],[\"status\",\"Opportunity\"],[\"opportunity_amount\",\"Opportunity\"],[\"probability\",\"Opportunity\"],[\"commence_date\",\"Opportunity\"]],\"order_by\":\"`tabOpportunity`.`modified` desc\",\"add_totals_row\":0,\"page_length\":100,\"column_widths\":{\"name\":120,\"title\":304,\"customer_name\":220,\"opportunity_type\":213,\"status\":120,\"opportunity_amount\":120,\"probability\":120,\"commence_date\":208},\"group_by\":null}",
+ "letter_head": "General TM",
+ "modified": "2023-05-23 11:40:20.236430",
+ "modified_by": "Administrator",
+ "module": "CRM",
+ "name": "Opportunity tracker",
+ "owner": "benhealy@thrustm.com",
+ "prepared_report": 0,
+ "ref_doctype": "Opportunity",
+ "report_name": "Opportunity tracker",
+ "report_type": "Report Builder",
+ "roles": [
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Sales Manager"
+  }
+ ]
+}

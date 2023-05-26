@@ -18,7 +18,10 @@ frappe.ui.form.on("Timesheet", {
 			return{
 				filters: {
 					'project': child.project,
-					'status': ["!=", "Cancelled"]
+					'type': ["=", "Timesheet"],
+					'status': ["!=", "Completed"]
+					//Amended by BH on 16NOV22.  Originally it was cancelled filter.  Above line added to make it filter by completed instead
+					//'status': ["!=", "Cancelled"],
 				}
 			};
 		};

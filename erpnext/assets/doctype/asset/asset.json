@@ -501,9 +501,14 @@
    "group": "Value",
    "link_doctype": "Asset Value Adjustment",
    "link_fieldname": "asset"
+  },
+  {
+   "group": "Maintenance",
+   "link_doctype": "Asset Maintenance Log",
+   "link_fieldname": "asset_name"
   }
  ],
- "modified": "2022-01-30 20:19:24.680027",
+ "modified": "2023-04-02 10:53:44.098954",
  "modified_by": "Administrator",
  "module": "Assets",
  "name": "Asset",

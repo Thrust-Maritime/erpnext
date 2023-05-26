@@ -228,7 +228,7 @@
    "label": "Order Type",
    "oldfieldname": "order_type",
    "oldfieldtype": "Select",
-   "options": "\nSales\nMaintenance\nShopping Cart",
+   "options": "\nSales",
    "print_hide": 1,
    "reqd": 1
   },
@@ -1547,11 +1547,10 @@
  "idx": 105,
  "is_submittable": 1,
  "links": [],
- "modified": "2022-04-26 14:38:18.350207",
+ "modified": "2023-05-25 18:02:43.084559",
  "modified_by": "Administrator",
  "module": "Selling",
  "name": "Sales Order",
- "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -1621,7 +1620,6 @@
  "show_name_in_global_search": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
  "timeline_field": "customer",
  "title_field": "customer_name",
  "track_changes": 1,
