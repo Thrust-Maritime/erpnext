@@ -101,7 +101,6 @@ def update_grand_total_for_rcm(doc, method):
 
 		update_totals(vat_tax, base_vat_tax, doc)
 
-
 def update_totals(vat_tax, base_vat_tax, doc):
 	"""Update the grand total values in the form."""
 	doc.base_grand_total -= base_vat_tax

@@ -161,7 +161,6 @@ def make_taxes_and_charges_template(company_name, doctype, template):
 	doc.insert(ignore_permissions=True)
 	return doc
 
-
 def make_item_tax_template(company_name, template):
 	"""Create an Item Tax Template.
 
@@ -204,7 +203,6 @@ def make_tax_category(tax_category):
 		doc.flags.ignore_links = True
 		doc.flags.ignore_validate = True
 		doc.insert(ignore_permissions=True)
-
 
 def get_or_create_account(company_name, account):
 	"""

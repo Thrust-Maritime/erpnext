@@ -328,14 +328,12 @@ def _set_missing_values(source, target):
 	if contact:
 		target.contact_person = contact[0].parent
 
-
 @frappe.whitelist()
 def get_lead_details(lead, posting_date=None, company=None):
 	if not lead:
 		return {}
 
 	from erpnext.accounts.party import set_address_details
-
 	out = frappe._dict()
 
 	lead_doc = frappe.get_doc("Lead", lead)

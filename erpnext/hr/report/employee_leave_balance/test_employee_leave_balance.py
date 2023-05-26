@@ -9,13 +9,11 @@ from frappe.utils import add_days, add_months, flt, get_year_ending, get_year_st
 
 from erpnext.hr.doctype.employee.test_employee import make_employee
 from erpnext.hr.doctype.holiday_list.test_holiday_list import set_holiday_list
-from erpnext.hr.doctype.leave_application.test_leave_application import (
-	get_first_sunday,
-	make_allocation_record,
-)
+from erpnext.hr.doctype.leave_application.test_leave_application import make_allocation_record
 from erpnext.hr.doctype.leave_ledger_entry.leave_ledger_entry import process_expired_allocation
 from erpnext.hr.doctype.leave_type.test_leave_type import create_leave_type
 from erpnext.hr.report.employee_leave_balance.employee_leave_balance import execute
+from erpnext.hr.tests.test_utils import get_first_sunday
 from erpnext.payroll.doctype.salary_slip.test_salary_slip import (
 	make_holiday_list,
 	make_leave_application,
@@ -156,7 +154,6 @@ class TestEmployeeLeaveBalance(unittest.TestCase):
 	@set_holiday_list("_Test Emp Balance Holiday List", "_Test Company")
 	def test_opening_balance_considers_carry_forwarded_leaves(self):
 		leave_type = create_leave_type(leave_type_name="_Test_CF_leave_expiry", is_carry_forward=1)
-		leave_type.insert()
 
 		# 30 leaves allocated for first half of the year
 		allocation1 = make_allocation_record(

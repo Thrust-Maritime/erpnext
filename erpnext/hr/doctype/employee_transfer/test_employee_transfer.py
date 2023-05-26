@@ -4,6 +4,7 @@
 import unittest
 
 import frappe
+from frappe.tests.utils import change_settings
 from frappe.utils import add_days, getdate
 
 from erpnext.hr.doctype.employee.test_employee import make_employee
@@ -80,12 +81,14 @@ class TestEmployeeTransfer(unittest.TestCase):
 		department = ["Accounts - TC", "Management - TC"]
 		designation = ["Accountant", "Manager"]
 		dt = [getdate("01-10-2021"), getdate()]
+		to_date = [add_days(dt[1], -1), None]
 
 		employee = frappe.get_doc("Employee", employee)
 		for data in employee.internal_work_history:
 			self.assertEqual(data.department, department[count])
 			self.assertEqual(data.designation, designation[count])
 			self.assertEqual(data.from_date, dt[count])
+			self.assertEqual(data.to_date, to_date[count])
 			count = count + 1
 
 		transfer.cancel()
@@ -95,6 +98,17 @@ class TestEmployeeTransfer(unittest.TestCase):
 			self.assertEqual(data.designation, designation[0])
 			self.assertEqual(data.department, department[0])
 			self.assertEqual(data.from_date, dt[0])
+			self.assertEqual(data.to_date, None)
+
+	@change_settings("System Settings", {"number_format": "#.###,##"})
+	def test_data_formatting_in_history(self):
+		from erpnext.hr.utils import get_formatted_value
+
+		value = get_formatted_value("12.500,00", "Float")
+		self.assertEqual(value, 12500.0)
+
+		value = get_formatted_value("12.500,00", "Currency")
+		self.assertEqual(value, 12500.0)
 
 
 def create_company():

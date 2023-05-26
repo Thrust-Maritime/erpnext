@@ -225,7 +225,6 @@ def update_value_in_parent_warehouse(
 @frappe.whitelist()
 def add_node():
 	from frappe.desk.treeview import make_tree_args
-
 	args = make_tree_args(**frappe.form_dict)
 
 	if cint(args.is_root):

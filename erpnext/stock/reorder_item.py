@@ -265,5 +265,4 @@ def notify_errors(exceptions_list):
 	content += _("Regards,") + "<br>" + _("Administrator")
 
 	from frappe.email import sendmail_to_system_managers
-
 	sendmail_to_system_managers(subject, content)

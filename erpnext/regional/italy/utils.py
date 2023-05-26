@@ -102,7 +102,6 @@ def prepare_invoice(invoice, progressive_number):
 
 	return invoice
 
-
 def get_conditions(filters):
 	filters = json.loads(filters)
 
@@ -442,7 +441,6 @@ def get_e_invoice_attachments(invoices):
 
 	return out
 
-
 def validate_address(address_name):
 	fields = ["pincode", "city", "country_code"]
 	data = frappe.get_cached_value("Address", address_name, fields, as_dict=1) or {}
@@ -465,7 +463,6 @@ def get_unamended_name(doc):
 		return "-".join(doc.name.split("-")[:-1])
 	else:
 		return doc.name
-
 
 def get_progressive_name_and_number(doc, replace=False):
 	if replace:

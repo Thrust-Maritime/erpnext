@@ -70,11 +70,11 @@ def get_children(doctype, parent=None, company=None, is_root=False):
 		select
 			name as value,
 			is_group as expandable
-		from `tab{doctype}`
+		from `tabDepartment`
 		where
 			{condition}
 		order by name""".format(
-			doctype=doctype, condition=condition
+			condition=condition
 		),
 		var_dict,
 		as_dict=1,
@@ -84,7 +84,6 @@ def get_children(doctype, parent=None, company=None, is_root=False):
 @frappe.whitelist()
 def add_node():
 	from frappe.desk.treeview import make_tree_args
-
 	args = frappe.form_dict
 	args = make_tree_args(**args)
 

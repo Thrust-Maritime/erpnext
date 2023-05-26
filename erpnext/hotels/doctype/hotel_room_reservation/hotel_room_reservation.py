@@ -103,7 +103,6 @@ class HotelRoomReservation(Document):
 			d.amount = net_rate * flt(d.qty)
 			self.net_total += d.amount
 
-
 @frappe.whitelist()
 def get_room_rate(hotel_room_reservation):
 	"""Calculate rate for each day as it may belong to different Hotel Room Pricing Item"""

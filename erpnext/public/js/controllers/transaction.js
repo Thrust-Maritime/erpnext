@@ -1,7 +1,6 @@
 // Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 // License: GNU General Public License v3. See license.txt
 
-frappe.provide('erpnext.accounts.dimensions');
 
 erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 	setup: function() {
@@ -319,8 +318,8 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 		});
 	},
 
-	make_payment_request: function() {
-		var me = this;
+	make_payment_request() {
+		let me = this;
 		const payment_request_type = (in_list(['Sales Order', 'Sales Invoice'], this.frm.doc.doctype))
 			? "Inward" : "Outward";
 
@@ -336,7 +335,7 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 			},
 			callback: function(r) {
 				if(!r.exc){
-					var doc = frappe.model.sync(r.message);
+					frappe.model.sync(r.message);
 					frappe.set_route("Form", r.message.doctype, r.message.name);
 				}
 			}
@@ -567,6 +566,7 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 			if(!this.validate_company_and_party()) {
 				this.frm.fields_dict["items"].grid.grid_rows[item.idx - 1].remove();
 			} else {
+				item.pricing_rules = ''
 				return this.frm.call({
 					method: "erpnext.stock.get_item_details.get_item_details",
 					child: item,
@@ -593,7 +593,6 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 							is_pos: cint(me.frm.doc.is_pos),
 							is_return: cint(me.frm.doc.is_return),
 							is_subcontracted: me.frm.doc.is_subcontracted,
-							transaction_date: me.frm.doc.transaction_date || me.frm.doc.posting_date,
 							ignore_pricing_rule: me.frm.doc.ignore_pricing_rule,
 							doctype: me.frm.doc.doctype,
 							name: me.frm.doc.name,
@@ -932,24 +931,6 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 				set_party_account(set_pricing);
 			});
 
-			// Get default company billing address in Purchase Invoice, Order and Receipt
-			if (this.frm.doc.company && frappe.meta.get_docfield(this.frm.doctype, "billing_address")) {
-				frappe.call({
-					method: "erpnext.setup.doctype.company.company.get_default_company_address",
-					args: {name: this.frm.doc.company, existing_address: this.frm.doc.billing_address || ""},
-					debounce: 2000,
-					callback: function(r) {
-						if (r.message) {
-							me.frm.set_value("billing_address", r.message);
-						} else {
-							if (frappe.meta.get_docfield(me.frm.doctype, 'company_address')) {
-								me.frm.set_value("company_address", "");
-							}
-						}
-					}
-				});
-			}
-
 		} else {
 			set_party_account(set_pricing);
 		}
@@ -1201,6 +1182,7 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 	uom: function(doc, cdt, cdn) {
 		var me = this;
 		var item = frappe.get_doc(cdt, cdn);
+		item.pricing_rules = ''
 		if(item.item_code && item.uom) {
 			return this.frm.call({
 				method: "erpnext.stock.get_item_details.get_conversion_factor",
@@ -1245,9 +1227,25 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 		}
 	},
 
+	is_a_mapped_document(item) {
+		const mapped_item_field_map = {
+			"Delivery Note Item": ["si_detail", "so_detail", "dn_detail"],
+			"Sales Invoice Item": ["dn_detail", "so_detail", "sales_invoice_item"],
+			"Purchase Receipt Item": ["purchase_order_item", "purchase_invoice_item", "purchase_receipt_item"],
+			"Purchase Invoice Item": ["purchase_order_item", "pr_detail", "po_detail"],
+		};
+		const mappped_fields = mapped_item_field_map[item.doctype] || [];
+
+		return mappped_fields
+			.map((field) => item[field])
+			.filter(Boolean).length > 0;
+	},
+
 	batch_no: function(doc, cdt, cdn) {
 		let item = frappe.get_doc(cdt, cdn);
-		this.apply_price_list(item, true);
+		if (!this.is_a_mapped_document(item)) {
+			this.apply_price_list(item, true);
+		}
 	},
 
 	toggle_conversion_factor: function(item) {
@@ -1261,6 +1259,7 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 
 	qty: function(doc, cdt, cdn) {
 		let item = frappe.get_doc(cdt, cdn);
+		item.pricing_rules = ''
 		this.conversion_factor(doc, cdt, cdn, true);
 		this.calculate_stock_uom_rate(doc, cdt, cdn);
 		this.apply_pricing_rule(item, true);
@@ -1803,6 +1802,10 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 		var me = this;
 		var valid = true;
 
+		if (frappe.flags.ignore_company_party_validation) {
+			return valid;
+		}
+
 		$.each(["company", "customer"], function(i, fieldname) {
 			if(frappe.meta.has_field(me.frm.doc.doctype, fieldname) && me.frm.doc.doctype != "Purchase Order") {
 				if (!me.frm.doc[fieldname]) {
@@ -1993,32 +1996,74 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 
 	get_advances: function() {
 		if(!this.frm.is_return) {
+			var me = this;
 			return this.frm.call({
 				method: "set_advances",
 				doc: this.frm.doc,
 				callback: function(r, rt) {
 					refresh_field("advances");
+					me.frm.dirty();
 				}
 			})
 		}
 	},
 
-	make_payment_entry: function() {
+	make_payment_entry() {
+		let via_journal_entry = this.frm.doc.__onload && this.frm.doc.__onload.make_payment_via_journal_entry;
+		if(this.has_discount_in_schedule() && !via_journal_entry) {
+			// If early payment discount is applied, ask user for reference date
+			this.prompt_user_for_reference_date();
+		} else {
+			this.make_mapped_payment_entry();
+		}
+	},
+
+	make_mapped_payment_entry(args) {
+		var me = this;
+		args = args || { "dt": this.frm.doc.doctype, "dn": this.frm.doc.name };
 		return frappe.call({
-			method: cur_frm.cscript.get_method_for_payment(),
-			args: {
-				"dt": cur_frm.doc.doctype,
-				"dn": cur_frm.doc.name
-			},
+			method: me.get_method_for_payment(),
+			args: args,
 			callback: function(r) {
 				var doclist = frappe.model.sync(r.message);
 				frappe.set_route("Form", doclist[0].doctype, doclist[0].name);
-				// cur_frm.refresh_fields()
 			}
 		});
 	},
 
-	make_quality_inspection: function () {
+	prompt_user_for_reference_date(){
+		let me = this;
+		frappe.prompt({
+			label: __("Cheque/Reference Date"),
+			fieldname: "reference_date",
+			fieldtype: "Date",
+			reqd: 1,
+		}, (values) => {
+			let args = {
+				"dt": me.frm.doc.doctype,
+				"dn": me.frm.doc.name,
+				"reference_date": values.reference_date
+			}
+			me.make_mapped_payment_entry(args);
+		},
+		__("Reference Date for Early Payment Discount"),
+		__("Continue")
+		);
+	},
+
+	has_discount_in_schedule() {
+		let is_eligible = in_list(
+			["Sales Order", "Sales Invoice", "Purchase Order", "Purchase Invoice"],
+			this.frm.doctype
+		);
+		let has_payment_schedule = this.frm.doc.payment_schedule && this.frm.doc.payment_schedule.length;
+		if(!is_eligible || !has_payment_schedule) return false;
+
+		let has_discount = this.frm.doc.payment_schedule.some(row => row.discount);
+		return has_discount;
+	},
+
+	make_quality_inspection() {
 		let data = [];
 		const fields = [
 			{
@@ -2128,7 +2173,8 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 					"qty": item.qty,
 					"description": item.description,
 					"serial_no": item.serial_no,
-					"batch_no": item.batch_no
+					"batch_no": item.batch_no,
+					"sample_size": item.sample_quantity
 				});
 				dialog_items.grid.refresh();
 			}

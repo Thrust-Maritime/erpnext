@@ -776,11 +776,9 @@ def update_delivery_note_status(docname, status):
 	dn = frappe.get_doc("Delivery Note", docname)
 	dn.update_status(status)
 
-
 @frappe.whitelist()
 def make_inter_company_purchase_receipt(source_name, target_doc=None):
 	return make_inter_company_transaction("Delivery Note", source_name, target_doc)
-
 
 def make_inter_company_transaction(doctype, source_name, target_doc=None):
 	from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
@@ -831,6 +829,9 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 			update_address(target_doc, "supplier_address", "address_display", source_doc.company_address)
 			update_address(
 				target_doc, "shipping_address", "shipping_address_display", source_doc.customer_address
+			)
+			update_address(
+				target_doc, "billing_address", "billing_address_display", source_doc.customer_address
 			)
 
 			update_taxes(

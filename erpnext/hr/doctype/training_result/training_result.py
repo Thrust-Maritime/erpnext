@@ -28,7 +28,6 @@ class TrainingResult(Document):
 
 		training_event.save()
 
-
 @frappe.whitelist()
 def get_employees(training_event):
 	return frappe.get_doc("Training Event", training_event).employees

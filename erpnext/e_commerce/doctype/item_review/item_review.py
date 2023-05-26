@@ -18,7 +18,6 @@ from erpnext.e_commerce.doctype.e_commerce_settings.e_commerce_settings import (
 class UnverifiedReviewer(frappe.ValidationError):
 	pass
 
-
 class ItemReview(Document):
 	def after_insert(self):
 		# regenerate cache on review creation

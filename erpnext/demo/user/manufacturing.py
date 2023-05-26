@@ -77,7 +77,6 @@ def work():
 	if random.random() < 0.4:
 		submit_job_cards()
 
-
 def make_stock_entry_from_pro(pro_id, purpose):
 	from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 	from erpnext.stock.doctype.stock_entry.stock_entry import (

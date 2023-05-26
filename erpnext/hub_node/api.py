@@ -111,7 +111,6 @@ def get_valid_items(search_value=""):
 
 	return valid_items
 
-
 @frappe.whitelist()
 def update_item(ref_doc, data):
 	data = json.loads(data)

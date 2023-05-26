@@ -24,7 +24,6 @@ class object_dict(dict):
 	>>> a.test, a.test2.name, a.test2.value
 	(1, 'test2', 2)
 	"""
-
 	def __init__(self, initd=None):
 		if initd is None:
 			initd = {}

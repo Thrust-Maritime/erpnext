@@ -180,7 +180,6 @@ def validate_expense_against_budget(args):
 			if budget_records:
 				validate_budget_records(args, budget_records)
 
-
 def validate_budget_records(args, budget_records):
 	for budget in budget_records:
 		if flt(budget.budget_amount):

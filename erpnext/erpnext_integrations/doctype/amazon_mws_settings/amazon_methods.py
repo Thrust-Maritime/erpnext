@@ -144,7 +144,6 @@ def call_mws_method(mws_method, *args, **kwargs):
 
 	frappe.throw(_("Sync has been temporarily disabled because maximum retries have been exceeded"))
 
-
 def create_item_code(amazon_item_json, sku):
 	if frappe.db.get_value("Item", sku):
 		return
@@ -182,7 +181,6 @@ def create_item_code(amazon_item_json, sku):
 
 	return item.name
 
-
 def create_manufacturer(amazon_item_json):
 	if not amazon_item_json.Product.AttributeSets.ItemAttributes.Manufacturer:
 		return None
@@ -199,7 +197,6 @@ def create_manufacturer(amazon_item_json):
 		return manufacturer.short_name
 	else:
 		return existing_manufacturer
-
 
 def create_brand(amazon_item_json):
 	if not amazon_item_json.Product.AttributeSets.ItemAttributes.Brand:
@@ -474,7 +471,6 @@ def get_order_items(market_place_order_id):
 		order_items_list = return_as_list(order_items_response.parsed.OrderItems.OrderItem)
 
 	return final_order_items
-
 
 def get_item_code(order_item):
 	sku = order_item.SellerSKU

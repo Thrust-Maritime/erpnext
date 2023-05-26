@@ -36,12 +36,10 @@ class Account(NestedSet):
 
 	def autoname(self):
 		from erpnext.accounts.utils import get_autoname_with_number
-
 		self.name = get_autoname_with_number(self.account_number, self.account_name, None, self.company)
 
 	def validate(self):
 		from erpnext.accounts.utils import validate_field_number
-
 		if frappe.local.flags.allow_unverified_charts:
 			return
 		self.validate_parent()
@@ -430,7 +428,6 @@ def update_account_number(name, account_name, account_number=None, from_descenda
 	if name != new_name:
 		frappe.rename_doc("Account", name, new_name, force=1)
 		return new_name
-
 
 @frappe.whitelist()
 def merge_account(old, new, is_group, root_type, company):

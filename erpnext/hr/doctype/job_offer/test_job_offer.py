@@ -12,7 +12,6 @@ from erpnext.hr.doctype.staffing_plan.test_staffing_plan import make_company
 
 # test_records = frappe.get_test_records('Job Offer')
 
-
 class TestJobOffer(unittest.TestCase):
 	def test_job_offer_creation_against_vacancies(self):
 		frappe.db.set_value("HR Settings", None, "check_vacancies", 1)
@@ -50,7 +49,6 @@ class TestJobOffer(unittest.TestCase):
 
 	def tearDown(self):
 		frappe.db.sql("DELETE FROM `tabJob Offer` WHERE 1")
-
 
 def create_job_offer(**args):
 	args = frappe._dict(args)

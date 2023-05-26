@@ -15,10 +15,20 @@ frappe.ui.form.on("Request for Quotation",{
 		frm.fields_dict["suppliers"].grid.get_field("contact").get_query = function(doc, cdt, cdn) {
 			let d = locals[cdt][cdn];
 			return {
-				query: "erpnext.buying.doctype.request_for_quotation.request_for_quotation.get_supplier_contacts",
-				filters: {'supplier': d.supplier}
-			}
+				query: "frappe.contacts.doctype.contact.contact.contact_query",
+				filters: {
+					link_doctype: "Supplier",
+					link_name: d.supplier || ""
+				}
+			};
 		}
+
+		frm.set_query('warehouse', 'items', () => ({
+			filters: {
+				company: frm.doc.company,
+				is_group: 0
+			}
+		}));
 	},
 
 	onload: function(frm) {

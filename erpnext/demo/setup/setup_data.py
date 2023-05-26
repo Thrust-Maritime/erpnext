@@ -90,7 +90,6 @@ def setup_demo_page():
 	website_settings.home_page = "demo"
 	website_settings.save()
 
-
 def setup_fiscal_year():
 	fiscal_year = None
 	for year in range(2010, now_datetime().year + 1, 1):

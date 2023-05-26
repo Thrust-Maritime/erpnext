@@ -52,7 +52,6 @@ def execute(filters=None):
 
 	return columns, data, None, chart
 
-
 def get_final_data(dimension, dimension_items, filters, period_month_ranges, data, DCC_allocation):
 	for account, monthwise_data in iteritems(dimension_items):
 		row = [dimension, account]
@@ -313,7 +312,6 @@ def get_actual_details(name, filters):
 		cc_actual_details.setdefault(d.account, []).append(d)
 
 	return cc_actual_details
-
 
 def get_dimension_account_month_map(filters):
 	dimension_target_details = get_dimension_target_details(filters)

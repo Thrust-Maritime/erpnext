@@ -37,7 +37,6 @@ def get_data_column(filters, partner_doctype):
 
 	return columns, data
 
-
 def get_data(filters, period_list, partner_doctype):
 	sales_field = frappe.scrub(partner_doctype)
 	sales_users_data = get_parents_data(filters, partner_doctype)
@@ -184,7 +183,6 @@ def prepare_data(filters, sales_users_data, actual_data, date_field, period_list
 			details["total_variance"] = details.get("total_achieved") - details.get("total_target")
 
 	return rows
-
 
 def get_actual_data(filters, item_groups, sales_users_or_territory_data, date_field, sales_field):
 	fiscal_year = get_fiscal_year(fiscal_year=filters.get("fiscal_year"), as_dict=1)

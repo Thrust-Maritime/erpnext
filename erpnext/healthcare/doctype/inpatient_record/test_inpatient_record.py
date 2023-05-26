@@ -132,7 +132,6 @@ class TestInpatientRecord(unittest.TestCase):
 		self.assertRaises(frappe.ValidationError, ip_record_new.save)
 		frappe.db.sql("""delete from `tabInpatient Record`""")
 
-
 def mark_invoiced_inpatient_occupancy(ip_record):
 	if ip_record.inpatient_occupancies:
 		for inpatient_occupancy in ip_record.inpatient_occupancies:

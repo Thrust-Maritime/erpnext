@@ -17,7 +17,6 @@ from erpnext.hr.utils import get_holiday_dates_for_employee
 class UploadAttendance(Document):
 	pass
 
-
 @frappe.whitelist()
 def get_template():
 	if not frappe.has_permission("Attendance", "create"):
@@ -106,7 +105,6 @@ def get_data(args):
 
 	return data
 
-
 def get_holidays_for_employees(employees, from_date, to_date):
 	holidays = {}
 	for employee in employees:
@@ -117,11 +115,9 @@ def get_holidays_for_employees(employees, from_date, to_date):
 
 	return holidays
 
-
 def writedata(w, data):
 	for row in data:
 		w.writerow(row)
-
 
 def get_dates(args):
 	"""get list of dates in between from date and to date"""
@@ -153,7 +149,6 @@ def get_existing_attendance_records(args):
 
 	return existing_attendance
 
-
 def get_naming_series():
 	series = frappe.get_meta("Attendance").get_field("naming_series").options.strip().split("\n")
 	if not series:
@@ -167,7 +162,6 @@ def upload():
 		raise frappe.PermissionError
 
 	from frappe.utils.csvutils import read_csv_content
-
 	rows = read_csv_content(frappe.local.uploaded_file)
 	if not rows:
 		frappe.throw(_("Please select a csv file"))

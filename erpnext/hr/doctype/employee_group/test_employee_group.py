@@ -28,7 +28,6 @@ def make_employee_group():
 	else:
 		return employee_group_exist
 
-
 def get_employee_group():
 	employee_group = frappe.db.exists("Employee Group", "_Test Employee Group")
 	return employee_group

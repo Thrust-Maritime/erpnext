@@ -58,7 +58,6 @@ def get_variables(criteria_name):
 	criteria = frappe.get_doc("Supplier Scorecard Criteria", criteria_name)
 	return _get_variables(criteria)
 
-
 def _get_variables(criteria):
 	my_variables = []
 	regex = r"\{(.*?)\}"

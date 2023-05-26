@@ -79,7 +79,6 @@ def work():
 				je.flags.ignore_permissions = 1
 				je.submit()
 
-
 def get_payroll_entry():
 	# process payroll for previous month
 	payroll_entry = frappe.new_doc("Payroll Entry")
@@ -173,7 +172,6 @@ def make_timesheet_records():
 		rand = random.random()
 		if rand >= 0.2:
 			make_sales_invoice_for_timesheet(ts.name)
-
 
 def make_salary_slip_for_timesheet(name):
 	salary_slip = make_salary_slip(name)

@@ -141,6 +141,9 @@ class Customer(TransactionBase):
 				)
 
 	def validate_internal_customer(self):
+		if not self.is_internal_customer:
+			self.represents_company = ""
+
 		internal_customer = frappe.db.get_value(
 			"Customer",
 			{
@@ -280,18 +283,9 @@ class Customer(TransactionBase):
 
 	def on_trash(self):
 		if self.customer_primary_contact:
-			frappe.db.sql(
-				"""
-				UPDATE `tabCustomer`
-				SET
-					customer_primary_contact=null,
-					customer_primary_address=null,
-					mobile_no=null,
-					email_id=null,
-					primary_address=null
-				WHERE name=%(name)s""",
-				{"name": self.name},
-			)
+			self.db_set("customer_primary_contact", None)
+		if self.customer_primary_address:
+			self.db_set("customer_primary_address", None)
 
 		delete_contact_and_address("Customer", self.name)
 		if self.lead_name:
@@ -363,7 +357,6 @@ def make_quotation(source_name, target_doc=None):
 
 	return target_doc
 
-
 @frappe.whitelist()
 def make_opportunity(source_name, target_doc=None):
 	def set_missing_values(source, target):
@@ -416,7 +409,6 @@ def _set_missing_values(source, target):
 
 	if contact:
 		target.contact_person = contact[0].parent
-
 
 @frappe.whitelist()
 def make_quotation(source_name, target_doc=None):
@@ -513,7 +505,6 @@ def get_loyalty_programs(doc):
 
 	return lp_details
 
-
 def get_nested_links(link_doctype, link_name, ignore_permissions=False):
 	from frappe.desk.treeview import _get_children
 
@@ -523,12 +514,10 @@ def get_nested_links(link_doctype, link_name, ignore_permissions=False):
 
 	return links
 
-
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
 def get_customer_list(doctype, txt, searchfield, start, page_len, filters=None):
 	from erpnext.controllers.queries import get_fields
-
 	fields = ["name", "customer_name", "customer_group", "territory"]
 
 	if frappe.db.get_default("cust_master_name") == "Customer Name":

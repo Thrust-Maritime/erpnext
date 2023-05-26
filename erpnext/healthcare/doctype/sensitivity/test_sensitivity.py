@@ -5,6 +5,5 @@ import unittest
 
 # test_records = frappe.get_test_records('Sensitivity')
 
-
 class TestSensitivity(unittest.TestCase):
 	pass

@@ -67,7 +67,6 @@ class SalesPerson(NestedSet):
 def on_doctype_update():
 	frappe.db.add_index("Sales Person", ["lft", "rgt"])
 
-
 def get_timeline_data(doctype, name):
 
 	out = {}

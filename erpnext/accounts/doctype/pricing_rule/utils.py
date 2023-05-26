@@ -62,7 +62,6 @@ def get_pricing_rules(args, doc=None):
 
 	return rules
 
-
 def sorted_by_priority(pricing_rules, args, doc=None):
 	# If more than one pricing rules, then sort by priority
 	pricing_rules_list = []
@@ -117,6 +116,12 @@ def _get_pricing_rules(apply_on, args, values):
 		)
 
 		if apply_on_field == "item_code":
+			if args.get("uom", None):
+				item_conditions += (
+					" and ({child_doc}.uom='{item_uom}' or IFNULL({child_doc}.uom, '')='')".format(
+						child_doc=child_doc, item_uom=args.get("uom")
+					)
+				)
 			if "variant_of" not in args:
 				args.variant_of = frappe.get_cached_value("Item", args.item_code, "variant_of")
 
@@ -127,7 +132,12 @@ def _get_pricing_rules(apply_on, args, values):
 				values["variant_of"] = args.variant_of
 	elif apply_on_field == "item_group":
 		item_conditions = _get_tree_conditions(args, "Item Group", child_doc, False)
-
+		if args.get("uom", None):
+			item_conditions += (
+				" and ({child_doc}.uom='{item_uom}' or IFNULL({child_doc}.uom, '')='')".format(
+					child_doc=child_doc, item_uom=args.get("uom")
+				)
+			)
 	conditions += get_other_conditions(conditions, values, args)
 	warehouse_conditions = _get_tree_conditions(args, "Warehouse", "`tabPricing Rule`")
 	if warehouse_conditions:
@@ -224,7 +234,6 @@ def _get_tree_conditions(args, parenttype, table, allow_blank=True):
 
 			frappe.flags.tree_conditions[key] = condition
 	return condition
-
 
 def get_other_conditions(conditions, values, args):
 	for field in ["company", "customer", "supplier", "campaign", "sales_partner"]:
@@ -374,7 +383,6 @@ def validate_quantity_and_amount_for_suggestion(args, qty, amount, item_code, tr
 
 	return msg
 
-
 def filter_pricing_rules_for_qty_amount(qty, rate, pricing_rules, args=None):
 	rules = []
 
@@ -407,7 +415,6 @@ def filter_pricing_rules_for_qty_amount(qty, rate, pricing_rules, args=None):
 
 	return rules
 
-
 def if_all_rules_same(pricing_rules, fields):
 	all_rules_same = True
 	val = [pricing_rules[0].get(k) for k in fields]
@@ -417,7 +424,6 @@ def if_all_rules_same(pricing_rules, fields):
 			break
 
 	return all_rules_same
-
 
 def apply_internal_priority(pricing_rules, field_set, args):
 	filtered_rules = []
@@ -459,7 +465,6 @@ def get_qty_and_rate_for_mixed_conditions(doc, pr_doc, args):
 
 	return sum_qty, sum_amt, items
 
-
 def get_qty_and_rate_for_other_item(doc, pr_doc, pricing_rules):
 	items = get_pricing_rule_items(pr_doc)
 
@@ -472,7 +477,6 @@ def get_qty_and_rate_for_other_item(doc, pr_doc, pricing_rules):
 			if pricing_rules and pricing_rules[0]:
 				pricing_rules[0].apply_rule_on_other_items = items
 				return pricing_rules
-
 
 def get_qty_amount_data_for_cumulative(pr_doc, doc, items=None):
 	if items is None:
@@ -592,7 +596,6 @@ def apply_pricing_rule_on_transaction(doc):
 				doc.set_missing_values()
 				doc.calculate_taxes_and_totals()
 
-
 def remove_free_item(doc):
 	for d in doc.items:
 		if d.is_free_item:
@@ -681,7 +684,6 @@ def get_pricing_rule_items(pr_doc):
 		apply_on_data.append(pr_doc.get("other_" + apply_on))
 
 	return list(set(apply_on_data))
-
 
 def validate_coupon_code(coupon_name):
 	coupon = frappe.get_doc("Coupon Code", coupon_name)

@@ -36,7 +36,6 @@ def new_doc(document):
 
 	return doc
 
-
 class TallyMigration(Document):
 	def validate(self):
 		failed_import_log = json.loads(self.failed_import_log)
@@ -302,6 +301,7 @@ class TallyMigration(Document):
 		frappe.publish_realtime(
 			"tally_migration_progress_update",
 			{"title": title, "message": message, "count": count, "total": total},
+			user=self.modified_by,
 		)
 
 	def _import_master_data(self):

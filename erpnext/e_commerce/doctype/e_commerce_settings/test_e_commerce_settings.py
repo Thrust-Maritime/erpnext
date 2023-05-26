@@ -49,5 +49,4 @@ def setup_e_commerce_settings(values_dict):
 	doc.update(values_dict)
 	doc.save()
 
-
 test_dependencies = ["Tax Rule"]

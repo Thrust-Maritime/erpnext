@@ -10,7 +10,6 @@ from erpnext.hr.doctype.employee.test_employee import make_employee
 
 test_dependencies = ["Shift Type"]
 
-
 class TestShiftRequest(unittest.TestCase):
 	def setUp(self):
 		for doctype in ["Shift Request", "Shift Assignment"]:

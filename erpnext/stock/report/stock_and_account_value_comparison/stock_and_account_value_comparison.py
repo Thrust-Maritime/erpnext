@@ -23,7 +23,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_data(report_filters):
 	data = []
 
@@ -41,7 +40,7 @@ def get_data(report_filters):
 		key = (d.voucher_type, d.voucher_no)
 		gl_data = voucher_wise_gl_data.get(key) or {}
 		d.account_value = gl_data.get("account_value", 0)
-		d.difference_value = abs(d.stock_value - d.account_value)
+		d.difference_value = d.stock_value - d.account_value
 		if abs(d.difference_value) > 0.1:
 			data.append(d)
 
@@ -99,7 +98,6 @@ def get_gl_data(report_filters, filters):
 		voucher_wise_gl_data[key] = d
 
 	return voucher_wise_gl_data
-
 
 def get_columns(filters):
 	return [

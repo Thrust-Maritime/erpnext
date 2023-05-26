@@ -20,7 +20,6 @@ class TestShipment(FrappeTestCase):
 		self.assertEqual(len(second_shipment.shipment_delivery_note), 1)
 		self.assertEqual(second_shipment.shipment_delivery_note[0].delivery_note, delivery_note.name)
 
-
 def create_test_delivery_note():
 	company = get_shipment_company()
 	customer = get_shipment_customer()

@@ -9,7 +9,6 @@ import frappe.utils
 
 # test_records = frappe.get_test_records('Daily Work Summary')
 
-
 class TestDailyWorkSummary(unittest.TestCase):
 	def test_email_trigger(self):
 		self.setup_and_prepare_test()

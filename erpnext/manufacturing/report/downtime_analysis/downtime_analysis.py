@@ -42,7 +42,6 @@ def get_data(filters):
 
 	return data
 
-
 def get_chart_data(data, columns):
 	labels = sorted(list(set([d.workstation for d in data])))
 
@@ -63,7 +62,6 @@ def get_chart_data(data, columns):
 	}
 
 	return chart
-
 
 def get_columns(filters):
 	return [

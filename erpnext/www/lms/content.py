@@ -45,13 +45,11 @@ def get_context(context):
 	context.previous = get_previous_content(content_list, context.position)
 	context.next = get_next_content(content_list, context.position)
 
-
 def get_next_content(content_list, current_index):
 	try:
 		return content_list[current_index + 1]
 	except IndexError:
 		return None
-
 
 def get_previous_content(content_list, current_index):
 	if current_index == 0:

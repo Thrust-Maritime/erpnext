@@ -453,7 +453,6 @@ class TestPutawayRule(FrappeTestCase):
 		rule_1.delete()
 		rule_2.delete()
 
-
 def create_putaway_rule(**args):
 	args = frappe._dict(args)
 	putaway = frappe.new_doc("Putaway Rule")

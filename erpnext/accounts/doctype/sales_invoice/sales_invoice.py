@@ -7,17 +7,7 @@ from frappe import _, msgprint, throw
 from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.utils import get_fetch_values
-from frappe.utils import (
-	add_days,
-	add_months,
-	cint,
-	cstr,
-	flt,
-	formatdate,
-	get_link_to_form,
-	getdate,
-	nowdate,
-)
+from frappe.utils import add_days, cint, cstr, flt, formatdate, get_link_to_form, getdate, nowdate
 from six import iteritems
 
 import erpnext
@@ -33,10 +23,12 @@ from erpnext.accounts.general_ledger import get_round_off_account_and_cost_cente
 from erpnext.accounts.party import get_due_date, get_party_account, get_party_details
 from erpnext.accounts.utils import get_account_currency
 from erpnext.assets.doctype.asset.depreciation import (
+	depreciate_asset,
 	get_disposal_account_and_cost_center,
 	get_gl_entries_on_asset_disposal,
 	get_gl_entries_on_asset_regain,
-	make_depreciation_entry,
+	reset_depreciation_schedule,
+	reverse_depreciation_entry_made_after_disposal,
 )
 from erpnext.controllers.accounts_controller import validate_account_head
 from erpnext.controllers.selling_controller import SellingController
@@ -116,6 +108,7 @@ class SalesInvoice(SellingController):
 		self.set_income_account_for_fixed_assets()
 		self.validate_item_cost_centers()
 		self.validate_income_account()
+		self.check_conversion_rate()
 
 		validate_inter_company_party(
 			self.doctype, self.customer, self.company, self.inter_company_invoice_reference
@@ -1042,7 +1035,7 @@ class SalesInvoice(SellingController):
 		)
 
 		if grand_total and not self.is_internal_transfer():
-			# Didnot use base_grand_total to book rounding loss gle
+			# Did not use base_grand_total to book rounding loss gle
 			gl_entries.append(
 				self.get_gl_dict(
 					{
@@ -1122,17 +1115,19 @@ class SalesInvoice(SellingController):
 						asset.db_set("disposal_date", None)
 
 						if asset.calculate_depreciation:
-							self.reverse_depreciation_entry_made_after_sale(asset)
-							self.reset_depreciation_schedule(asset)
+							posting_date = frappe.db.get_value("Sales Invoice", self.return_against, "posting_date")
+							reverse_depreciation_entry_made_after_disposal(asset, posting_date)
+							reset_depreciation_schedule(asset, self.posting_date)
 
 					else:
+						if asset.calculate_depreciation:
+							depreciate_asset(asset, self.posting_date)
+							asset.reload()
+
 						fixed_asset_gl_entries = get_gl_entries_on_asset_disposal(
 							asset, item.base_net_amount, item.finance_book
 						)
 						asset.db_set("disposal_date", self.posting_date)
-
-						if asset.calculate_depreciation:
-							self.depreciate_asset(asset)
 
 					for gle in fixed_asset_gl_entries:
 						gle["against"] = self.customer
@@ -1194,93 +1189,6 @@ class SalesInvoice(SellingController):
 			frappe.throw(
 				_("Select finance book for the item {0} at row {1}").format(item.item_code, item.idx)
 			)
-
-	def depreciate_asset(self, asset):
-		asset.flags.ignore_validate_update_after_submit = True
-		asset.prepare_depreciation_data(date_of_sale=self.posting_date)
-		asset.save()
-
-		make_depreciation_entry(asset.name, self.posting_date)
-
-	def reset_depreciation_schedule(self, asset):
-		asset.flags.ignore_validate_update_after_submit = True
-
-		# recreate original depreciation schedule of the asset
-		asset.prepare_depreciation_data(date_of_return=self.posting_date)
-
-		self.modify_depreciation_schedule_for_asset_repairs(asset)
-		asset.save()
-
-	def modify_depreciation_schedule_for_asset_repairs(self, asset):
-		asset_repairs = frappe.get_all(
-			"Asset Repair", filters={"asset": asset.name}, fields=["name", "increase_in_asset_life"]
-		)
-
-		for repair in asset_repairs:
-			if repair.increase_in_asset_life:
-				asset_repair = frappe.get_doc("Asset Repair", repair.name)
-				asset_repair.modify_depreciation_schedule()
-				asset.prepare_depreciation_data()
-
-	def reverse_depreciation_entry_made_after_sale(self, asset):
-		from erpnext.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
-
-		posting_date_of_original_invoice = self.get_posting_date_of_sales_invoice()
-
-		row = -1
-		finance_book = asset.get("schedules")[0].get("finance_book")
-		for schedule in asset.get("schedules"):
-			if schedule.finance_book != finance_book:
-				row = 0
-				finance_book = schedule.finance_book
-			else:
-				row += 1
-
-			if schedule.schedule_date == posting_date_of_original_invoice:
-				if not self.sale_was_made_on_original_schedule_date(
-					asset, schedule, row, posting_date_of_original_invoice
-				) or self.sale_happens_in_the_future(posting_date_of_original_invoice):
-
-					reverse_journal_entry = make_reverse_journal_entry(schedule.journal_entry)
-					reverse_journal_entry.posting_date = nowdate()
-					frappe.flags.is_reverse_depr_entry = True
-					reverse_journal_entry.submit()
-
-					frappe.flags.is_reverse_depr_entry = False
-					asset.flags.ignore_validate_update_after_submit = True
-					schedule.journal_entry = None
-					depreciation_amount = self.get_depreciation_amount_in_je(reverse_journal_entry)
-					asset.finance_books[0].value_after_depreciation += depreciation_amount
-					asset.save()
-
-	def get_posting_date_of_sales_invoice(self):
-		return frappe.db.get_value("Sales Invoice", self.return_against, "posting_date")
-
-	# if the invoice had been posted on the date the depreciation was initially supposed to happen, the depreciation shouldn't be undone
-	def sale_was_made_on_original_schedule_date(
-		self, asset, schedule, row, posting_date_of_original_invoice
-	):
-		for finance_book in asset.get("finance_books"):
-			if schedule.finance_book == finance_book.finance_book:
-				orginal_schedule_date = add_months(
-					finance_book.depreciation_start_date, row * cint(finance_book.frequency_of_depreciation)
-				)
-
-				if orginal_schedule_date == posting_date_of_original_invoice:
-					return True
-		return False
-
-	def sale_happens_in_the_future(self, posting_date_of_original_invoice):
-		if posting_date_of_original_invoice > getdate():
-			return True
-
-		return False
-
-	def get_depreciation_amount_in_je(self, journal_entry):
-		if journal_entry.accounts[0].debit_in_account_currency:
-			return journal_entry.accounts[0].debit_in_account_currency
-		else:
-			return journal_entry.accounts[0].credit_in_account_currency
 
 	@property
 	def enable_discount_accounting(self):
@@ -1833,7 +1741,6 @@ def get_total_in_party_account_currency(doc):
 
 	return flt(doc.get(total_fieldname), doc.precision(total_fieldname))
 
-
 def is_overdue(doc, total):
 	outstanding_amount = flt(doc.outstanding_amount, doc.precision("outstanding_amount"))
 	if outstanding_amount <= 0:
@@ -1879,7 +1786,6 @@ def get_discounting_status(sales_invoice):
 			break
 
 	return status
-
 
 def validate_inter_company_party(doctype, party, company, inter_company_reference):
 	if not party:
@@ -2149,7 +2055,6 @@ def validate_inter_company_transaction(doc, doctype):
 def make_inter_company_purchase_invoice(source_name, target_doc=None):
 	return make_inter_company_transaction("Sales Invoice", source_name, target_doc)
 
-
 def make_inter_company_transaction(doctype, source_name, target_doc=None):
 	if doctype in ["Sales Invoice", "Sales Order"]:
 		source_doc = frappe.get_doc(doctype, source_name)
@@ -2157,11 +2062,13 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 		target_detail_field = "sales_invoice_item" if doctype == "Sales Invoice" else "sales_order_item"
 		source_document_warehouse_field = "target_warehouse"
 		target_document_warehouse_field = "from_warehouse"
+		received_items = get_received_items(source_name, target_doctype, target_detail_field)
 	else:
 		source_doc = frappe.get_doc(doctype, source_name)
 		target_doctype = "Sales Invoice" if doctype == "Purchase Invoice" else "Sales Order"
 		source_document_warehouse_field = "from_warehouse"
 		target_document_warehouse_field = "target_warehouse"
+		received_items = {}
 
 	validate_inter_company_transaction(source_doc, doctype)
 	details = get_inter_company_details(source_doc, doctype)
@@ -2184,6 +2091,9 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 			update_address(target_doc, "supplier_address", "address_display", source_doc.company_address)
 			update_address(
 				target_doc, "shipping_address", "shipping_address_display", source_doc.customer_address
+			)
+			update_address(
+				target_doc, "billing_address", "billing_address_display", source_doc.customer_address
 			)
 
 			if currency:
@@ -2227,12 +2137,17 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 				shipping_address_name=target_doc.shipping_address_name,
 			)
 
+	def update_item(source, target, source_parent):
+		target.qty = flt(source.qty) - received_items.get(source.name, 0.0)
+
 	item_field_map = {
 		"doctype": target_doctype + " Item",
 		"field_no_map": ["income_account", "expense_account", "cost_center", "warehouse"],
 		"field_map": {
 			"rate": "rate",
 		},
+		"postprocess": update_item,
+		"condition": lambda doc: doc.qty > 0,
 	}
 
 	if doctype in ["Sales Invoice", "Sales Order"]:
@@ -2268,6 +2183,28 @@ def make_inter_company_transaction(doctype, source_name, target_doc=None):
 	)
 
 	return doclist
+
+
+def get_received_items(reference_name, doctype, reference_fieldname):
+	target_doctypes = frappe.get_all(
+		doctype,
+		filters={"inter_company_invoice_reference": reference_name, "docstatus": 1},
+		as_list=True,
+	)
+
+	if target_doctypes:
+		target_doctypes = list(target_doctypes[0])
+
+	received_items_map = frappe._dict(
+		frappe.get_all(
+			doctype + " Item",
+			filters={"parent": ("in", target_doctypes)},
+			fields=[reference_fieldname, "qty"],
+			as_list=1,
+		)
+	)
+
+	return received_items_map
 
 
 def set_purchase_references(doc):
@@ -2359,7 +2296,6 @@ def get_sales_invoice_details(internal_reference):
 			so_item_map.setdefault(d.name, d.so_detail)
 
 	return dn_item_map, so_item_map
-
 
 def get_pd_details(doctype, sd_detail_map, sd_detail_field):
 	pd_item_map = {}
@@ -2539,7 +2475,6 @@ def create_dunning(source_name, target_doc=None):
 		calculate_interest_and_amount,
 		get_dunning_letter_text,
 	)
-
 	def set_missing_values(source, target):
 		target.sales_invoice = source_name
 		target.outstanding_amount = source.outstanding_amount

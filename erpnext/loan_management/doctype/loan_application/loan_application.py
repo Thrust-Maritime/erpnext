@@ -192,7 +192,6 @@ def create_loan(source_name, target_doc=None, submit=0):
 
 	return doclist
 
-
 @frappe.whitelist()
 def create_pledge(loan_application, loan=None):
 	loan_application_doc = frappe.get_doc("Loan Application", loan_application)

@@ -59,7 +59,6 @@ def add_security(loan):
 
 	return loan_security_pledge.as_dict()
 
-
 def check_for_ltv_shortfall(process_loan_security_shortfall):
 
 	update_time = get_datetime()

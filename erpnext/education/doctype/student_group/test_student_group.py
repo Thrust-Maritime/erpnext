@@ -24,7 +24,6 @@ def get_random_group():
 
 	return doc
 
-
 class TestStudentGroup(unittest.TestCase):
 	def test_student_roll_no(self):
 		doc = get_random_group()

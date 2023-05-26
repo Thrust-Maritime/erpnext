@@ -11,7 +11,6 @@ test_records = frappe.get_test_records("Operation")
 class TestOperation(unittest.TestCase):
 	pass
 
-
 def make_operation(*args, **kwargs):
 	args = args if args else kwargs
 	if isinstance(args, tuple):

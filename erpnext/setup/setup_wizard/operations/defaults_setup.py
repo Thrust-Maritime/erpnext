@@ -119,7 +119,6 @@ def create_employee_for_self(args):
 def create_territories():
 	"""create two default territories, one for home country and one named Rest of the World"""
 	from frappe.utils.nestedset import get_root_of
-
 	country = frappe.db.get_default("country")
 	root_territory = get_root_of("Territory")
 
@@ -138,7 +137,6 @@ def create_territories():
 def create_feed_and_todo():
 	"""update Activity feed and create todo for creation of item, customer, vendor"""
 	return
-
 
 def get_fy_details(fy_start_date, fy_end_date):
 	start_year = getdate(fy_start_date).year

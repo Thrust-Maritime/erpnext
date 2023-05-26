@@ -101,14 +101,12 @@ def make_opportunity(domain):
 	b.insert()
 	frappe.db.commit()
 
-
 def make_quotation(domain):
 	# get open opportunites
 	opportunity = get_random("Opportunity", {"status": "Open", "with_items": 1})
 
 	if opportunity:
 		from erpnext.crm.doctype.opportunity.opportunity import make_quotation
-
 		qtn = frappe.get_doc(make_quotation(opportunity))
 		qtn.insert()
 		frappe.db.commit()
@@ -160,12 +158,10 @@ def make_quotation(domain):
 		qtn.submit()
 		frappe.db.commit()
 
-
 def make_sales_order():
 	q = get_random("Quotation", {"status": "Submitted"})
 	if q:
 		from erpnext.selling.doctype.quotation.quotation import make_sales_order as mso
-
 		so = frappe.get_doc(mso(q))
 		so.transaction_date = frappe.flags.current_date
 		so.delivery_date = frappe.utils.add_days(frappe.flags.current_date, 10)

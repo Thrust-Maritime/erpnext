@@ -63,7 +63,6 @@ class Item(Document):
 					make_variant_item_code(self.variant_of, template_item_name, self)
 			else:
 				from frappe.model.naming import set_name_by_naming_series
-
 				set_name_by_naming_series(self)
 				self.item_code = self.name
 
@@ -354,10 +353,15 @@ class Item(Document):
 		check_list = []
 		for d in self.get("taxes"):
 			if d.item_tax_template:
-				if d.item_tax_template in check_list:
-					frappe.throw(_("{0} entered twice in Item Tax").format(d.item_tax_template))
+				if (d.item_tax_template, d.tax_category) in check_list:
+					frappe.throw(
+						_("{0} entered twice {1} in Item Taxes").format(
+							frappe.bold(d.item_tax_template),
+							"for tax category {0}".format(frappe.bold(d.tax_category)) if d.tax_category else "",
+						)
+					)
 				else:
-					check_list.append(d.item_tax_template)
+					check_list.append((d.item_tax_template, d.tax_category))
 
 	def validate_barcode(self):
 		from stdnum import ean
@@ -1008,7 +1012,6 @@ def validate_cancelled_item(item_code, docstatus=None):
 	if docstatus == 2:
 		frappe.throw(_("Item {0} is cancelled").format(item_code))
 
-
 def get_last_purchase_details(item_code, doc_name=None, conversion_rate=1.0):
 	"""returns last purchase details in stock uom"""
 	# get last purchase order item details
@@ -1115,7 +1118,6 @@ def invalidate_item_variants_cache_for_website(doc):
 	if item_code:
 		item_cache = ItemVariantsCacheManager(item_code)
 		item_cache.rebuild_cache()
-
 
 def check_stock_uom_with_bin(item, stock_uom):
 	if stock_uom == frappe.db.get_value("Item", item, "stock_uom"):
@@ -1259,7 +1261,6 @@ def update_variants(variants, template, publish_progress=True):
 		variant.save()
 		if publish_progress:
 			frappe.publish_progress(count / total * 100, title=_("Updating Variants..."))
-
 
 @erpnext.allow_regional
 def set_item_tax_from_hsn_code(item):

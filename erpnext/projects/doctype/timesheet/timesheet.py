@@ -253,7 +253,6 @@ class Timesheet(Document):
 		if not ts_detail.is_billable:
 			ts_detail.billing_rate = 0.0
 
-
 @frappe.whitelist()
 def get_projectwise_timesheet_data(project=None, parent=None, from_time=None, to_time=None):
 	condition = ""
@@ -405,7 +404,6 @@ def make_sales_invoice(source_name, item_code=None, customer=None, currency=None
 
 	return target
 
-
 @frappe.whitelist()
 def make_salary_slip(source_name, target_doc=None):
 	target = frappe.new_doc("Salary Slip")
@@ -449,7 +447,6 @@ def get_activity_cost(employee=None, activity_type=None, currency=None):
 			rate[0]["billing_rate"] = rate[0]["billing_rate"] * exchange_rate
 
 	return rate[0] if rate else {}
-
 
 @frappe.whitelist()
 def get_events(start, end, filters=None):

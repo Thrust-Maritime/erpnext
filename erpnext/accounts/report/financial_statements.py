@@ -134,7 +134,6 @@ def validate_dates(from_date, to_date):
 	if to_date < from_date:
 		frappe.throw(_("To Date cannot be less than From Date"))
 
-
 def get_months(start_date, end_date):
 	diff = (12 * end_date.year + end_date.month) - (12 * start_date.year + start_date.month)
 	return diff + 1

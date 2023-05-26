@@ -551,7 +551,6 @@ class TestMaterialRequest(FrappeTestCase):
 
 	def test_warehouse_company_validation(self):
 		from erpnext.stock.utils import InvalidWarehouseCompany
-
 		mr = frappe.copy_doc(test_records[0])
 		mr.company = "_Test Company 1"
 		self.assertRaises(InvalidWarehouseCompany, mr.insert)
@@ -738,7 +737,6 @@ class TestMaterialRequest(FrappeTestCase):
 
 		self.assertEqual(mr.per_ordered, 100)
 		self.assertEqual(existing_requested_qty, current_requested_qty)
-
 
 def make_material_request(**args):
 	args = frappe._dict(args)

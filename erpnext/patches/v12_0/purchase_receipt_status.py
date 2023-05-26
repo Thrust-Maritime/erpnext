@@ -7,7 +7,6 @@ import frappe
 
 logger = frappe.logger("patch", allow_site=True, file_count=50)
 
-
 def execute():
 	affected_purchase_receipts = frappe.db.sql(
 		"""select name from `tabPurchase Receipt`

@@ -135,7 +135,6 @@ def convert_deferred_revenue_to_income(
 	if frappe.flags.deferred_accounting_error:
 		send_mail(deferred_process)
 
-
 def get_booking_dates(doc, item, posting_date=None):
 	if not posting_date:
 		posting_date = add_days(today(), -1)
@@ -378,7 +377,7 @@ def book_deferred_income_or_expense(doc, deferred_process, posting_date=None):
 			return
 
 		# check if books nor frozen till endate:
-		if accounts_frozen_upto and (end_date) <= getdate(accounts_frozen_upto):
+		if accounts_frozen_upto and getdate(end_date) <= getdate(accounts_frozen_upto):
 			end_date = get_last_day(add_days(accounts_frozen_upto, 1))
 
 		if via_journal_entry:

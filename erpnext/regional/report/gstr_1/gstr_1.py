@@ -16,7 +16,6 @@ from erpnext.regional.india.utils import get_gst_accounts
 def execute(filters=None):
 	return Gstr1Report(filters).run()
 
-
 class Gstr1Report(object):
 	def __init__(self, filters=None):
 		self.filters = frappe._dict(filters or {})
@@ -713,7 +712,6 @@ class Gstr1Report(object):
 
 		self.columns = self.invoice_columns + self.tax_columns + self.other_columns
 
-
 @frappe.whitelist()
 def get_json(filters, report_name, data):
 	filters = json.loads(filters)
@@ -828,7 +826,6 @@ def get_b2b_json(res, gstin):
 
 	return out
 
-
 def get_b2cs_json(data, gstin):
 	company_state_number = gstin[0:2]
 
@@ -872,7 +869,6 @@ def get_b2cs_json(data, gstin):
 
 	return out
 
-
 def get_advances_json(data, gstin):
 	company_state_number = gstin[0:2]
 	out = []
@@ -903,7 +899,6 @@ def get_advances_json(data, gstin):
 
 	return out
 
-
 def get_b2cl_json(res, gstin):
 	out = []
 	for pos in res:
@@ -930,7 +925,6 @@ def get_b2cl_json(res, gstin):
 		out.append(b2cl_item)
 
 	return out
-
 
 def get_export_json(res):
 	out = []
@@ -959,7 +953,6 @@ def get_export_json(res):
 		out.append(exp_item)
 
 	return out
-
 
 def get_cdnr_reg_json(res, gstin):
 	out = []
@@ -1002,7 +995,6 @@ def get_cdnr_reg_json(res, gstin):
 		out.append(cdnr_item)
 
 	return out
-
 
 def get_cdnr_unreg_json(res, gstin):
 	out = []
@@ -1156,8 +1148,11 @@ def get_company_gstins(company):
 		.inner_join(links)
 		.on(address.name == links.parent)
 		.select(address.gstin)
+		.distinct()
 		.where(links.link_doctype == "Company")
 		.where(links.link_name == company)
+		.where(address.gstin.isnotnull())
+		.where(address.gstin != "")
 		.run(as_dict=1)
 	)
 

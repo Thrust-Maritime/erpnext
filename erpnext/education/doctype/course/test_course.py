@@ -23,7 +23,6 @@ class TestCourse(unittest.TestCase):
 		self.assertEqual(topics[1].name, "_Test Topic 2")
 		frappe.db.rollback()
 
-
 def make_course(name):
 	try:
 		course = frappe.get_doc("Course", name)

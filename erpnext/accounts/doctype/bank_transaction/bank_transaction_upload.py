@@ -62,7 +62,6 @@ def create_bank_entries(columns, data, bank_account):
 
 	return {"success": success, "errors": errors}
 
-
 def get_header_mapping(columns, bank_account):
 	mapping = get_bank_mapping(bank_account)
 
@@ -72,7 +71,6 @@ def get_header_mapping(columns, bank_account):
 			header_map.update({mapping[column["content"]]: column["colIndex"]})
 
 	return header_map
-
 
 def get_bank_mapping(bank_account):
 	bank_name = frappe.db.get_value("Bank Account", bank_account, "bank")

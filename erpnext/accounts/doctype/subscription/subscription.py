@@ -681,7 +681,6 @@ def get_calendar_months(billing_interval):
 
 	return calendar_months
 
-
 def get_prorata_factor(period_end, period_start, is_prepaid):
 	if is_prepaid:
 		prorate_factor = 1

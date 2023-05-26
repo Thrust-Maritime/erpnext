@@ -24,12 +24,10 @@ def setup_data():
 	frappe.db.commit()
 	frappe.clear_cache()
 
-
 def make_masters():
 	import_json("Healthcare Practitioner")
 	import_drug()
 	frappe.db.commit()
-
 
 def make_patient():
 	file_path = get_json_path("Patient")
@@ -119,7 +117,6 @@ def set_encounter(patient, patient_sex, practitioner, department, encounter_date
 		encounter = append_test_rx(encounter)
 	return encounter
 
-
 def make_lab_test():
 	practitioner = get_random("Healthcare Practitioner")
 	patient = get_random("Patient")
@@ -152,7 +149,6 @@ def set_lab_test(patient, patient_sex, practitioner, template, rx=None):
 	lab_test.template = template
 	lab_test.prescription = rx
 	create_test_from_template(lab_test)
-
 
 def append_test_rx(encounter):
 	i = 1

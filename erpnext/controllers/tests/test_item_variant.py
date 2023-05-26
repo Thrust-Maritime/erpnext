@@ -18,7 +18,6 @@ class TestItemVariant(unittest.TestCase):
 		variant = make_item_variant()
 		self.assertEqual(variant.get("quality_inspection_template"), "_Test QC Template")
 
-
 def create_variant_with_tables(item, args):
 	if isinstance(args, string_types):
 		args = json.loads(args)
@@ -41,7 +40,6 @@ def create_variant_with_tables(item, args):
 
 	return variant
 
-
 def make_item_variant():
 	frappe.delete_doc_if_exists("Item", "_Test Variant Item-XSL", force=1)
 	variant = create_variant_with_tables("_Test Variant Item", '{"Test Size": "Extra Small"}')
@@ -49,7 +47,6 @@ def make_item_variant():
 	variant.item_name = "_Test Variant Item-XSL"
 	variant.save()
 	return variant
-
 
 def make_quality_inspection_template():
 	qc_template = "_Test QC Template"

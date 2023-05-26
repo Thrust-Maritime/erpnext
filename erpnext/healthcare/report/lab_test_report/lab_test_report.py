@@ -138,7 +138,6 @@ def get_conditions(filters):
 
 	return conditions
 
-
 def get_chart_data(data):
 	if not data:
 		return None

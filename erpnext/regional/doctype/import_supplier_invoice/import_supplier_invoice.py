@@ -146,7 +146,9 @@ class ImportSupplierInvoice(Document):
 
 	def publish(self, title, message, count, total):
 		frappe.publish_realtime(
-			"import_invoice_update", {"title": title, "message": message, "count": count, "total": total}
+			"import_invoice_update",
+			{"title": title, "message": message, "count": count, "total": total},
+			user=self.modified_by,
 		)
 
 
@@ -293,7 +295,6 @@ def create_supplier(supplier_group, args):
 		new_contact.insert(ignore_mandatory=True)
 
 		return new_supplier.name
-
 
 def create_address(supplier_name, args):
 	args = frappe._dict(args)

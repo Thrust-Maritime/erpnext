@@ -7,7 +7,6 @@ from erpnext.setup.utils import get_exchange_rate
 
 __exchange_rates = {}
 
-
 def get_currency(filters):
 	"""
 	Returns a dictionary containing currency information. The keys of the dict are
@@ -28,7 +27,7 @@ def get_currency(filters):
 		filters["presentation_currency"] if filters.get("presentation_currency") else company_currency
 	)
 
-	report_date = filters.get("to_date")
+	report_date = filters.get("to_date") or filters.get("period_end_date")
 
 	if not report_date:
 		fiscal_year_to_date = get_from_and_to_date(filters.get("to_fiscal_year"))["to_date"]

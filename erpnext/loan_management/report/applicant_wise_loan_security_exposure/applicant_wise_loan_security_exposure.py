@@ -133,7 +133,6 @@ def get_data(filters):
 
 	return data
 
-
 def get_loan_security_details():
 	security_detail_map = {}
 	loan_security_price_map = {}
@@ -176,7 +175,6 @@ def get_loan_security_details():
 		security_detail_map.setdefault(security.loan_security, security)
 
 	return security_detail_map
-
 
 def get_applicant_wise_total_loan_security_qty(filters, loan_security_details):
 	current_pledges = {}

@@ -11,7 +11,9 @@ from frappe.utils import cstr, flt
 
 from erpnext.buying.doctype.purchase_order.test_purchase_order import create_purchase_order
 from erpnext.manufacturing.doctype.bom.bom import BOMRecursionError, item_query
-from erpnext.manufacturing.doctype.bom_update_tool.bom_update_tool import update_cost
+from erpnext.manufacturing.doctype.bom_update_log.test_bom_update_log import (
+	update_cost_in_all_boms_in_test,
+)
 from erpnext.stock.doctype.item.test_item import make_item
 from erpnext.stock.doctype.stock_reconciliation.test_stock_reconciliation import (
 	create_stock_reconciliation,
@@ -47,7 +49,6 @@ class TestBOM(FrappeTestCase):
 
 	def test_get_items_list(self):
 		from erpnext.manufacturing.doctype.bom.bom import get_bom_items
-
 		self.assertEqual(len(get_bom_items(bom=get_default_bom(), company="_Test Company")), 3)
 
 	def test_default_bom(self):
@@ -69,26 +70,31 @@ class TestBOM(FrappeTestCase):
 
 	def test_update_bom_cost_in_all_boms(self):
 		# get current rate for '_Test Item 2'
-		rm_rate = frappe.db.sql(
-			"""select rate from `tabBOM Item`
-			where parent='BOM-_Test Item Home Desktop Manufactured-001'
-			and item_code='_Test Item 2' and docstatus=1 and parenttype='BOM'"""
+		bom_rates = frappe.db.get_values(
+			"BOM Item",
+			{
+				"parent": "BOM-_Test Item Home Desktop Manufactured-001",
+				"item_code": "_Test Item 2",
+				"docstatus": 1,
+			},
+			fieldname=["rate", "base_rate"],
+			as_dict=True,
 		)
-		rm_rate = rm_rate[0][0] if rm_rate else 0
+		rm_base_rate = bom_rates[0].get("base_rate") if bom_rates else 0
 
 		# Reset item valuation rate
-		reset_item_valuation_rate(item_code="_Test Item 2", qty=200, rate=rm_rate + 10)
+		reset_item_valuation_rate(item_code="_Test Item 2", qty=200, rate=rm_base_rate + 10)
 
 		# update cost of all BOMs based on latest valuation rate
-		update_cost()
+		update_cost_in_all_boms_in_test()
 
 		# check if new valuation rate updated in all BOMs
 		for d in frappe.db.sql(
-			"""select rate from `tabBOM Item`
+			"""select base_rate from `tabBOM Item`
 			where item_code='_Test Item 2' and docstatus=1 and parenttype='BOM'""",
 			as_dict=1,
 		):
-			self.assertEqual(d.rate, rm_rate + 10)
+			self.assertEqual(d.base_rate, rm_base_rate + 10)
 
 	def test_bom_cost(self):
 		bom = frappe.copy_doc(test_records[2])
@@ -512,10 +518,95 @@ class TestBOM(FrappeTestCase):
 
 		new_bom.delete()
 
+	def test_set_default_bom_for_item_having_single_bom(self):
+		from erpnext.stock.doctype.item.test_item import make_item
+
+		fg_item = make_item(properties={"is_stock_item": 1})
+		bom_item = make_item(properties={"is_stock_item": 1})
+
+		# Step 1: Create BOM
+		bom = frappe.new_doc("BOM")
+		bom.item = fg_item.item_code
+		bom.quantity = 1
+		bom.append(
+			"items",
+			{
+				"item_code": bom_item.item_code,
+				"qty": 1,
+				"uom": bom_item.stock_uom,
+				"stock_uom": bom_item.stock_uom,
+				"rate": 100.0,
+			},
+		)
+		bom.save()
+		bom.submit()
+		self.assertEqual(frappe.get_value("Item", fg_item.item_code, "default_bom"), bom.name)
+
+		# Step 2: Uncheck is_active field
+		bom.is_active = 0
+		bom.save()
+		bom.reload()
+		self.assertIsNone(frappe.get_value("Item", fg_item.item_code, "default_bom"))
+
+		# Step 3: Check is_active field
+		bom.is_active = 1
+		bom.save()
+		bom.reload()
+		self.assertEqual(frappe.get_value("Item", fg_item.item_code, "default_bom"), bom.name)
+
+	def test_exploded_items_rate(self):
+		rm_item = make_item(
+			properties={"is_stock_item": 1, "valuation_rate": 99, "last_purchase_rate": 89}
+		).name
+		fg_item = make_item(properties={"is_stock_item": 1}).name
+
+		from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
+
+		bom = make_bom(item=fg_item, raw_materials=[rm_item], do_not_save=True)
+
+		bom.rm_cost_as_per = "Last Purchase Rate"
+		bom.save()
+		self.assertEqual(bom.items[0].base_rate, 89)
+		self.assertEqual(bom.exploded_items[0].rate, bom.items[0].base_rate)
+
+		bom.rm_cost_as_per = "Price List"
+		bom.save()
+		self.assertEqual(bom.items[0].base_rate, 0.0)
+		self.assertEqual(bom.exploded_items[0].rate, bom.items[0].base_rate)
+
+		bom.rm_cost_as_per = "Valuation Rate"
+		bom.save()
+		self.assertEqual(bom.items[0].base_rate, 99)
+		self.assertEqual(bom.exploded_items[0].rate, bom.items[0].base_rate)
+
+		bom.submit()
+		self.assertEqual(bom.exploded_items[0].rate, bom.items[0].base_rate)
+
+	def test_bom_cost_update_flag(self):
+		rm_item = make_item(
+			properties={"is_stock_item": 1, "valuation_rate": 99, "last_purchase_rate": 89}
+		).name
+		fg_item = make_item(properties={"is_stock_item": 1}).name
+
+		from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom
+
+		bom = make_bom(item=fg_item, raw_materials=[rm_item])
+
+		create_stock_reconciliation(
+			item_code=rm_item, warehouse="_Test Warehouse - _TC", qty=100, rate=600
+		)
+
+		bom.load_from_db()
+		bom.update_cost()
+		self.assertTrue(bom.flags.cost_updated)
+
+		bom.load_from_db()
+		bom.update_cost()
+		self.assertFalse(bom.flags.cost_updated)
+
 
 def get_default_bom(item_code="_Test FG Item 2"):
 	return frappe.db.get_value("BOM", {"item": item_code, "is_active": 1, "is_default": 1})
-
 
 def level_order_traversal(node):
 	traversal = []
@@ -541,7 +632,6 @@ def create_nested_bom(tree, prefix="_Test bom "):
 			if not frappe.db.exists("Item", bom_item_code):
 				frappe.get_doc(doctype="Item", item_code=bom_item_code, item_group="_Test Item Group").insert()
 			create_items(subtree)
-
 	create_items(tree)
 
 	def dfs(tree, node):

@@ -22,7 +22,6 @@ from erpnext.payroll.doctype.salary_structure.salary_structure import make_salar
 
 test_dependencies = ["Fiscal Year"]
 
-
 class TestSalaryStructure(unittest.TestCase):
 	def setUp(self):
 		for dt in ["Salary Slip", "Salary Structure", "Salary Structure Assignment"]:
@@ -149,6 +148,8 @@ def make_salary_structure(
 	company=None,
 	currency=erpnext.get_default_currency(),
 	payroll_period=None,
+	include_flexi_benefits=False,
+	base=None,
 ):
 	if test_tax:
 		frappe.db.sql("""delete from `tabSalary Structure` where name=%s""", (salary_structure))
@@ -161,7 +162,10 @@ def make_salary_structure(
 		"name": salary_structure,
 		"company": company or erpnext.get_default_company(),
 		"earnings": make_earning_salary_component(
-			setup=True, test_tax=test_tax, company_list=["_Test Company"]
+			setup=True,
+			test_tax=test_tax,
+			company_list=["_Test Company"],
+			include_flexi_benefits=include_flexi_benefits,
 		),
 		"deductions": make_deduction_salary_component(
 			setup=True, test_tax=test_tax, company_list=["_Test Company"]
@@ -196,6 +200,7 @@ def make_salary_structure(
 			company=company,
 			currency=currency,
 			payroll_period=payroll_period,
+			base=base,
 		)
 
 	return salary_structure_doc
@@ -244,7 +249,6 @@ def create_salary_structure_assignment(
 	salary_structure_assignment.income_tax_slab = income_tax_slab
 	salary_structure_assignment.submit()
 	return salary_structure_assignment
-
 
 def get_payable_account(company=None):
 	if not company:

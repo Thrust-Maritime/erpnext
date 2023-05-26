@@ -13,7 +13,6 @@ def execute(filters=None):
 	data = get_data(filters)
 	return columns, data
 
-
 def get_data(filters):
 	data = get_stock_ledger_entries(filters)
 	itewise_balance_qty = {}
@@ -25,7 +24,6 @@ def get_data(filters):
 	res = validate_data(itewise_balance_qty)
 	return res
 
-
 def validate_data(itewise_balance_qty):
 	res = []
 	for key, data in iteritems(itewise_balance_qty):
@@ -35,7 +33,6 @@ def validate_data(itewise_balance_qty):
 			res.append({})
 
 	return res
-
 
 def get_incorrect_data(data):
 	balance_qty = 0.0

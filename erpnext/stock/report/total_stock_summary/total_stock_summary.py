@@ -15,7 +15,6 @@ def execute(filters=None):
 
 	return columns, stock
 
-
 def get_columns():
 	columns = [
 		_("Company") + ":Link/Company:250",
@@ -26,7 +25,6 @@ def get_columns():
 	]
 
 	return columns
-
 
 def get_total_stock(filters):
 	conditions = ""

@@ -100,7 +100,6 @@ def execute(filters=None):
 
 	return columns, data, None, chart_data
 
-
 def get_chart_data(emp_att_map, days):
 	labels = []
 	datasets = [
@@ -181,7 +180,6 @@ def add_data(
 					total_l += 1
 				elif status == "Half Day":
 					total_p += 0.5
-					total_a += 0.5
 					total_l += 0.5
 				elif not status:
 					total_um += 1
@@ -236,7 +234,6 @@ def add_data(
 
 	return record, emp_att_map
 
-
 def get_columns(filters):
 
 	columns = []
@@ -282,7 +279,6 @@ def get_attendance_list(conditions, filters):
 		att_map[d.employee][d.day_of_month] = d.status
 
 	return att_map
-
 
 def get_conditions(filters):
 	if not (filters.get("month") and filters.get("year")):
@@ -334,7 +330,6 @@ def get_employee_details(group_by, company):
 		return emp_map
 	else:
 		return emp_map, group_by_parameters
-
 
 def get_holiday(holiday_list, month):
 	holiday_map = frappe._dict()

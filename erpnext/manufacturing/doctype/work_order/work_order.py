@@ -145,7 +145,7 @@ class WorkOrder(Document):
 			frappe.throw(_("Sales Order {0} is {1}").format(self.sales_order, status))
 
 	def set_default_warehouse(self):
-		if not self.wip_warehouse:
+		if not self.wip_warehouse and not self.skip_transfer:
 			self.wip_warehouse = frappe.db.get_single_value(
 				"Manufacturing Settings", "default_wip_warehouse"
 			)
@@ -653,19 +653,30 @@ class WorkOrder(Document):
 		"""Fetch operations from BOM and set in 'Work Order'"""
 
 		def _get_operations(bom_no, qty=1):
-			return frappe.db.sql(
-				f"""select
-						operation, description, workstation, idx,
-						base_hour_rate as hour_rate, time_in_mins * {qty} as time_in_mins,
-						"Pending" as status, parent as bom, batch_size, sequence_id
-					from
-						`tabBOM Operation`
-					where
-						parent = %s order by idx
-					""",
-				bom_no,
-				as_dict=1,
+			data = frappe.get_all(
+				"BOM Operation",
+				filters={"parent": bom_no},
+				fields=[
+					"operation",
+					"description",
+					"workstation",
+					"idx",
+					"base_hour_rate as hour_rate",
+					"time_in_mins",
+					"parent as bom",
+					"batch_size",
+					"sequence_id",
+					"fixed_time",
+				],
+				order_by="idx",
 			)
+
+			for d in data:
+				if not d.fixed_time:
+					d.time_in_mins = flt(d.time_in_mins) * flt(qty)
+				d.status = "Pending"
+
+			return data
 
 		self.set("operations", [])
 		if not self.bom_no or not frappe.get_cached_value("BOM", self.bom_no, "with_operations"):
@@ -679,7 +690,7 @@ class WorkOrder(Document):
 
 			for node in bom_traversal:
 				if node.is_bom:
-					operations.extend(_get_operations(node.name, qty=node.exploded_qty))
+					operations.extend(_get_operations(node.name, qty=node.exploded_qty / node.bom_qty))
 
 		bom_qty = frappe.get_cached_value("BOM", self.bom_no, "quantity")
 		operations.extend(_get_operations(self.bom_no, qty=1.0 / bom_qty))
@@ -692,8 +703,8 @@ class WorkOrder(Document):
 
 	def calculate_time(self):
 		for d in self.get("operations"):
-			# d.time_in_mins = flt(d.time_in_mins) / flt(bom_qty) * (flt(self.qty) / flt(d.batch_size))
-			d.time_in_mins = flt(d.time_in_mins) * (flt(self.qty) / flt(d.batch_size))
+			if not d.fixed_time:
+				d.time_in_mins = flt(d.time_in_mins) * (flt(self.qty) / flt(d.batch_size))
 
 		self.calculate_operating_cost()
 
@@ -1077,7 +1088,6 @@ def get_item_details(item, project=None, skip_bom_info=False):
 
 	return res
 
-
 @frappe.whitelist()
 def make_work_order(bom_no, item, qty=0, project=None, variant_items=None):
 	if not frappe.has_permission("Work Order", "write"):
@@ -1098,7 +1108,6 @@ def make_work_order(bom_no, item, qty=0, project=None, variant_items=None):
 		add_variant_item(variant_items, wo_doc, bom_no, "required_items")
 
 	return wo_doc
-
 
 def add_variant_item(variant_items, wo_doc, bom_no, table_name="items"):
 	if isinstance(variant_items, str):
@@ -1198,7 +1207,6 @@ def make_stock_entry(work_order_id, purpose, qty=None):
 	stock_entry.set_serial_no_batch_for_finished_good()
 	return stock_entry.as_dict()
 
-
 @frappe.whitelist()
 def get_default_warehouse():
 	doc = frappe.get_cached_doc("Manufacturing Settings")
@@ -1261,7 +1269,6 @@ def make_job_card(work_order, operations):
 			if row.job_card_qty > 0:
 				create_job_card(work_order, row, auto_create=True)
 
-
 @frappe.whitelist()
 def close_work_order(work_order, status):
 	if not frappe.has_permission("Work Order", "write"):
@@ -1304,7 +1311,6 @@ def split_qty_based_on_batch_size(wo_doc, row, qty):
 	get_serial_nos_for_job_card(row, wo_doc)
 
 	return qty
-
 
 def get_serial_nos_for_job_card(row, wo_doc):
 	if not wo_doc.serial_no:

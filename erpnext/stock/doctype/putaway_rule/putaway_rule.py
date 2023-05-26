@@ -270,7 +270,6 @@ def add_row(item, to_allocate, warehouse, updated_table, rule=None, serial_nos=N
 	updated_table.append(new_updated_table_row)
 	return updated_table
 
-
 def show_unassigned_items_message(items_not_accomodated):
 	msg = _("The following Items, having Putaway Rules, could not be accomodated:") + "<br><br>"
 	formatted_item_rows = ""

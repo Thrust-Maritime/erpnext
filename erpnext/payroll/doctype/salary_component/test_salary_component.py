@@ -7,7 +7,6 @@ import frappe
 
 # test_records = frappe.get_test_records('Salary Component')
 
-
 class TestSalaryComponent(unittest.TestCase):
 	pass
 

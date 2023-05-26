@@ -54,7 +54,6 @@ def get_periodwise_distribution_data(distribution_id, period_list, periodicity):
 
 	return period_dict
 
-
 def get_percentage(doc, start_date, period):
 	percentage = 0
 	months = [start_date.strftime("%B").title()]

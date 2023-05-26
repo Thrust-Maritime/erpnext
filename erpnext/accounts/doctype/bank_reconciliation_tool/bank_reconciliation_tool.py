@@ -299,7 +299,7 @@ def reconcile_vouchers(bank_transaction_name, vouchers):
 			dict(
 				account=account, voucher_type=voucher["payment_doctype"], voucher_no=voucher["payment_name"]
 			),
-			["credit", "debit"],
+			["credit_in_account_currency as credit", "debit_in_account_currency as debit"],
 			as_dict=1,
 		)
 		gl_amount, transaction_amount = (
@@ -333,7 +333,6 @@ def get_linked_payments(bank_transaction_name, document_types=None):
 	(account, company) = (bank_account.account, bank_account.company)
 	matching = check_matching(account, company, transaction, document_types)
 	return matching
-
 
 def check_matching(bank_account, company, transaction, document_types):
 	# combine all types of vouchers
@@ -576,7 +575,6 @@ def get_si_matching_query(amount_condition):
 			AND sip.amount {amount_condition} %(amount)s
 			AND si.docstatus = 1
 	"""
-
 
 def get_pi_matching_query(amount_condition):
 	# get matching purchase invoice query

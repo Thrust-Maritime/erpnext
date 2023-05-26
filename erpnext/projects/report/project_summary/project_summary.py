@@ -38,7 +38,6 @@ def execute(filters=None):
 
 	return columns, data, None, chart, report_summary
 
-
 def get_columns():
 	return [
 		{

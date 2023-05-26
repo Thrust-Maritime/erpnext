@@ -23,7 +23,6 @@ def setup(company=None, patch=True):
 	if not patch:
 		make_fixtures(company)
 
-
 # TODO: for all countries
 def setup_company_independent_fixtures(patch=False):
 	make_custom_fields()
@@ -34,7 +33,6 @@ def setup_company_independent_fixtures(patch=False):
 	create_gratuity_rule()
 	add_print_formats()
 	update_accounts_settings_for_taxes()
-
 
 def add_hsn_sac_codes():
 	if frappe.flags.in_test and frappe.flags.created_hsn_codes:
@@ -714,7 +712,7 @@ def get_custom_fields():
 			insert_after="customer",
 			no_copy=1,
 			print_hide=1,
-			depends_on='eval:in_list(["Registered Regular", "Registered Composition", "SEZ", "Overseas", "Deemed Export"], doc.gst_category) && doc.irn_cancelled === 0',
+			depends_on='eval:in_list(["Registered Regular", "Registered Composition", "SEZ", "Overseas", "Deemed Export", "UIN Holders"], doc.gst_category) && doc.irn_cancelled === 0',
 		),
 		dict(
 			fieldname="irn_cancelled",
@@ -1248,7 +1246,6 @@ def get_custom_fields():
 	}
 
 	return custom_fields
-
 
 def make_fixtures(company=None):
 	docs = []

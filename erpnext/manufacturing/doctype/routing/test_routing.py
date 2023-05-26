@@ -88,11 +88,9 @@ class TestRouting(FrappeTestCase):
 def setup_operations(rows):
 	from erpnext.manufacturing.doctype.operation.test_operation import make_operation
 	from erpnext.manufacturing.doctype.workstation.test_workstation import make_workstation
-
 	for row in rows:
 		make_workstation(row)
 		make_operation(row)
-
 
 def create_routing(**args):
 	args = frappe._dict(args)
@@ -112,7 +110,6 @@ def create_routing(**args):
 			doc.save()
 
 	return doc
-
 
 def setup_bom(**args):
 	from erpnext.manufacturing.doctype.production_plan.test_production_plan import make_bom

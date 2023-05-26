@@ -33,7 +33,6 @@ def execute(filters=None):
 	columns = get_columns()
 	return columns, data
 
-
 def validate_filters(filters):
 	if not filters.fiscal_year:
 		frappe.throw(_("Fiscal Year {0} is required").format(filters.fiscal_year))
@@ -78,7 +77,6 @@ def validate_filters(filters):
 
 
 def get_data(filters):
-
 	accounts = frappe.db.sql(
 		"""select name, account_number, parent_account, account_name, root_type, report_type, lft, rgt
 
@@ -118,12 +116,10 @@ def get_data(filters):
 		ignore_closing_entries=not flt(filters.with_period_closing_entry),
 	)
 
-	total_row = calculate_values(
-		accounts, gl_entries_by_account, opening_balances, filters, company_currency
-	)
+	calculate_values(accounts, gl_entries_by_account, opening_balances)
 	accumulate_values_into_parents(accounts, accounts_by_name)
 
-	data = prepare_data(accounts, filters, total_row, parent_children_map, company_currency)
+	data = prepare_data(accounts, filters, parent_children_map, company_currency)
 	data = filter_out_zero_value_rows(
 		data, parent_children_map, show_zero_values=filters.get("show_zero_values")
 	)
@@ -160,20 +156,19 @@ def get_rootwise_opening_balances(filters, report_type):
 	if filters.project:
 		additional_conditions += " and project = %(project)s"
 
-	if filters.finance_book:
-		fb_conditions = " AND finance_book = %(finance_book)s"
-		if filters.include_default_book_entries:
-			fb_conditions = (
-				" AND (finance_book in (%(finance_book)s, %(company_fb)s, '') OR finance_book IS NULL)"
-			)
-
-		additional_conditions += fb_conditions
+	if filters.get("include_default_book_entries"):
+		additional_conditions += (
+			" AND (finance_book in (%(finance_book)s, %(company_fb)s, '') OR finance_book IS NULL)"
+		)
+	else:
+		additional_conditions += " AND (finance_book in (%(finance_book)s, '') OR finance_book IS NULL)"
 
 	accounting_dimensions = get_accounting_dimensions(as_list=False)
 
 	query_filters = {
 		"company": filters.company,
 		"from_date": filters.from_date,
+		"to_date": filters.to_date,
 		"report_type": report_type,
 		"year_start_date": filters.year_start_date,
 		"project": filters.project,
@@ -202,7 +197,7 @@ def get_rootwise_opening_balances(filters, report_type):
 		where
 			company=%(company)s
 			{additional_conditions}
-			and (posting_date < %(from_date)s or ifnull(is_opening, 'No') = 'Yes')
+			and (posting_date < %(from_date)s or (ifnull(is_opening, 'No') = 'Yes' and posting_date <= %(to_date)s))
 			and account in (select name from `tabAccount` where report_type=%(report_type)s)
 			and is_cancelled = 0
 		group by account""".format(
@@ -219,7 +214,7 @@ def get_rootwise_opening_balances(filters, report_type):
 	return opening
 
 
-def calculate_values(accounts, gl_entries_by_account, opening_balances, filters, company_currency):
+def calculate_values(accounts, gl_entries_by_account, opening_balances):
 	init = {
 		"opening_debit": 0.0,
 		"opening_credit": 0.0,
@@ -227,22 +222,6 @@ def calculate_values(accounts, gl_entries_by_account, opening_balances, filters,
 		"credit": 0.0,
 		"closing_debit": 0.0,
 		"closing_credit": 0.0,
-	}
-
-	total_row = {
-		"account": "'" + _("Total") + "'",
-		"account_name": "'" + _("Total") + "'",
-		"warn_if_negative": True,
-		"opening_debit": 0.0,
-		"opening_credit": 0.0,
-		"debit": 0.0,
-		"credit": 0.0,
-		"closing_debit": 0.0,
-		"closing_credit": 0.0,
-		"parent_account": None,
-		"indent": 0,
-		"has_value": True,
-		"currency": company_currency,
 	}
 
 	for d in accounts:
@@ -262,11 +241,30 @@ def calculate_values(accounts, gl_entries_by_account, opening_balances, filters,
 
 		prepare_opening_closing(d)
 
-		for field in value_fields:
-			total_row[field] += d[field]
+
+def calculate_total_row(accounts, company_currency):
+	total_row = {
+		"account": "'" + _("Total") + "'",
+		"account_name": "'" + _("Total") + "'",
+		"warn_if_negative": True,
+		"opening_debit": 0.0,
+		"opening_credit": 0.0,
+		"debit": 0.0,
+		"credit": 0.0,
+		"closing_debit": 0.0,
+		"closing_credit": 0.0,
+		"parent_account": None,
+		"indent": 0,
+		"has_value": True,
+		"currency": company_currency,
+	}
+
+	for d in accounts:
+		if not d.parent_account:
+			for field in value_fields:
+				total_row[field] += d[field]
 
 	return total_row
-
 
 def accumulate_values_into_parents(accounts, accounts_by_name):
 	for d in reversed(accounts):
@@ -275,7 +273,7 @@ def accumulate_values_into_parents(accounts, accounts_by_name):
 				accounts_by_name[d.parent_account][key] += d[key]
 
 
-def prepare_data(accounts, filters, total_row, parent_children_map, company_currency):
+def prepare_data(accounts, filters, parent_children_map, company_currency):
 	data = []
 
 	for d in accounts:
@@ -306,6 +304,7 @@ def prepare_data(accounts, filters, total_row, parent_children_map, company_curr
 		row["has_value"] = has_value
 		data.append(row)
 
+	total_row = calculate_total_row(accounts, company_currency)
 	data.extend([{}, total_row])
 
 	return data

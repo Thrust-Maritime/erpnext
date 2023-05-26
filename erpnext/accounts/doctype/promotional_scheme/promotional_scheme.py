@@ -67,7 +67,6 @@ product_discount_fields = [
 class TransactionExists(frappe.ValidationError):
 	pass
 
-
 class PromotionalScheme(Document):
 	def validate(self):
 		if not self.selling and not self.buying:
@@ -168,7 +167,6 @@ def get_pricing_rules(doc, rules=None):
 			new_doc.extend(_get_pricing_rules(doc, child_doc, fields, rules))
 
 	return new_doc
-
 
 def _get_pricing_rules(doc, child_doc, discount_fields, rules=None):
 	if rules is None:

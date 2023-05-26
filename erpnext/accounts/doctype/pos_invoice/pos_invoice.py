@@ -56,7 +56,6 @@ class POSInvoice(SalesInvoice):
 		self.validate_loyalty_transaction()
 		if self.coupon_code:
 			from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
-
 			validate_coupon_code(self.coupon_code)
 
 	def on_submit(self):
@@ -161,7 +160,7 @@ class POSInvoice(SalesInvoice):
 
 		bold_item_name = frappe.bold(item.item_name)
 		bold_extra_batch_qty_needed = frappe.bold(
-			abs(available_batch_qty - reserved_batch_qty - item.qty)
+			abs(available_batch_qty - reserved_batch_qty - item.stock_qty)
 		)
 		bold_invalid_batch_no = frappe.bold(item.batch_no)
 
@@ -172,7 +171,7 @@ class POSInvoice(SalesInvoice):
 				).format(item.idx, bold_invalid_batch_no, bold_item_name),
 				title=_("Item Unavailable"),
 			)
-		elif (available_batch_qty - reserved_batch_qty - item.qty) < 0:
+		elif (available_batch_qty - reserved_batch_qty - item.stock_qty) < 0:
 			frappe.throw(
 				_(
 					"Row #{}: Batch No. {} of item {} has less than required stock available, {} more required"
@@ -222,9 +221,6 @@ class POSInvoice(SalesInvoice):
 		allow_negative_stock = frappe.db.get_single_value("Stock Settings", "allow_negative_stock")
 
 		for d in self.get("items"):
-			is_service_item = not (frappe.db.get_value("Item", d.get("item_code"), "is_stock_item"))
-			if is_service_item:
-				return
 			if d.serial_no:
 				self.validate_pos_reserved_serial_nos(d)
 				self.validate_delivered_serial_nos(d)
@@ -242,14 +238,14 @@ class POSInvoice(SalesInvoice):
 					frappe.bold(d.warehouse),
 					frappe.bold(d.qty),
 				)
-				if flt(available_stock) <= 0:
+				if is_stock_item and flt(available_stock) <= 0:
 					frappe.throw(
 						_("Row #{}: Item Code: {} is not available under warehouse {}.").format(
 							d.idx, item_code, warehouse
 						),
 						title=_("Item Unavailable"),
 					)
-				elif flt(available_stock) < flt(d.qty):
+				elif is_stock_item and flt(available_stock) < flt(d.stock_qty):
 					frappe.throw(
 						_(
 							"Row #{}: Stock quantity not enough for Item Code: {} under warehouse {}. Available quantity {}."
@@ -440,7 +436,6 @@ class POSInvoice(SalesInvoice):
 	def set_pos_fields(self, for_validate=False):
 		"""Set retail related fields from POS Profiles"""
 		from erpnext.stock.get_item_details import get_pos_profile, get_pos_profile_item_details
-
 		if not self.pos_profile:
 			pos_profile = get_pos_profile(self.company) or {}
 			if not pos_profile:
@@ -637,11 +632,12 @@ def get_stock_availability(item_code, warehouse):
 		pos_sales_qty = get_pos_reserved_qty(item_code, warehouse)
 		return bin_qty - pos_sales_qty, is_stock_item
 	else:
-		is_stock_item = False
+		is_stock_item = True
 		if frappe.db.exists("Product Bundle", item_code):
 			return get_bundle_availability(item_code, warehouse), is_stock_item
 		else:
-			# Is a service item
+			is_stock_item = False
+			# Is a service item or non_stock item
 			return 0, is_stock_item
 
 
@@ -654,8 +650,10 @@ def get_bundle_availability(bundle_item_code, warehouse):
 		item_pos_reserved_qty = get_pos_reserved_qty(item.item_code, warehouse)
 		available_qty = item_bin_qty - item_pos_reserved_qty
 
-		max_available_bundles = available_qty / item.qty
-		if bundle_bin_qty > max_available_bundles:
+		max_available_bundles = available_qty / item.stock_qty
+		if bundle_bin_qty > max_available_bundles and frappe.get_value(
+			"Item", item.item_code, "is_stock_item"
+		):
 			bundle_bin_qty = max_available_bundles
 
 	pos_sales_qty = get_pos_reserved_qty(bundle_item_code, warehouse)
@@ -747,3 +745,7 @@ def add_return_modes(doc, pos_profile):
 		]:
 			payment_mode = get_mode_of_payment_info(mode_of_payment, doc.company)
 			append_payment(payment_mode[0])
+
+
+def on_doctype_update():
+	frappe.db.add_index("POS Invoice", ["return_against"])

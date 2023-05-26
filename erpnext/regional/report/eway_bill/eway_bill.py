@@ -18,7 +18,6 @@ def execute(filters=None):
 	data = get_data(filters)
 	return columns, data
 
-
 def get_data(filters):
 
 	conditions = get_conditions(filters)
@@ -72,7 +71,6 @@ def get_data(filters):
 		row.customer = re.sub(special_characters[:-1] + "&0-9" + "]", "", row.customer)
 
 	return data
-
 
 def get_conditions(filters):
 

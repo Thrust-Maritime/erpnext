@@ -82,7 +82,6 @@ def validate_item_variant_attributes(item, args=None):
 			attributes_list = attribute_values.get(attribute.lower(), [])
 			validate_item_attribute_value(attributes_list, attribute, value, item.name, from_variant=True)
 
-
 def validate_is_incremental(numeric_attribute, attribute, value, item):
 	from_range = numeric_attribute.from_range
 	to_range = numeric_attribute.to_range
@@ -191,7 +190,6 @@ def find_variant(template, args, variant_item_code=None):
 			if match_count == len(args.keys()):
 				return variant.name
 
-
 @frappe.whitelist()
 def create_variant(item, args):
 	if isinstance(args, string_types):
@@ -210,7 +208,6 @@ def create_variant(item, args):
 	make_variant_item_code(template.item_code, template.item_name, variant)
 
 	return variant
-
 
 @frappe.whitelist()
 def enqueue_multiple_variant_creation(item, args):
@@ -354,7 +351,6 @@ def copy_attributes_to_variant(item, variant):
 				if attributes_description not in variant.description:
 					variant.description = attributes_description
 
-
 def make_variant_item_code(template_item_code, template_item_name, variant):
 	"""Uses template's item code and abbreviations to make variant's item code"""
 	if variant.item_code:
@@ -385,7 +381,6 @@ def make_variant_item_code(template_item_code, template_item_name, variant):
 	if abbreviations:
 		variant.item_code = "{0}-{1}".format(template_item_code, "-".join(abbreviations))
 		variant.item_name = "{0}-{1}".format(template_item_name, "-".join(abbreviations))
-
 
 @frappe.whitelist()
 def create_variant_doc_for_quick_entry(template, args):

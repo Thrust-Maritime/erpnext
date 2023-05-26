@@ -128,7 +128,6 @@ class TestAssetMovement(unittest.TestCase):
 		movement1.cancel()
 		self.assertEqual(frappe.db.get_value("Asset", asset.name, "location"), "Test Location")
 
-
 def create_asset_movement(**args):
 	args = frappe._dict(args)
 

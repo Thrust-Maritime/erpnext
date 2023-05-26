@@ -16,7 +16,6 @@ def execute(filters=None):
 
 	return columns, data, None, chart
 
-
 def get_columns():
 	return [
 		{
@@ -108,7 +107,6 @@ def get_data(filters):
 	data = get_inpatient_details(data, filters.get("service_unit"))
 
 	return data
-
 
 def get_conditions(filters):
 	conditions = ""

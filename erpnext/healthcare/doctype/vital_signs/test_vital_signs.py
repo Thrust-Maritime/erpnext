@@ -5,6 +5,5 @@ import unittest
 
 # test_records = frappe.get_test_records('Vital Signs')
 
-
 class TestVitalSigns(unittest.TestCase):
 	pass

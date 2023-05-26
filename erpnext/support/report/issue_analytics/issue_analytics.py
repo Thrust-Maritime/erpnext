@@ -15,7 +15,6 @@ from erpnext.accounts.utils import get_fiscal_year
 def execute(filters=None):
 	return IssueAnalytics(filters).run()
 
-
 class IssueAnalytics(object):
 	def __init__(self, filters=None):
 		"""Issue Analytics Report"""

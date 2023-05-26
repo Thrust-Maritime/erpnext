@@ -229,7 +229,6 @@ def create_compounds(template, lab_test, is_group):
 		normal.allow_blank = normal_test_template.allow_blank
 		normal.template = template.name
 
-
 def create_descriptives(template, lab_test):
 	lab_test.descriptive_toggle = 1
 	if template.sensitivity:

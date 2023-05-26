@@ -13,7 +13,6 @@ from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 
 Filters = frappe._dict
 
-
 def execute(filters: Filters = None) -> Tuple:
 	to_date = filters["to_date"]
 	columns = get_columns(filters)
@@ -25,7 +24,6 @@ def execute(filters: Filters = None) -> Tuple:
 
 	return columns, data, None, chart_data
 
-
 def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> List[Dict]:
 	"Returns ordered, formatted data with ranges."
 	_func = itemgetter(1)
@@ -34,6 +32,9 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
 	precision = cint(frappe.db.get_single_value("System Settings", "float_precision", cache=True))
 
 	for item, item_dict in item_details.items():
+		if not flt(item_dict.get("total_qty"), precision):
+			continue
+
 		earliest_age, latest_age = 0, 0
 		details = item_dict["details"]
 
@@ -69,7 +70,6 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
 		data.append(row)
 
 	return data
-
 
 def get_average_age(fifo_queue: List, to_date: str) -> float:
 	batch_age = age_qty = total_qty = 0.0

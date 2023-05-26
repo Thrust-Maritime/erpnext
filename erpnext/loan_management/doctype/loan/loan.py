@@ -7,7 +7,16 @@ import math
 
 import frappe
 from frappe import _
-from frappe.utils import add_months, flt, get_last_day, getdate, now_datetime, nowdate
+from frappe.utils import (
+	add_days,
+	add_months,
+	date_diff,
+	flt,
+	get_last_day,
+	getdate,
+	now_datetime,
+	nowdate,
+)
 from six import string_types
 
 import erpnext
@@ -26,6 +35,7 @@ class Loan(AccountsController):
 		self.set_loan_amount()
 		self.validate_loan_amount()
 		self.set_missing_fields()
+		self.validate_cost_center()
 		self.validate_accounts()
 		self.check_sanctioned_amount_limit()
 		self.validate_repay_from_salary()
@@ -58,6 +68,13 @@ class Loan(AccountsController):
 						frappe.bold(self.get(fieldname)), frappe.bold(self.company)
 					)
 				)
+
+	def validate_cost_center(self):
+		if not self.cost_center and self.rate_of_interest != 0.0:
+			self.cost_center = frappe.db.get_value("Company", self.company, "cost_center")
+
+			if not self.cost_center:
+				frappe.throw(_("Cost center is mandatory for loans having rate of interest greater than 0"))
 
 	def on_submit(self):
 		self.link_loan_security_pledge()
@@ -107,30 +124,81 @@ class Loan(AccountsController):
 		if not self.repayment_start_date:
 			frappe.throw(_("Repayment Start Date is mandatory for term loans"))
 
+		schedule_type_details = frappe.db.get_value(
+			"Loan Type", self.loan_type, ["repayment_schedule_type", "repayment_date_on"], as_dict=1
+		)
+
 		self.repayment_schedule = []
 		payment_date = self.repayment_start_date
 		balance_amount = self.loan_amount
-		while balance_amount > 0:
-			interest_amount = flt(balance_amount * flt(self.rate_of_interest) / (12 * 100))
-			principal_amount = self.monthly_repayment_amount - interest_amount
-			balance_amount = flt(balance_amount + interest_amount - self.monthly_repayment_amount)
-			if balance_amount < 0:
-				principal_amount += balance_amount
-				balance_amount = 0.0
 
-			total_payment = principal_amount + interest_amount
-			self.append(
-				"repayment_schedule",
-				{
-					"payment_date": payment_date,
-					"principal_amount": principal_amount,
-					"interest_amount": interest_amount,
-					"total_payment": total_payment,
-					"balance_loan_amount": balance_amount,
-				},
+		while balance_amount > 0:
+			interest_amount, principal_amount, balance_amount, total_payment = self.get_amounts(
+				payment_date,
+				balance_amount,
+				schedule_type_details.repayment_schedule_type,
+				schedule_type_details.repayment_date_on,
 			)
-			next_payment_date = add_single_month(payment_date)
-			payment_date = next_payment_date
+
+			if schedule_type_details.repayment_schedule_type == "Pro-rated calendar months":
+				next_payment_date = get_last_day(payment_date)
+				if schedule_type_details.repayment_date_on == "Start of the next month":
+					next_payment_date = add_days(next_payment_date, 1)
+
+				payment_date = next_payment_date
+
+			self.add_repayment_schedule_row(
+				payment_date, principal_amount, interest_amount, total_payment, balance_amount
+			)
+
+			if (
+				schedule_type_details.repayment_schedule_type == "Monthly as per repayment start date"
+				or schedule_type_details.repayment_date_on == "End of the current month"
+			):
+				next_payment_date = add_single_month(payment_date)
+				payment_date = next_payment_date
+
+	def get_amounts(self, payment_date, balance_amount, schedule_type, repayment_date_on):
+		if schedule_type == "Monthly as per repayment start date":
+			days = 1
+			months = 12
+		else:
+			expected_payment_date = get_last_day(payment_date)
+			if repayment_date_on == "Start of the next month":
+				expected_payment_date = add_days(expected_payment_date, 1)
+
+			if expected_payment_date == payment_date:
+				# using 30 days for calculating interest for all full months
+				days = 30
+				months = 365
+			else:
+				days = date_diff(get_last_day(payment_date), payment_date)
+				months = 365
+
+		interest_amount = flt(balance_amount * flt(self.rate_of_interest) * days / (months * 100))
+		principal_amount = self.monthly_repayment_amount - interest_amount
+		balance_amount = flt(balance_amount + interest_amount - self.monthly_repayment_amount)
+		if balance_amount < 0:
+			principal_amount += balance_amount
+			balance_amount = 0.0
+
+		total_payment = principal_amount + interest_amount
+
+		return interest_amount, principal_amount, balance_amount, total_payment
+
+	def add_repayment_schedule_row(
+		self, payment_date, principal_amount, interest_amount, total_payment, balance_loan_amount
+	):
+		self.append(
+			"repayment_schedule",
+			{
+				"payment_date": payment_date,
+				"principal_amount": principal_amount,
+				"interest_amount": interest_amount,
+				"total_payment": total_payment,
+				"balance_loan_amount": balance_loan_amount,
+			},
+		)
 
 	def set_repayment_period(self):
 		if self.repayment_method == "Repay Fixed Amount per Period":
@@ -301,7 +369,6 @@ def get_monthly_repayment_amount(loan_amount, rate_of_interest, repayment_period
 		monthly_repayment_amount = math.ceil(flt(loan_amount) / repayment_periods)
 	return monthly_repayment_amount
 
-
 @frappe.whitelist()
 def request_loan_closure(loan, posting_date=None):
 	if not posting_date:
@@ -335,10 +402,25 @@ def get_loan_application(loan_application):
 		return loan.as_dict()
 
 
+@frappe.whitelist()
+def close_unsecured_term_loan(loan):
+	loan_details = frappe.db.get_value(
+		"Loan", {"name": loan}, ["status", "is_term_loan", "is_secured_loan"], as_dict=1
+	)
+
+	if (
+		loan_details.status == "Loan Closure Requested"
+		and loan_details.is_term_loan
+		and not loan_details.is_secured_loan
+	):
+		frappe.db.set_value("Loan", loan, "status", "Closed")
+	else:
+		frappe.throw(_("Cannot close this loan until full repayment"))
+
+
 def close_loan(loan, total_amount_paid):
 	frappe.db.set_value("Loan", loan, "total_amount_paid", total_amount_paid)
 	frappe.db.set_value("Loan", loan, "status", "Closed")
-
 
 @frappe.whitelist()
 def make_loan_disbursement(loan, company, applicant_type, applicant, pending_amount=0, as_dict=0):
@@ -355,7 +437,6 @@ def make_loan_disbursement(loan, company, applicant_type, applicant, pending_amo
 		return disbursement_entry.as_dict()
 	else:
 		return disbursement_entry
-
 
 @frappe.whitelist()
 def make_repayment_entry(loan, applicant_type, applicant, loan_type, company, as_dict=0):
@@ -453,7 +534,6 @@ def unpledge_security(
 	else:
 		return unpledge_request
 
-
 def create_loan_security_unpledge(unpledge_map, loan, company, applicant_type, applicant):
 	unpledge_request = frappe.new_doc("Loan Security Unpledge")
 	unpledge_request.applicant_type = applicant_type
@@ -472,7 +552,6 @@ def validate_employee_currency_with_company_currency(applicant, company):
 	from erpnext.payroll.doctype.salary_structure_assignment.salary_structure_assignment import (
 		get_employee_currency,
 	)
-
 	if not applicant:
 		frappe.throw(_("Please select Applicant"))
 	if not company:

@@ -24,7 +24,6 @@ def execute(filters=None):
 	columns, data = get_columns(filters), get_data(filters)
 	return columns, data
 
-
 def get_columns(filters):
 	party_type = filters.get("party_type")
 	party_type_value = get_party_group(party_type)
@@ -53,7 +52,6 @@ def get_data(filters):
 	party_group = get_party_group(party_type)
 
 	return get_party_addresses_and_contact(party_type, party, party_group)
-
 
 def get_party_addresses_and_contact(party_type, party, party_group):
 	data = []

@@ -16,7 +16,6 @@ def setup(company=None, patch=True):
 	add_permissions()
 	make_custom_fields()
 
-
 def add_print_formats():
 	frappe.reload_doc("regional", "print_format", "detailed_tax_invoice", force=True)
 	frappe.reload_doc("regional", "print_format", "simplified_tax_invoice", force=True)
@@ -92,7 +91,6 @@ def make_custom_fields():
 	}
 
 	create_custom_fields(custom_fields, update=True)
-
 
 def update_regional_tax_settings(country, company):
 	create_ksa_vat_setting(company)

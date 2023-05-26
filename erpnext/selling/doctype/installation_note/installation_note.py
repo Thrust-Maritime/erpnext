@@ -35,7 +35,6 @@ class InstallationNote(TransactionBase):
 		self.check_item_table()
 
 		from erpnext.controllers.selling_controller import set_default_income_account_for_item
-
 		set_default_income_account_for_item(self)
 
 	def is_serial_no_added(self, item_code, serial_no):

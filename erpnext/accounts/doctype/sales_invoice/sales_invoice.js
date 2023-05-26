@@ -53,7 +53,6 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 			me.frm.refresh_fields();
 		}
 		erpnext.queries.setup_warehouse_query(this.frm);
-		erpnext.accounts.dimensions.setup_dimension_filters(this.frm, this.frm.doctype);
 	},
 
 	refresh: function(doc, dt, dn) {
@@ -76,9 +75,12 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 
 		if (doc.docstatus == 1 && doc.outstanding_amount!=0
 			&& !(cint(doc.is_return) && doc.return_against)) {
-			cur_frm.add_custom_button(__('Payment'),
-				this.make_payment_entry, __('Create'));
-			cur_frm.page.set_inner_btn_group_as_primary(__('Create'));
+			this.frm.add_custom_button(
+				__('Payment'),
+				() => this.make_payment_entry(),
+				__('Create')
+			);
+			this.frm.page.set_inner_btn_group_as_primary(__('Create'));
 		}
 
 		if(doc.docstatus==1 && !doc.is_return) {
@@ -314,6 +316,7 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 	},
 
 	make_inter_company_invoice: function() {
+		let me = this;
 		frappe.model.open_mapped_doc({
 			method: "erpnext.accounts.doctype.sales_invoice.sales_invoice.make_inter_company_purchase_invoice",
 			frm: me.frm
@@ -477,7 +480,19 @@ erpnext.accounts.SalesInvoiceController = erpnext.selling.SellingController.exte
 			});
 			this.frm.trigger("calculate_timesheet_totals");
 		}
+	},
+
+	is_cash_or_non_trade_discount() {
+		this.frm.set_df_property("additional_discount_account", "hidden", 1 - this.frm.doc.is_cash_or_non_trade_discount);
+		this.frm.set_df_property("additional_discount_account", "reqd", this.frm.doc.is_cash_or_non_trade_discount);
+
+		if (!this.frm.doc.is_cash_or_non_trade_discount) {
+			this.frm.set_value("additional_discount_account", "");
+		}
+
+		this.calculate_taxes_and_totals();
 	}
+
 });
 
 // for backward compatibility: combine new and previous states
@@ -1067,7 +1082,7 @@ var select_loyalty_program = function(frm, loyalty_programs) {
 		]
 	});
 
-	dialog.set_primary_action(__("Set"), function() {
+	dialog.set_primary_action(__("Set Loyalty Program"), function() {
 		dialog.hide();
 		return frappe.call({
 			method: "frappe.client.set_value",

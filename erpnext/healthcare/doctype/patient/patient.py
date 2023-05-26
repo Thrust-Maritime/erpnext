@@ -300,7 +300,6 @@ def make_invoice(patient, company):
 	sales_invoice.set_missing_values()
 	return sales_invoice
 
-
 @frappe.whitelist()
 def get_patient_detail(patient):
 	patient_dict = frappe.db.sql("""select * from tabPatient where name=%s""", (patient), as_dict=1)

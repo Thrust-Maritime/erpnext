@@ -102,7 +102,6 @@ def create_dunning():
 	dunning.save()
 	return dunning
 
-
 def create_dunning_with_zero_interest_rate():
 	posting_date = add_days(today(), -20)
 	due_date = add_days(today(), -15)

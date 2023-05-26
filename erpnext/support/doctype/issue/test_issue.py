@@ -18,7 +18,6 @@ class TestSetUp(unittest.TestCase):
 		frappe.db.set_value("Support Settings", None, "track_service_level_agreement", 1)
 		create_service_level_agreements_for_issues()
 
-
 class TestIssue(TestSetUp):
 	def test_response_time_and_resolution_time_based_on_different_sla(self):
 		creation = get_datetime("2019-03-04 12:00")
@@ -138,7 +137,6 @@ class TestIssue(TestSetUp):
 
 		issue.reload()
 		self.assertEqual(flt(issue.total_hold_time, 2), 2700)
-
 
 class TestFirstResponseTime(TestSetUp):
 	# working hours used in all cases: Mon-Fri, 10am to 6pm

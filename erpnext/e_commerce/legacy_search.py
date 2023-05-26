@@ -123,11 +123,9 @@ def update_index_for_path(path):
 	search = ProductSearch(INDEX_NAME)
 	return search.update_index_by_name(path)
 
-
 def remove_document_from_index(path):
 	search = ProductSearch(INDEX_NAME)
 	return search.remove_document_from_index(path)
-
 
 def build_index_for_all_routes():
 	search = ProductSearch(INDEX_NAME)

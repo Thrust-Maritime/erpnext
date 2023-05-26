@@ -49,7 +49,6 @@ def get_data(filters):
 	tasks.sort(key=lambda x: x["delay"], reverse=True)
 	return tasks
 
-
 def get_conditions(filters):
 	conditions = frappe._dict()
 	keys = ["priority", "status"]
@@ -61,7 +60,6 @@ def get_conditions(filters):
 	if filters.get("to_date"):
 		conditions.exp_start_date = ["<=", filters.get("to_date")]
 	return conditions
-
 
 def get_chart_data(data):
 	delay, on_track = 0, 0

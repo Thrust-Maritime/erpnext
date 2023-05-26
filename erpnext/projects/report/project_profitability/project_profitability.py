@@ -14,12 +14,10 @@ def execute(filters=None):
 	charts = get_chart_data(data)
 	return columns, data, None, charts
 
-
 def get_data(filters):
 	data = get_rows(filters)
 	data = calculate_cost_and_profit(data)
 	return data
-
 
 def get_rows(filters):
 	conditions = get_conditions(filters)
@@ -69,7 +67,6 @@ def calculate_cost_and_profit(data):
 		row.profit = flt(row.base_grand_total) - flt(row.base_gross_pay) * flt(row.utilization)
 	return data
 
-
 def get_conditions(filters):
 	conditions = []
 
@@ -95,7 +92,6 @@ def get_conditions(filters):
 
 	conditions = " and ".join(conditions)
 	return conditions
-
 
 def get_chart_data(data):
 	if not data:

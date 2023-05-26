@@ -104,7 +104,6 @@ def identify_is_group(child):
 
 	return is_group
 
-
 def get_chart(chart_template, existing_company=None):
 	chart = {}
 	if existing_company:
@@ -114,13 +113,11 @@ def get_chart(chart_template, existing_company=None):
 		from erpnext.accounts.doctype.account.chart_of_accounts.verified import (
 			standard_chart_of_accounts,
 		)
-
 		return standard_chart_of_accounts.get()
 	elif chart_template == "Standard with Numbers":
 		from erpnext.accounts.doctype.account.chart_of_accounts.verified import (
 			standard_chart_of_accounts_with_account_number,
 		)
-
 		return standard_chart_of_accounts_with_account_number.get()
 	else:
 		folders = ("verified",)
@@ -135,7 +132,6 @@ def get_chart(chart_template, existing_company=None):
 						chart = f.read()
 						if chart and json.loads(chart).get("name") == chart_template:
 							return json.loads(chart).get("tree")
-
 
 @frappe.whitelist()
 def get_charts_for_country(country, with_standard=False):
@@ -197,7 +193,6 @@ def get_account_tree_from_existing_company(existing_company):
 		build_account_tree(account_tree, None, all_accounts)
 	return account_tree
 
-
 def build_account_tree(tree, parent, all_accounts):
 	# find children
 	parent_account = parent.name if parent else ""
@@ -225,7 +220,6 @@ def build_account_tree(tree, parent, all_accounts):
 
 		# call recursively to build a subtree for current account
 		build_account_tree(tree[child.account_name], child, all_accounts)
-
 
 @frappe.whitelist()
 def validate_bank_account(coa, bank_account):

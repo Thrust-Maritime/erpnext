@@ -9,7 +9,6 @@ from frappe.model.document import Document
 class StudentAttendanceTool(Document):
 	pass
 
-
 @frappe.whitelist()
 def get_student_attendance_records(based_on, date=None, student_group=None, course_schedule=None):
 	student_list = []

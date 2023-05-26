@@ -113,7 +113,6 @@ def calculate_values(accounts, gl_entries_by_account, filters):
 
 	return total_row
 
-
 def accumulate_values_into_parents(accounts, accounts_by_name):
 	for d in reversed(accounts):
 		if d.parent_account:

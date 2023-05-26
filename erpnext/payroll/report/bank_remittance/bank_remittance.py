@@ -86,7 +86,6 @@ def execute(filters=None):
 
 	return columns, data
 
-
 def get_bank_accounts():
 	accounts = [d.name for d in get_all("Account", filters={"account_type": "Bank"})]
 	return accounts
@@ -140,7 +139,6 @@ def get_salary_slips(payroll_entries):
 			slip["debit_acc_no"] = None
 
 	return salary_slips
-
 
 def get_emp_bank_ifsc_code(salary_slips):
 	emp_names = [d.employee for d in salary_slips]

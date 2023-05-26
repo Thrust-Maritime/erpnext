@@ -21,7 +21,6 @@ charts = {}
 all_account_types = []
 all_roots = {}
 
-
 def go():
 	global accounts, charts
 	default_account_types = get_default_account_types()
@@ -83,7 +82,6 @@ def get_xml_roots(files_path):
 					xml_roots.setdefault(node.get("model"), []).append(root)
 					break
 	return xml_roots
-
 
 def get_csv_contents(files_path):
 	csv_content = {}
@@ -148,7 +146,6 @@ def get_account_types(root_list, csv_content, prefix=None):
 				types[node_id] = data
 	return types
 
-
 def make_maps_for_xml(xml_roots, account_types, country_dir):
 	"""make maps for `charts` and `accounts`"""
 	for model, root_list in iteritems(xml_roots):
@@ -182,7 +179,6 @@ def make_maps_for_xml(xml_roots, account_types, country_dir):
 							data["account_root_id"] = field.get("ref")
 						data["id"] = country_dir
 					charts.setdefault(node.get("id"), {}).update(data)
-
 
 def make_maps_for_csv(csv_content, account_types, country_dir):
 	for content in csv_content.get("account.account.template", []):
@@ -233,7 +229,6 @@ def make_account_trees():
 	for id in accounts.keys():
 		if "children" in accounts[id] and not accounts[id].get("children"):
 			del accounts[id]["children"]
-
 
 def make_charts():
 	"""write chart files in app/setup/doctype/company/charts"""

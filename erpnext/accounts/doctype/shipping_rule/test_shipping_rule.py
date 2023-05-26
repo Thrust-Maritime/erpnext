@@ -43,7 +43,6 @@ class TestShippingRule(unittest.TestCase):
 			shipping_rule.get("conditions")[1].to_value = range_b[1]
 			self.assertRaises(OverlappingConditionError, shipping_rule.insert)
 
-
 def create_shipping_rule(shipping_rule_type, shipping_rule_name):
 
 	if frappe.db.exists("Shipping Rule", shipping_rule_name):

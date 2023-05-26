@@ -131,7 +131,6 @@ def make_pos_invoice():
 		si.insert()
 		si.submit()
 
-
 def make_payment_entries_for_pos_invoice(si):
 	for data in si.payments:
 		data.amount = si.outstanding_amount

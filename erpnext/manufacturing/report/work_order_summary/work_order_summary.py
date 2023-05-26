@@ -31,6 +31,7 @@ def get_data(filters):
 		"sales_order",
 		"production_item",
 		"qty",
+		"creation",
 		"produced_qty",
 		"planned_start_date",
 		"planned_end_date",
@@ -39,12 +40,22 @@ def get_data(filters):
 		"lead_time",
 	]
 
-	for field in ["sales_order", "production_item", "status", "company"]:
+	for field in ["sales_order", "production_item"]:
 		if filters.get(field):
 			query_filters[field] = ("in", filters.get(field))
 
-	query_filters["planned_start_date"] = (">=", filters.get("from_date"))
-	query_filters["planned_end_date"] = ("<=", filters.get("to_date"))
+	for field in ["status", "company"]:
+		if filters.get(field):
+			query_filters[field] = filters.get(field)
+
+	if filters.get("based_on") == "Planned Date":
+		query_filters["planned_start_date"] = (">=", filters.get("from_date"))
+		query_filters["planned_end_date"] = ("<=", filters.get("to_date"))
+	elif filters.get("based_on") == "Actual Date":
+		query_filters["actual_start_date"] = (">=", filters.get("from_date"))
+		query_filters["actual_end_date"] = ("<=", filters.get("to_date"))
+	else:
+		query_filters["creation"] = ("between", [filters.get("from_date"), filters.get("to_date")])
 
 	data = frappe.get_all(
 		"Work Order", fields=fields, filters=query_filters, order_by="planned_start_date asc"
@@ -63,7 +74,6 @@ def get_data(filters):
 
 	return res
 
-
 def get_chart_data(data, filters):
 	if filters.get("charts_based_on") == "Status":
 		return get_chart_based_on_status(data)
@@ -71,7 +81,6 @@ def get_chart_data(data, filters):
 		return get_chart_based_on_age(data)
 	else:
 		return get_chart_based_on_qty(data, filters)
-
 
 def get_chart_based_on_status(data):
 	labels = frappe.get_meta("Work Order").get_options("status").split("\n")
@@ -124,7 +133,6 @@ def get_chart_based_on_age(data):
 
 	return chart
 
-
 def get_chart_based_on_qty(data, filters):
 	labels, periodic_data = prepare_chart_data(data, filters)
 
@@ -173,7 +181,6 @@ def prepare_chart_data(data, filters):
 
 	return labels, periodic_data
 
-
 def get_columns(filters):
 	columns = [
 		{
@@ -207,6 +214,12 @@ def get_columns(filters):
 				"fieldtype": "Link",
 				"options": "Sales Order",
 				"width": 90,
+			},
+			{
+				"label": _("Created On"),
+				"fieldname": "creation",
+				"fieldtype": "Date",
+				"width": 150,
 			},
 			{
 				"label": _("Planned Start Date"),

@@ -30,6 +30,9 @@ def execute(filters=None):
 		conversion_factors.append(0)
 
 	actual_qty = stock_value = 0
+	if opening_row:
+		actual_qty = opening_row.get("qty_after_transaction")
+		stock_value = opening_row.get("stock_value")
 
 	available_serial_nos = {}
 	for sle in sl_entries:
@@ -59,7 +62,6 @@ def execute(filters=None):
 
 	update_included_uom_in_report(columns, data, include_uom, conversion_factors)
 	return columns, data
-
 
 def update_available_serial_nos(available_serial_nos, sle):
 	serial_nos = get_serial_nos(sle.serial_no)
@@ -355,7 +357,7 @@ def get_opening_balance(filters, columns, sl_entries):
 	)
 
 	# check if any SLEs are actually Opening Stock Reconciliation
-	for sle in sl_entries:
+	for sle in list(sl_entries):
 		if (
 			sle.get("voucher_type") == "Stock Reconciliation"
 			and sle.get("date").split()[0] == filters.from_date

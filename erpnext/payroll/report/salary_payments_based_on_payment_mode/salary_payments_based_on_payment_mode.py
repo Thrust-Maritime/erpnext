@@ -65,7 +65,6 @@ def prepare_data(entry):
 
 	return branch_wise_entries, gross_pay
 
-
 def get_data(filters, mode_of_payments):
 	data = []
 
@@ -136,7 +135,6 @@ def get_total_based_on_mode_of_payment(data, mode_of_payments):
 
 	total_row["total"] = total
 	return total_row
-
 
 def get_report_summary(gross_pay, total_deductions, net_pay, currency):
 	return [

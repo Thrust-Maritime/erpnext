@@ -99,7 +99,8 @@ class TestBatch(FrappeTestCase):
 
 		# shipped from FEFO batch
 		self.assertEqual(
-			delivery_note.items[0].batch_no, get_batch_no(item_code, receipt.items[0].warehouse, batch_qty)
+			delivery_note.items[0].batch_no,
+			get_batch_no(item_code, receipt.items[0].warehouse, batch_qty).get("batch_no", None),
 		)
 
 	def test_delivery_note_fail(self):
@@ -145,7 +146,8 @@ class TestBatch(FrappeTestCase):
 
 		# assert same batch is selected
 		self.assertEqual(
-			stock_entry.items[0].batch_no, get_batch_no(item_code, receipt.items[0].warehouse, batch_qty)
+			stock_entry.items[0].batch_no,
+			get_batch_no(item_code, receipt.items[0].warehouse, batch_qty).get("batch_no", None),
 		)
 
 	def test_batch_split(self):
@@ -366,8 +368,14 @@ def make_new_batch(**args):
 				"doctype": "Batch",
 				"batch_id": args.batch_id,
 				"item": args.item_code,
+				"expiry_date": args.expiry_date,
 			}
-		).insert()
+		)
+
+		if args.expiry_date:
+			batch.expiry_date = args.expiry_date
+
+		batch.insert()
 
 	except frappe.DuplicateEntryError:
 		batch = frappe.get_doc("Batch", args.batch_id)

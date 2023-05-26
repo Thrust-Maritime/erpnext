@@ -53,6 +53,5 @@ def get_previous_setting():
 	obj["companies"] = get_setting_companies()
 	return obj
 
-
 def get_setting_companies():
 	return frappe.db.sql("select * from `tabDaily Work Summary Settings Company`", as_dict=True)
