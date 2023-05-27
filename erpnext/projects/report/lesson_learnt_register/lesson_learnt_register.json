@@ -1,0 +1,28 @@
+{
+    "add_total_row": 0,
+    "columns": [],
+    "creation": "2023-04-29 21:50:14.651083",
+    "disable_prepared_report": 0,
+    "disabled": 0,
+    "docstatus": 0,
+    "doctype": "Report",
+    "filters": [],
+    "idx": 0,
+    "is_standard": "Yes",
+    "json": "{\"filters\":[],\"fields\":[[\"name\",\"Lessons learnt\"],[\"category\",\"LL Child Table\"],[\"what_happened\",\"LL Child Table\"],[\"recommended_future_approach\",\"LL Child Table\"]],\"order_by\":\"`tabLessons learnt`.`modified` desc\",\"add_totals_row\":0,\"page_length\":20,\"column_widths\":{\"name\":196,\"LL Child Table:category\":129,\"LL Child Table:what_happened\":416,\"LL Child Table:recommended_future_approach\":723},\"group_by\":null}",
+    "letter_head": "General TM",
+    "modified": "2023-04-30 12:14:14.965072",
+    "modified_by": "Administrator",
+    "module": "Projects",
+    "name": "Lesson Learnt Register",
+    "owner": "benhealy@thrustm.com",
+    "prepared_report": 0,
+    "ref_doctype": "Lessons learnt",
+    "report_name": "Lesson Learnt Register",
+    "report_type": "Report Builder",
+    "roles": [
+     {
+      "role": "System Manager"
+     }
+    ]
+   }

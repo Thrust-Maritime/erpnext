@@ -242,7 +242,7 @@
    "label": "Order Type",
    "oldfieldname": "order_type",
    "oldfieldtype": "Select",
-   "options": "\nSales\nMaintenance\nShopping Cart",
+   "options": "\nSales",
    "print_hide": 1,
    "reqd": 1
   },
