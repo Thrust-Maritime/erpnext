@@ -22,4 +22,6 @@ frappe.views.calendar["Deliverables"] = {
 		}
 	],
 	get_events_method: "frappe.desk.calendar.get_events"
+
 }
+
