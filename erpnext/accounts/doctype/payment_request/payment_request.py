@@ -6,7 +6,6 @@ import json
 
 import frappe
 from frappe import _
-from frappe.integrations.utils import get_payment_gateway_controller
 from frappe.model.document import Document
 from frappe.utils import flt, get_url, nowdate
 from frappe.utils.background_jobs import enqueue
@@ -477,8 +476,8 @@ def make_payment_request(**args):
 		if args.order_type == "Shopping Cart" or args.mute_email:
 			pr.flags.mute_email = True
 
+		pr.insert(ignore_permissions=True)
 		if args.submit_doc:
-			pr.insert(ignore_permissions=True)
 			pr.submit()
 
 	if args.order_type == "Shopping Cart":
