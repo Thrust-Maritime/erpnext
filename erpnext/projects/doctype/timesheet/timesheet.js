@@ -22,9 +22,6 @@ frappe.ui.form.on("Timesheet", {
 					'project': child.project,
 					'type': ["=", "Timesheet"],
 					'status': ["!=", "Completed"]
-					//'status': ["!=", "Cancelled"],
-					//'status': ["!=", "Completed"],
-					//'status': ["!=", "Hold"]
 				}
 			};
 		};
