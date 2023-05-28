@@ -38,7 +38,6 @@ repos:
       - id: isort
         exclude: ".*setup.py$"
 
-
 ci:
     autoupdate_schedule: weekly
     skip: []

@@ -35,6 +35,9 @@ class Bin(Document):
 			self.item_code, self.warehouse
 		)
 
+		self.reserved_qty_for_production = get_reserved_qty_for_production(
+			self.item_code, self.warehouse
+		)
 		self.set_projected_qty()
 
 		self.db_set(

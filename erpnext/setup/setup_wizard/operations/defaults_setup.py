@@ -61,6 +61,7 @@ def set_default_settings(args):
 	delivery_settings.save()
 
 
+
 def set_no_copy_fields_in_variant_settings():
 	# set no copy fields of an item doctype to item variant settings
 	doc = frappe.get_doc("Item Variant Settings")

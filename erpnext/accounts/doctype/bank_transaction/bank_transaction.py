@@ -30,6 +30,10 @@ class BankTransaction(StatusUpdater):
 		self.clear_linked_payment_entries(for_cancel=True)
 		self.set_status(update=True)
 
+	def on_cancel(self):
+		self.clear_linked_payment_entries(for_cancel=True)
+		self.set_status(update=True)
+
 	def update_allocations(self):
 		"The doctype does not allow modifications after submission, so write to the db direct"
 		if self.payment_entries:

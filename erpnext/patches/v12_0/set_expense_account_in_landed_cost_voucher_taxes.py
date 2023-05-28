@@ -1,6 +1,7 @@
 import frappe
 
 
+
 def execute():
 	frappe.reload_doctype("Landed Cost Taxes and Charges")
 

@@ -520,6 +520,7 @@ def calculate_exchange_rate_using_last_gle(company, account, party_type, party):
 	return last_exchange_rate
 
 
+
 @frappe.whitelist()
 def get_account_details(company, posting_date, account, party_type=None, party=None):
 	if not (company and posting_date):

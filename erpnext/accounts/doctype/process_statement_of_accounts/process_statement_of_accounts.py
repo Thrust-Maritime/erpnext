@@ -6,6 +6,7 @@ import copy
 
 import frappe
 from frappe import _
+from frappe.desk.reportview import get_match_cond
 from frappe.model.document import Document
 from frappe.utils import add_days, add_months, format_date, getdate, today
 from frappe.utils.jinja import validate_template
@@ -319,6 +320,8 @@ def send_emails(document_name, from_scheduler=False):
 			attachments = [{"fname": customer + ".pdf", "fcontent": report_pdf}]
 
 			recipients, cc = get_recipients_and_cc(customer, doc)
+			if not recipients:
+				continue
 			context = get_context(customer, doc)
 			subject = frappe.render_template(doc.subject, context)
 			message = frappe.render_template(doc.body, context)

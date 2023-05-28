@@ -797,7 +797,6 @@ def update_delivery_note_status(docname, status):
 def make_inter_company_purchase_receipt(source_name, target_doc=None):
 	return make_inter_company_transaction("Delivery Note", source_name, target_doc)
 
-
 def make_inter_company_transaction(doctype, source_name, target_doc=None):
 	from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
 		get_inter_company_details,

@@ -53,7 +53,7 @@ def execute(filters=None):
 
 		GROUP BY
 			gl.party
-
+			
 		ORDER BY
 			gl.party DESC""".format(
 			conditions=conditions

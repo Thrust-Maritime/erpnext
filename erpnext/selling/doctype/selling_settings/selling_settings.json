@@ -34,6 +34,11 @@
  ],
  "fields": [
   {
+   "fieldname": "customer_defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Customer Defaults"
+  },
+  {
    "default": "Customer Name",
    "fieldname": "cust_master_name",
    "fieldtype": "Select",
@@ -49,6 +54,10 @@
    "options": "Customer Group"
   },
   {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "territory",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -56,15 +65,64 @@
    "options": "Territory"
   },
   {
-   "fieldname": "selling_price_list",
-   "fieldtype": "Link",
+   "fieldname": "crm_settings_section",
+   "fieldtype": "Section Break",
+   "label": "CRM Settings"
+  },
+  {
+   "fieldname": "campaign_naming_by",
+   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Default Price List",
-   "options": "Price List"
+   "label": "Campaign Naming By",
+   "options": "Campaign Name\nNaming Series\nAuto Name"
+  },
+  {
+   "fieldname": "contract_naming_by",
+   "fieldtype": "Select",
+   "label": "Contract Naming By",
+   "options": "Party Name\nNaming Series"
+  },
+  {
+   "fieldname": "default_valid_till",
+   "fieldtype": "Data",
+   "label": "Default Quotation Validity Days"
+  },
+  {
+   "fieldname": "column_break_9",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "column_break_5",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "maintain_same_sales_rate",
+   "fieldtype": "Check",
+   "label": "Maintain Same Rate Throughout Sales Cycle"
+  },
+  {
+   "default": "0",
+   "fieldname": "editable_price_list_rate",
+   "fieldtype": "Check",
+   "label": "Allow User to Edit Price List Rate in Transactions"
+  },
+  {
+   "default": "0",
+   "fieldname": "validate_selling_price",
+   "fieldtype": "Check",
+   "label": "Validate Selling Price for Item Against Purchase Rate or Valuation Rate"
+  },
+  {
+   "default": "0",
+   "fieldname": "editable_bundle_item_rates",
+   "fieldtype": "Check",
+   "label": "Calculate Product Bundle Price based on Child Items' Rates"
+  },
+  {
+   "fieldname": "sales_transactions_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Transaction Settings"
   },
   {
    "fieldname": "so_required",
@@ -89,15 +147,10 @@
   },
   {
    "default": "0",
-   "fieldname": "maintain_same_sales_rate",
-   "fieldtype": "Check",
-   "label": "Maintain Same Rate Throughout Sales Cycle"
-  },
-  {
-   "default": "0",
-   "fieldname": "editable_price_list_rate",
-   "fieldtype": "Check",
-   "label": "Allow User to Edit Price List Rate in Transactions"
+   "description": "Percentage you are allowed to order more against the Blanket Order Quantity. For example: If you have a Blanket Order of Quantity 100 units. and your Allowance is 10% then you are allowed to order 110 units.",
+   "fieldname": "over_order_allowance",
+   "fieldtype": "Float",
+   "label": "Over Order Allowance (%)"
   },
   {
    "default": "0",
@@ -110,12 +163,6 @@
    "fieldname": "allow_against_multiple_purchase_orders",
    "fieldtype": "Check",
    "label": "Allow Multiple Sales Orders Against a Customer's Purchase Order"
-  },
-  {
-   "default": "0",
-   "fieldname": "validate_selling_price",
-   "fieldtype": "Check",
-   "label": "Validate Selling Price for Item Against Purchase Rate or Valuation Rate"
   },
   {
    "default": "0",

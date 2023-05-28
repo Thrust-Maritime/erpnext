@@ -81,7 +81,7 @@ frappe.ui.form.on("Project", {
 
 				frm.add_custom_button(__("Kanban Board"), () => {
 					frappe.call('erpnext.projects.doctype.project.project.create_kanban_board_if_not_exists', {
-						project: frm.doc.name
+						project: frm.doc.project_name
 					}).then(() => {
 						frappe.set_route('List', 'Task', 'Kanban', frm.doc.project_name);
 					});
@@ -139,6 +139,9 @@ frappe.ui.form.on("Project", {
 		});
 	},
 
+	collect_progress: function(frm) {
+		frm.set_df_property("message", "reqd", frm.doc.collect_progress);
+	}
 });
 
 function open_form(frm, doctype, child_doctype, parentfield) {

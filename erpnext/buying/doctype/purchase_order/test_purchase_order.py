@@ -711,7 +711,6 @@ class TestPurchaseOrder(FrappeTestCase):
 		po.insert()
 		po.submit()
 		self.assertTrue(po.get("payment_schedule"))
-
 		pi = make_pi_from_po(po.name)
 		pi.insert()
 		self.assertTrue(pi.get("payment_schedule"))
@@ -951,6 +950,7 @@ def make_pr_against_po(po, received_qty=0):
 	pr.insert()
 	pr.submit()
 	return pr
+
 
 
 def get_same_items():

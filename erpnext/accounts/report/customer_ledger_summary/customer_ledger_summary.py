@@ -7,6 +7,7 @@ from frappe import _, scrub
 from frappe.utils import getdate, nowdate
 
 
+
 class PartyLedgerSummaryReport(object):
 	def __init__(self, filters=None):
 		self.filters = frappe._dict(filters or {})

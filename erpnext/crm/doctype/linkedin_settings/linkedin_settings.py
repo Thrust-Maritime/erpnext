@@ -195,7 +195,6 @@ class LinkedInSettings(Document):
 		else:
 			frappe.throw(response.reason, title=response.status_code)
 
-
 @frappe.whitelist(allow_guest=True)
 def callback(code=None, error=None, error_description=None):
 	if not error:

@@ -10,6 +10,7 @@ from frappe.utils.nestedset import get_ancestors_of, get_root_of  # noqa
 from erpnext import get_default_company
 
 
+
 def before_tests():
 	frappe.clear_cache()
 	# complete setup if missing

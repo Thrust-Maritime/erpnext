@@ -257,7 +257,6 @@ class ReceivablePayableReport(object):
 				(abs(row.outstanding_in_account_currency) > 1.0 / 10**self.currency_precision)
 				or (row.voucher_no in self.err_journals)
 			):
-
 				# non-zero oustanding, we must consider this row
 
 				if self.is_invoice(row) and self.filters.based_on_payment_terms:

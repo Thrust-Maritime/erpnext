@@ -199,6 +199,19 @@ class AccountsController(TransactionBase):
 
 		if self.doctype != "Material Request" and not self.ignore_pricing_rule:
 			apply_pricing_rule_on_transaction(self)
+	
+	def before_cancel(self):
+		validate_einvoice_fields(self)
+
+	def validate_deferred_start_and_end_date(self):
+		for d in self.items:
+			if d.get("enable_deferred_revenue") or d.get("enable_deferred_expense"):
+				if not (d.service_start_date and d.service_end_date):
+					frappe.throw(_("Row #{0}: Service Start and End Date is required for deferred accounting").format(d.idx))
+				elif getdate(d.service_start_date) > getdate(d.service_end_date):
+					frappe.throw(_("Row #{0}: Service Start Date cannot be greater than Service End Date").format(d.idx))
+				elif getdate(self.posting_date) > getdate(d.service_end_date):
+					frappe.throw(_("Row #{0}: Service End Date cannot be before Invoice Posting Date").format(d.idx))
 
 	def before_cancel(self):
 		validate_einvoice_fields(self)
@@ -2517,7 +2530,6 @@ def update_bin_on_delete(row, doctype):
 		get_reserved_qty,
 		update_bin_qty,
 	)
-
 	qty_dict = {}
 
 	if doctype == "Sales Order":

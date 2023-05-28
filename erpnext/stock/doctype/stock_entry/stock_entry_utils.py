@@ -34,6 +34,33 @@ def make_stock_entry(
 	...
 
 
+import erpnext
+
+if TYPE_CHECKING:
+	from erpnext.stock.doctype.stock_entry.stock_entry import StockEntry
+
+
+@overload
+def make_stock_entry(
+	*,
+	item_code: str,
+	qty: float,
+	company: Optional[str] = None,
+	from_warehouse: Optional[str] = None,
+	to_warehouse: Optional[str] = None,
+	rate: Optional[float] = None,
+	serial_no: Optional[str] = None,
+	batch_no: Optional[str] = None,
+	posting_date: Optional[str] = None,
+	posting_time: Optional[str] = None,
+	purpose: Optional[str] = None,
+	do_not_save: bool = False,
+	do_not_submit: bool = False,
+	inspection_required: bool = False,
+) -> "StockEntry":
+	...
+
+
 @frappe.whitelist()
 def make_stock_entry(**args):
 	"""Helper function to make a Stock Entry

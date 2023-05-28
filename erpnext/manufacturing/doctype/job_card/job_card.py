@@ -795,6 +795,7 @@ class JobCard(Document):
 
 		return False
 
+		return False
 
 @frappe.whitelist()
 def make_time_log(args):

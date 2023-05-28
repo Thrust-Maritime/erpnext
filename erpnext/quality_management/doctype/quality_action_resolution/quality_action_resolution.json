@@ -16,7 +16,7 @@
    "fieldname": "problem",
    "fieldtype": "Long Text",
    "in_list_view": 1,
-   "label": "Problem"
+   "label": "Review"
   },
   {
    "fieldname": "resolution",

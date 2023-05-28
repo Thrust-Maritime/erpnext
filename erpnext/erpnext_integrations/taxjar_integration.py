@@ -329,7 +329,6 @@ def check_sales_tax_exemption(doc):
 	else:
 		return False
 
-
 def validate_tax_request(tax_dict):
 	"""Return the sales tax that should be collected for a given order."""
 

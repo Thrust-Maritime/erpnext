@@ -1016,6 +1016,28 @@
    "no_copy": 1,
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fieldname": "product_bundle",
+   "fieldtype": "Link",
+   "label": "Product Bundle",
+   "options": "Product Bundle",
+   "read_only": 1
+  },
+  {
+   "fieldname": "provisional_expense_account",
+   "fieldtype": "Link",
+   "label": "Provisional Expense Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "accounting_details_section",
+   "fieldtype": "Section Break",
+   "label": "Accounting Details"
+  },
+  {
+   "fieldname": "column_break_102",
+   "fieldtype": "Column Break"
   }
  ],
  "idx": 1,

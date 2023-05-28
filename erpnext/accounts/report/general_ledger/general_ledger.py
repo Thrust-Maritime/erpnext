@@ -20,7 +20,6 @@ from erpnext.accounts.utils import get_account_currency
 # to cache translations
 TRANSLATIONS = frappe._dict()
 
-
 def execute(filters=None):
 	if not filters:
 		return [], []

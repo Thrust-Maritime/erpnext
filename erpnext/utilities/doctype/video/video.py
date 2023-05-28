@@ -11,6 +11,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint
 from pyyoutube import Api
+from six import string_types
+
 
 
 class Video(Document):

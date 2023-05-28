@@ -120,6 +120,7 @@ def get_fiscal_years(
 	)
 	if company:
 		error_msg = _("""{0} for {1}""").format(error_msg, frappe.bold(company))
+		
 
 	if verbose == 1:
 		frappe.msgprint(error_msg)
@@ -468,6 +469,7 @@ def reconcile_against_document(args, skip_ref_details_update_for_pe=False):  # n
 		frappe.flags.ignore_party_validation = False
 
 
+
 def check_if_advance_entry_modified(args):
 	"""
 	check if there is already a voucher reference
@@ -586,7 +588,6 @@ def update_reference_in_journal_entry(d, journal_entry, do_not_save=False):
 	journal_entry.flags.ignore_validate_update_after_submit = True
 	if not do_not_save:
 		journal_entry.save(ignore_permissions=True)
-
 
 def update_reference_in_payment_entry(
 	d, payment_entry, do_not_save=False, skip_ref_details_update_for_pe=False
@@ -988,7 +989,6 @@ def get_account_balances(accounts, company):
 			account["balance_in_account_currency"] = flt(get_balance_on(account["value"], company=company))
 
 	return accounts
-
 
 def create_payment_gateway_account(gateway, payment_channel="Email"):
 	from erpnext.setup.setup_wizard.operations.install_fixtures import create_bank_account

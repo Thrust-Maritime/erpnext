@@ -7,6 +7,9 @@ frappe.listview_settings['Payment Request'] = {
 		if(doc.status == "Requested") {
 			return [__("Requested"), "green", "status,=,Requested"];
 		}
+		if(doc.status == "Requested") {
+			return [__("Requested"), "green", "status,=,Requested"];
+		}
 		else if(doc.status == "Initiated") {
 			return [__("Initiated"), "green", "status,=,Initiated"];
 		}

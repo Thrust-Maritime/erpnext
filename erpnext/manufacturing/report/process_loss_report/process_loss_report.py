@@ -13,13 +13,11 @@ Data = List[Row]
 Columns = List[Dict[str, str]]
 QueryArgs = Dict[str, str]
 
-
 def execute(filters: Filters) -> Tuple[Columns, Data]:
 	filters = frappe._dict(filters or {})
 	columns = get_columns()
 	data = get_data(filters)
 	return columns, data
-
 
 def get_data(filters: Filters) -> Data:
 	wo = frappe.qb.DocType("Work Order")

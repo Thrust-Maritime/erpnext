@@ -1293,7 +1293,6 @@ def update_variants(variants, template, publish_progress=True):
 		if publish_progress:
 			frappe.publish_progress(count / total * 100, title=_("Updating Variants..."))
 
-
 @erpnext.allow_regional
 def set_item_tax_from_hsn_code(item):
 	pass

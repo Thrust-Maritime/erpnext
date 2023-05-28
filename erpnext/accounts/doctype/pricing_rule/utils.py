@@ -127,7 +127,12 @@ def _get_pricing_rules(apply_on, args, values):
 				values["variant_of"] = args.variant_of
 	elif apply_on_field == "item_group":
 		item_conditions = _get_tree_conditions(args, "Item Group", child_doc, False)
-
+		if args.get("uom", None):
+			item_conditions += (
+				" and ({child_doc}.uom='{item_uom}' or IFNULL({child_doc}.uom, '')='')".format(
+					child_doc=child_doc, item_uom=args.get("uom")
+				)
+			)
 	conditions += get_other_conditions(conditions, values, args)
 	warehouse_conditions = _get_tree_conditions(args, "Warehouse", "`tabPricing Rule`")
 	if warehouse_conditions:
@@ -492,7 +497,6 @@ def get_qty_and_rate_for_other_item(doc, pr_doc, pricing_rules, row_item):
 			if pricing_rules and pricing_rules[0]:
 				pricing_rules[0].apply_rule_on_other_items = other_items
 				return pricing_rules
-
 
 def get_qty_amount_data_for_cumulative(pr_doc, doc, items=None):
 	if items is None:

@@ -86,7 +86,6 @@ def make_company(company_name, abbr):
 
 	return company
 
-
 def set_sa_vat_accounts():
 	if not frappe.db.exists("South Africa VAT Settings", "_Test Company SA VAT"):
 		vat_accounts = frappe.get_all(
@@ -147,7 +146,6 @@ def make_item(item_code, properties=None):
 			item.update(properties)
 
 		item.insert()
-
 
 def make_sales_invoices():
 	def make_sales_invoices_wrapper(item, rate, tax_account, tax_rate, tax=True):

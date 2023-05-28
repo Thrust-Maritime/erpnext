@@ -810,6 +810,27 @@ class ProductionPlan(Document):
 		return all_work_orders_completed
 
 
+	def all_items_completed(self):
+		all_items_produced = all(
+			flt(d.planned_qty) - flt(d.produced_qty) < 0.000001 for d in self.po_items
+		)
+		if not all_items_produced:
+			return False
+
+		wo_status = frappe.get_all(
+			"Work Order",
+			filters={
+				"production_plan": self.name,
+				"status": ("not in", ["Closed", "Stopped"]),
+				"docstatus": ("<", 2),
+			},
+			fields="status",
+			pluck="status",
+		)
+		all_work_orders_completed = all(s == "Completed" for s in wo_status)
+		return all_work_orders_completed
+
+
 @frappe.whitelist()
 def download_raw_materials(doc, warehouses=None):
 	if isinstance(doc, str):

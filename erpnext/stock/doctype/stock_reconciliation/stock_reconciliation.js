@@ -153,6 +153,20 @@ frappe.ui.form.on("Stock Reconciliation", {
 		});
 	},
 
+	posting_date: function(frm) {
+		frm.trigger("set_valuation_rate_and_qty_for_all_items");
+	},
+
+	posting_time: function(frm) {
+		frm.trigger("set_valuation_rate_and_qty_for_all_items");
+	},
+
+	set_valuation_rate_and_qty_for_all_items: function(frm) {
+		frm.doc.items.forEach(row => {
+			frm.events.set_valuation_rate_and_qty(frm, row.doctype, row.name);
+		});
+	},
+
 	set_valuation_rate_and_qty: function(frm, cdt, cdn) {
 		var d = frappe.model.get_doc(cdt, cdn);
 
@@ -239,6 +253,11 @@ frappe.ui.form.on("Stock Reconciliation Item", {
 			frappe.model.set_value(cdt, cdn, "batch_no", "");
 		}
 
+		if (child.serial_no) {
+			frappe.model.set_value(cdt, cdn, "serial_no", "");
+			frappe.model.set_value(cdt, cdn, "current_serial_no", "");
+		}
+
 		frm.events.set_valuation_rate_and_qty(frm, cdt, cdn);
 	},
 
@@ -315,3 +334,4 @@ erpnext.stock.StockReconciliation = class StockReconciliation extends erpnext.st
 };
 
 cur_frm.cscript = new erpnext.stock.StockReconciliation({frm: cur_frm});
+

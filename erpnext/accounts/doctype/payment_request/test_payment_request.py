@@ -202,6 +202,7 @@ class TestPaymentRequest(unittest.TestCase):
 			dt="Sales Order", dn=so.name, recipient_id="nabin@erpnext.com", return_doc=1
 		)
 		pr1.grand_total = 200
+		pr1.insert()
 		pr1.submit()
 
 		# Make a 2nd Payment Request

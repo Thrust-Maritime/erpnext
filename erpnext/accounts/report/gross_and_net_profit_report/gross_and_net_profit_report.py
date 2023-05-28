@@ -10,7 +10,6 @@ from frappe.utils import flt
 
 from erpnext.accounts.report.financial_statements import get_columns, get_data, get_period_list
 
-
 def execute(filters=None):
 	period_list = get_period_list(
 		filters.from_fiscal_year,

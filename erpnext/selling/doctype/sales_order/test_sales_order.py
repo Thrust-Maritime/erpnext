@@ -1312,7 +1312,6 @@ class TestSalesOrder(FrappeTestCase):
 		from erpnext.manufacturing.doctype.work_order.work_order import (
 			make_stock_entry as make_production_stock_entry,
 		)
-
 		se = frappe.get_doc(make_production_stock_entry(work_order.name, "Manufacture", 1))
 		se.submit()
 		reserved_serial_no = se.get("items")[2].serial_no
@@ -1347,7 +1346,6 @@ class TestSalesOrder(FrappeTestCase):
 		from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
 			make_delivery_note as make_delivery_note_from_invoice,
 		)
-
 		dn = make_delivery_note_from_invoice(si.name)
 		dn.save()
 		dn.submit()

@@ -173,7 +173,6 @@ def get_tax_withholding_rates(tax_withholding, posting_date):
 
 	frappe.throw(_("No Tax Withholding data found for the current posting date."))
 
-
 def get_tax_row_for_tcs(inv, tax_details, tax_amount, tax_deducted):
 	row = {
 		"category": "Total",

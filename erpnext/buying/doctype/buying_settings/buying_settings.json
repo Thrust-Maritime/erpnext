@@ -63,6 +63,13 @@
   },
   {
    "default": "0",
+   "description": "Percentage you are allowed to order more against the Blanket Order Quantity. For example: If you have a Blanket Order of Quantity 100 units. and your Allowance is 10% then you are allowed to order 110 units.",
+   "fieldname": "over_order_allowance",
+   "fieldtype": "Float",
+   "label": "Over Order Allowance (%)"
+  },
+  {
+   "default": "0",
    "fieldname": "maintain_same_rate",
    "fieldtype": "Check",
    "label": "Maintain Same Rate Throughout the Purchase Cycle"
@@ -72,6 +79,13 @@
    "fieldname": "allow_multiple_items",
    "fieldtype": "Check",
    "label": "Allow Item To Be Added Multiple Times in a Transaction"
+  },
+  {
+   "default": "1",
+   "description": "If checked, Rejected Quantity will be included while making Purchase Invoice from Purchase Receipt.",
+   "fieldname": "bill_for_rejected_quantity_in_purchase_invoice",
+   "fieldtype": "Check",
+   "label": "Bill for Rejected Quantity in Purchase Invoice"
   },
   {
    "fieldname": "subcontract",
@@ -84,6 +98,10 @@
    "fieldtype": "Select",
    "label": "Backflush Raw Materials of Subcontract Based On",
    "options": "BOM\nMaterial Transferred for Subcontract"
+  },
+  {
+   "fieldname": "column_break_11",
+   "fieldtype": "Column Break"
   },
   {
    "depends_on": "eval:doc.backflush_raw_materials_of_subcontract_based_on == \"BOM\"",

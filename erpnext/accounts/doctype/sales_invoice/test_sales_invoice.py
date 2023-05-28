@@ -960,8 +960,11 @@ class TestSalesInvoice(unittest.TestCase):
 		pos.insert()
 		pos.submit()
 
-		pos_return = make_sales_return(pos.name)
+		pos_return = create_sales_invoice(is_return=1,
+			return_against=pos.name, qty=-5, do_not_save=True)
 
+		pos_return.is_pos = 1
+		pos_return.pos_profile = pos_profile.name
 		pos_return.insert()
 		pos_return.submit()
 
@@ -1276,7 +1279,6 @@ class TestSalesInvoice(unittest.TestCase):
 		from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import (
 			test_records as pr_test_records,
 		)
-
 		pr = frappe.copy_doc(pr_test_records[0])
 		pr.naming_series = "_T-Purchase Receipt-"
 		pr.insert()
@@ -1286,7 +1288,6 @@ class TestSalesInvoice(unittest.TestCase):
 		from erpnext.stock.doctype.delivery_note.test_delivery_note import (
 			test_records as dn_test_records,
 		)
-
 		dn = frappe.copy_doc(dn_test_records[0])
 		dn.naming_series = "_T-Delivery Note-"
 		dn.insert()
@@ -1534,6 +1535,91 @@ class TestSalesInvoice(unittest.TestCase):
 
 		self.assertEqual(loss_for_si["credit"], loss_for_return_si["debit"])
 		self.assertEqual(loss_for_si["debit"], loss_for_return_si["credit"])
+
+	def test_incoming_rate_for_stand_alone_credit_note(self):
+		return_si = create_sales_invoice(
+			is_return=1,
+			update_stock=1,
+			qty=-1,
+			rate=90000,
+			incoming_rate=10,
+			company="_Test Company with perpetual inventory",
+			warehouse="Stores - TCP1",
+			debit_to="Debtors - TCP1",
+			income_account="Sales - TCP1",
+			expense_account="Cost of Goods Sold - TCP1",
+			cost_center="Main - TCP1",
+		)
+
+		incoming_rate = frappe.db.get_value(
+			"Stock Ledger Entry", {"voucher_no": return_si.name}, "incoming_rate"
+		)
+		debit_amount = frappe.db.get_value(
+			"GL Entry", {"voucher_no": return_si.name, "account": "Stock In Hand - TCP1"}, "debit"
+		)
+
+		self.assertEqual(debit_amount, 10.0)
+		self.assertEqual(incoming_rate, 10.0)
+
+		pi = frappe.new_doc("Purchase Invoice")
+		pi.supplier = "_Test Supplier"
+		pi.append("items", {"item_code": "Macbook Pro", "qty": 1})
+		pi.set_missing_values()
+
+		asset = create_asset(item_code="Macbook Pro")
+
+		si = create_sales_invoice(item_code="Macbook Pro", asset=asset.name, qty=1, rate=90000)
+		return_si = create_sales_invoice(
+			is_return=1,
+			return_against=si.name,
+			item_code="Macbook Pro",
+			asset=asset.name,
+			qty=-1,
+			rate=90000,
+		)
+
+		disposal_account = frappe.get_cached_value("Company", "_Test Company", "disposal_account")
+
+		# Asset value is 100,000 but it was sold for 90,000, so there should be a loss of 10,000
+		loss_for_si = frappe.get_all(
+			"GL Entry",
+			filters={"voucher_no": si.name, "account": disposal_account},
+			fields=["credit", "debit"],
+		)[0]
+
+		loss_for_return_si = frappe.get_all(
+			"GL Entry",
+			filters={"voucher_no": return_si.name, "account": disposal_account},
+			fields=["credit", "debit"],
+		)[0]
+
+		self.assertEqual(loss_for_si["credit"], loss_for_return_si["debit"])
+		self.assertEqual(loss_for_si["debit"], loss_for_return_si["credit"])
+
+	def test_incoming_rate_for_stand_alone_credit_note(self):
+		return_si = create_sales_invoice(
+			is_return=1,
+			update_stock=1,
+			qty=-1,
+			rate=90000,
+			incoming_rate=10,
+			company="_Test Company with perpetual inventory",
+			warehouse="Stores - TCP1",
+			debit_to="Debtors - TCP1",
+			income_account="Sales - TCP1",
+			expense_account="Cost of Goods Sold - TCP1",
+			cost_center="Main - TCP1",
+		)
+
+		incoming_rate = frappe.db.get_value(
+			"Stock Ledger Entry", {"voucher_no": return_si.name}, "incoming_rate"
+		)
+		debit_amount = frappe.db.get_value(
+			"GL Entry", {"voucher_no": return_si.name, "account": "Stock In Hand - TCP1"}, "debit"
+		)
+
+		self.assertEqual(debit_amount, 10.0)
+		self.assertEqual(incoming_rate, 10.0)
 
 	def test_incoming_rate_for_stand_alone_credit_note(self):
 		return_si = create_sales_invoice(
@@ -2061,10 +2147,26 @@ class TestSalesInvoice(unittest.TestCase):
 			as_dict=1,
 		)
 
+		debit_credit_diff = 0
 		for gle in gl_entries:
 			self.assertEqual(expected_values[gle.account][0], gle.account)
 			self.assertEqual(expected_values[gle.account][1], gle.debit)
 			self.assertEqual(expected_values[gle.account][2], gle.credit)
+			debit_credit_diff += gle.debit - gle.credit
+
+		self.assertEqual(debit_credit_diff, 0)
+
+		round_off_gle = frappe.db.get_value(
+			"GL Entry",
+			{"voucher_type": "Sales Invoice", "voucher_no": si.name, "account": "Round Off - _TC"},
+			["cost_center", "location"],
+			as_dict=1,
+		)
+
+		self.assertEqual(round_off_gle.cost_center, "_Test Cost Center 2 - _TC")
+		self.assertEqual(round_off_gle.location, "Block 1")
+
+		disable_dimension()
 
 	def test_rounding_adjustment_3(self):
 		from erpnext.accounts.doctype.accounting_dimension.test_accounting_dimension import (
@@ -2240,7 +2342,7 @@ class TestSalesInvoice(unittest.TestCase):
 
 		for gle in gl_entries:
 			self.assertEqual(expected_values[gle.account]["cost_center"], gle.cost_center)
-
+	
 	def test_sales_invoice_with_project_link(self):
 		from erpnext.projects.doctype.project.test_project import make_project
 
@@ -2260,8 +2362,8 @@ class TestSalesInvoice(unittest.TestCase):
 		)
 
 		sales_invoice = create_sales_invoice(do_not_save=1)
-		sales_invoice.items[0].project = item_project.name
-		sales_invoice.project = project.name
+		sales_invoice.items[0].project = item_project.project_name
+		sales_invoice.project = project.project_name
 
 		sales_invoice.submit()
 
@@ -2702,7 +2804,17 @@ class TestSalesInvoice(unittest.TestCase):
 			},
 		)
 
-		item.save()
+		# Normal Itemized Discount
+		si = get_sales_invoice_for_e_invoice()
+		si.apply_discount_on = ""
+		si.items[0].price_list_rate = 12
+		si.items[0].discount_percentage = 16.6666666667
+		si.items[0].rate = 10
+
+		si.items[1].price_list_rate = 15
+		si.items[1].discount_amount = 5
+		si.items[1].rate = 10
+		si.save()
 
 		sales_invoice = create_sales_invoice(item="T Shirt", rate=700, do_not_submit=True)
 		self.assertEqual(

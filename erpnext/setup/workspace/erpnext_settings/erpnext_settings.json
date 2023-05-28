@@ -29,6 +29,14 @@
    "type": "DocType"
   },
   {
+   "color": "Grey",
+   "doc_view": "",
+   "icon": "dot-horizontal",
+   "label": "Naming Series",
+   "link_to": "Naming Series",
+   "type": "DocType"
+  },
+  {
    "icon": "accounting",
    "label": "Accounts Settings",
    "link_to": "Accounts Settings",

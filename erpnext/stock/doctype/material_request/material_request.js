@@ -21,9 +21,9 @@ frappe.ui.form.on('Material Request', {
 		frm.set_indicator_formatter('item_code',
 			function(doc) { return (doc.stock_qty<=doc.ordered_qty) ? "green" : "orange"; });
 
-		frm.set_query("item_code", "items", function() {
+		frm.set_query("from_warehouse", "items", function(doc) {
 			return {
-				query: "erpnext.controllers.queries.item_query"
+				filters: {'company': doc.company}
 			};
 		});
 

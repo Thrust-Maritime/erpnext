@@ -1704,6 +1704,7 @@ def create_tax_witholding_category(category_name, company, account):
 	).insert(ignore_if_duplicate=True)
 
 
+
 def unlink_payment_on_cancel_of_invoice(enable=1):
 	accounts_settings = frappe.get_doc("Accounts Settings")
 	accounts_settings.unlink_payment_on_cancellation_of_invoice = enable

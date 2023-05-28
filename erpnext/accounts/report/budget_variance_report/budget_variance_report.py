@@ -7,6 +7,7 @@ import datetime
 import frappe
 from frappe import _
 from frappe.utils import flt, formatdate
+from six import iteritems
 
 from erpnext.controllers.trends import get_period_date_ranges, get_period_month_ranges
 

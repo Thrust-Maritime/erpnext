@@ -14,7 +14,6 @@ def execute(filters=None):
 	data = get_data(filters)
 	return columns, data
 
-
 def get_columns():
 	return [
 		{

@@ -765,7 +765,6 @@ class TestDeliveryNote(FrappeTestCase):
 		from erpnext.selling.doctype.sales_order.sales_order import (
 			make_sales_invoice as make_sales_invoice_from_so,
 		)
-
 		frappe.db.set_value("Stock Settings", None, "allow_negative_stock", 1)
 
 		so = make_sales_order()

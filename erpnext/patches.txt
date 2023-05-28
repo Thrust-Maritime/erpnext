@@ -206,6 +206,7 @@ erpnext.patches.v12_0.add_document_type_field_for_italy_einvoicing
 erpnext.patches.v13_0.update_shipment_status
 erpnext.patches.v13_0.remove_attribute_field_from_item_variant_setting
 erpnext.patches.v13_0.set_pos_closing_as_failed
+erpnext.patches.v13_0.rename_stop_to_send_birthday_reminders
 execute:frappe.rename_doc("Workspace", "Loan Management", "Loans", force=True)
 erpnext.patches.v13_0.update_timesheet_changes
 erpnext.patches.v13_0.add_doctype_to_sla #14-06-2021

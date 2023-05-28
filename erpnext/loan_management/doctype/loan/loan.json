@@ -55,6 +55,7 @@
   "column_break_19",
   "total_interest_payable",
   "total_amount_paid",
+  "is_npa",
   "amended_from"
  ],
  "fields": [

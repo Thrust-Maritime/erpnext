@@ -24,6 +24,7 @@ def execute():
 			frappe.delete_doc("Report", report, force=True)
 
 
+
 def delete_auto_email_reports(report):
 	"""Check for one or multiple Auto Email Reports and delete"""
 	auto_email_reports = frappe.db.get_values("Auto Email Report", {"report": report}, ["name"])

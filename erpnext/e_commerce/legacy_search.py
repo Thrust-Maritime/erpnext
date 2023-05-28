@@ -28,7 +28,6 @@ class ProductSearch(FullTextSearch):
 	def get_items_to_index(self):
 		"""Get all routes to be indexed, this includes the static pages
 		in www/ and routes from published documents
-
 		Returns:
 		        self (object): FullTextSearch Instance
 		"""
@@ -68,12 +67,10 @@ class ProductSearch(FullTextSearch):
 
 	def search(self, text, scope=None, limit=20):
 		"""Search from the current index
-
 		Args:
 		        text (str): String to search for
 		        scope (str, optional): Scope to limit the search. Defaults to None.
 		        limit (int, optional): Limit number of search results. Defaults to 20.
-
 		Returns:
 		        [List(_dict)]: Search results
 		"""

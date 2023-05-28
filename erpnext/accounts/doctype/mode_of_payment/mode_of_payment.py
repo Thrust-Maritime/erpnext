@@ -12,7 +12,6 @@ class ModeofPayment(Document):
 		self.validate_accounts()
 		self.validate_repeating_companies()
 		self.validate_pos_mode_of_payment()
-
 	def validate_repeating_companies(self):
 		"""Error when Same Company is entered multiple times in accounts"""
 		accounts_list = []

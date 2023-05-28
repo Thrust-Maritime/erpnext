@@ -168,6 +168,26 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 				};
 			});
 		}
+		if (this.frm.fields_dict["items"].grid.get_field("cost_center")) {
+			this.frm.set_query("cost_center", "items", function(doc) {
+				return {
+					filters: {
+						"company": doc.company,
+						"is_group": 0
+					}
+				};
+			});
+		}
+
+		if (this.frm.fields_dict["items"].grid.get_field("expense_account")) {
+			this.frm.set_query("expense_account", "items", function(doc) {
+				return {
+					filters: {
+						"company": doc.company
+					}
+				};
+			});
+		}
 
 		if (this.frm.fields_dict["items"].grid.get_field("expense_account")) {
 			this.frm.set_query("expense_account", "items", function(doc) {
@@ -1659,9 +1679,9 @@ erpnext.TransactionController = class TransactionController extends erpnext.taxe
 			me.frm.doc.items = items;
 			refresh_field('items');
 		} else if(item.applied_on_items && item.apply_on) {
-			const applied_on_items = item.applied_on_items.split(',');
+			const applied_on_items = JSON.parse(item.applied_on_items);
 			me.frm.doc.items.forEach(row => {
-				if(applied_on_items.includes(row[item.apply_on])) {
+				if(in_list(applied_on_items, row[item.apply_on])) {
 					fields.forEach(f => {
 						row[f] = 0;
 					});

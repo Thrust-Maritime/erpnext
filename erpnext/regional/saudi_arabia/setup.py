@@ -14,7 +14,6 @@ def setup(company=None, patch=True):
 	add_permissions()
 	make_custom_fields()
 
-
 def add_print_formats():
 	frappe.reload_doc("regional", "print_format", "detailed_tax_invoice", force=True)
 	frappe.reload_doc("regional", "print_format", "simplified_tax_invoice", force=True)

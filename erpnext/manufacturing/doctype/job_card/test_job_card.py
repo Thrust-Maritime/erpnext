@@ -407,7 +407,6 @@ class TestJobCard(FrappeTestCase):
 		jc.docstatus = 2
 		assertStatus("Cancelled")
 
-
 def create_bom_with_multiple_operations():
 	"Create a BOM with multiple operations and Material Transfer against Job Card"
 	from erpnext.manufacturing.doctype.operation.test_operation import make_operation
@@ -441,7 +440,6 @@ def create_bom_with_multiple_operations():
 	bom_doc.submit()
 
 	return bom_doc
-
 
 def make_wo_with_transfer_against_jc():
 	"Create a WO with multiple operations and Material Transfer against Job Card"

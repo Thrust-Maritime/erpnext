@@ -491,7 +491,6 @@ def get_gl_entries_on_asset_disposal(
 			entry["voucher_type"] = voucher_type
 			entry["voucher_no"] = voucher_no
 
-	return gl_entries
 
 
 def get_asset_details(asset, finance_book=None):

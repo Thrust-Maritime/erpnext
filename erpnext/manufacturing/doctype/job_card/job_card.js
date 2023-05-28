@@ -91,7 +91,6 @@ frappe.ui.form.on('Job Card', {
 				frm.trigger("prepare_timer_buttons");
 			}
 		}
-
 		frm.trigger("setup_quality_inspection");
 
 		if (frm.doc.work_order) {
@@ -305,6 +304,20 @@ frappe.ui.form.on('Job Card', {
 			if (sub_operations && sub_operations.length) {
 				args["sub_operation"] = sub_operations[0].sub_operation;
 			}
+		});
+	},
+
+	validate: function(frm) {
+		if ((!frm.doc.time_logs || !frm.doc.time_logs.length) && frm.doc.started_time) {
+			frm.trigger("reset_timer");
+		}
+	},
+
+	employee: function(frm) {
+		if (frm.doc.job_started && !frm.doc.current_time) {
+			frm.trigger("reset_timer");
+		} else {
+			frm.events.start_job(frm);
 		}
 	},
 

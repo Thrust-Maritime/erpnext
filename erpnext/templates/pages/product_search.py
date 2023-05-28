@@ -33,7 +33,6 @@ def get_product_list(search=None, start=0, limit=12):
 
 	return [get_item_for_list_in_html(r) for r in data]
 
-
 def get_product_data(search=None, start=0, limit=12):
 	# limit = 12 because we show 12 items in the grid view
 	# base query
@@ -122,7 +121,6 @@ def clean_up_query(query):
 
 def convert_to_dict(redis_search_doc):
 	return redis_search_doc.__dict__
-
 
 @frappe.whitelist(allow_guest=True)
 def get_category_suggestions(query):

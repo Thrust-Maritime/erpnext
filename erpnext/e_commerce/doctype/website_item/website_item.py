@@ -377,7 +377,6 @@ class WebsiteItem(WebsiteGenerator):
 
 		return items
 
-
 def invalidate_cache_for_web_item(doc):
 	"""Invalidate Website Item Group cache and rebuild ItemVariantsCacheManager."""
 	from erpnext.stock.doctype.item.item import invalidate_item_variants_cache_for_website
@@ -398,7 +397,6 @@ def invalidate_cache_for_web_item(doc):
 	update_index_for_item(doc)
 
 	invalidate_item_variants_cache_for_website(doc)
-
 
 def on_doctype_update():
 	# since route is a Text column, it needs a length for indexing
@@ -422,7 +420,6 @@ def check_if_user_is_customer(user=None):
 				break
 
 	return True if customer else False
-
 
 @frappe.whitelist()
 def make_website_item(doc: "Item", save: bool = True) -> Union["WebsiteItem", List[str]]:

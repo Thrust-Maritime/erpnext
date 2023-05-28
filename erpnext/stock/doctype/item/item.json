@@ -97,6 +97,7 @@
   "sales_uom",
   "grant_commission",
   "is_sales_item",
+  "grant_commission",
   "column_break3",
   "max_discount",
   "deferred_revenue",

@@ -145,6 +145,7 @@ def apply_filters_on_query(filters, parent, child, query):
 	return query
 
 
+
 def get_data(filters):
 	purchase_order_entry = get_po_entries(filters)
 	mr_records, procurement_record_against_mr = get_mapped_mr_details(filters)

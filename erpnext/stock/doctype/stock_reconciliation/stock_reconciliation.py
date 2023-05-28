@@ -853,4 +853,4 @@ def get_difference_account(purpose, company):
 			"Account", {"is_group": 0, "company": company, "account_type": "Temporary"}, "name"
 		)
 
-	return account
+	return 

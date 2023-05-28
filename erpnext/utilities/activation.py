@@ -8,6 +8,9 @@ from frappe import _
 import erpnext
 
 
+import erpnext
+
+
 def get_level():
 	activation_level = 0
 	sales_data = []

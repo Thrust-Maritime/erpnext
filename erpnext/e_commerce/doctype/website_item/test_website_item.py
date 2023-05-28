@@ -78,7 +78,6 @@ class TestWebsiteItem(unittest.TestCase):
 	def test_index_creation(self):
 		"Check if index is getting created in db."
 		from erpnext.e_commerce.doctype.website_item.website_item import on_doctype_update
-
 		on_doctype_update()
 
 		indices = frappe.db.sql("show index from `tabWebsite Item`", as_dict=1)
@@ -471,7 +470,6 @@ class TestWebsiteItem(unittest.TestCase):
 		recommended_web_item.delete()
 		frappe.get_cached_doc("Item", "Test Mobile Phone 1").delete()
 
-
 def create_regular_web_item(item_code=None, item_args=None, web_args=None):
 	"Create Regular Item and Website Item."
 	item_code = item_code or "Test Mobile Phone"
@@ -486,7 +484,6 @@ def create_regular_web_item(item_code=None, item_args=None, web_args=None):
 		web_item = frappe.get_cached_doc("Website Item", {"item_code": item_code})
 
 	return web_item
-
 
 def make_web_item_price(**kwargs):
 	item_code = kwargs.get("item_code")
@@ -507,7 +504,6 @@ def make_web_item_price(**kwargs):
 		item_price = frappe.get_cached_doc("Item Price", {"item_code": item_code})
 
 	return item_price
-
 
 def make_web_pricing_rule(**kwargs):
 	title = kwargs.get("title")
@@ -559,6 +555,5 @@ def create_user_and_customer_if_not_exists(email, first_name=None):
 	link.link_name = "_Test Customer"
 	link.link_title = "_Test Customer"
 	contact.save()
-
 
 test_dependencies = ["Price List", "Item Price", "Customer", "Contact", "Item"]

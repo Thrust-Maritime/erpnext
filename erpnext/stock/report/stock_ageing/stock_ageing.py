@@ -13,7 +13,6 @@ from erpnext.stock.doctype.serial_no.serial_no import get_serial_nos
 
 Filters = frappe._dict
 
-
 def execute(filters: Filters = None) -> Tuple:
 	to_date = filters["to_date"]
 	columns = get_columns(filters)
@@ -72,7 +71,6 @@ def format_report_data(filters: Filters, item_details: Dict, to_date: str) -> Li
 		data.append(row)
 
 	return data
-
 
 def get_average_age(fifo_queue: List, to_date: str) -> float:
 	batch_age = age_qty = total_qty = 0.0

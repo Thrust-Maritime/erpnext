@@ -86,6 +86,7 @@ def get_stock_value_on(
 	return query.run(as_list=True)[0][0]
 
 
+
 @frappe.whitelist()
 def get_stock_balance(
 	item_code,

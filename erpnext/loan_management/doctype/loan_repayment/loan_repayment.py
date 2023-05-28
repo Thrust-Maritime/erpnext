@@ -563,7 +563,6 @@ def get_penalty_details(against_loan):
 	else:
 		return None, 0
 
-
 def regenerate_repayment_schedule(loan, cancel=0):
 	from erpnext.loan_management.doctype.loan.loan import (
 		add_single_month,

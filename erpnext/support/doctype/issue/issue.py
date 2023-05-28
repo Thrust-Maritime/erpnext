@@ -130,10 +130,6 @@ class Issue(Document):
 
 		return replicated_issue.name
 
-	def reset_issue_metrics(self):
-		self.db_set("resolution_time", None)
-		self.db_set("user_resolution_time", None)
-
 
 def get_list_context(context=None):
 	return {
@@ -186,6 +182,7 @@ def set_status(name, status):
 	frappe.db.set_value("Issue", name, "status", status)
 
 
+
 def auto_close_tickets():
 	"""Auto-close replied support tickets after 7 days"""
 	auto_close_after_days = (
@@ -220,6 +217,7 @@ def has_website_permission(doc, ptype, user, verbose=False):
 def update_issue(contact, method):
 	"""Called when Contact is deleted"""
 	frappe.db.sql("""UPDATE `tabIssue` set contact='' where contact=%s""", contact.name)
+
 
 
 @frappe.whitelist()
@@ -350,14 +348,12 @@ def get_working_hours(date, support_hours):
 			if day.workday == weekday:
 				return day.start_time, day.end_time
 
-
 def is_work_day(date, support_hours):
 	weekday = frappe.utils.get_weekday(date)
 	for day in support_hours:
 		if day.workday == weekday:
 			return True
 	return False
-
 
 def is_during_working_hours(date, support_hours):
 	start_time, end_time = get_working_hours(date, support_hours)
@@ -380,7 +376,6 @@ def calculate_initial_frt(issue_creation_date, days_in_between, support_hours):
 			initial_frt += get_elapsed_time(start_time, end_time)
 
 	return initial_frt
-
 
 def is_before_working_hours(date, support_hours):
 	start_time, end_time = get_working_hours(date, support_hours)

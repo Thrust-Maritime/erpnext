@@ -7,11 +7,13 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from frappe.permissions import add_permission, update_permission_property
 
 
+
 def setup(company=None, patch=True):
 	make_custom_fields()
 	add_print_formats()
 	add_custom_roles_for_reports()
 	add_permissions()
+
 
 
 def make_custom_fields():

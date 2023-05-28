@@ -427,10 +427,8 @@ class Subscription(Document):
 		invoice.to_date = self.current_invoice_end
 
 		invoice.flags.ignore_mandatory = True
-
 		invoice.set_missing_values()
 		invoice.save()
-
 		if self.submit_invoice:
 			invoice.submit()
 
@@ -572,6 +570,9 @@ class Subscription(Document):
 		if self.cancel_at_period_end and getdate() > getdate(self.current_invoice_end):
 			self.cancel_subscription_at_period_end()
 
+		if self.is_current_invoice_generated() and getdate() > getdate(self.current_invoice_end):
+			self.update_subscription_period(add_days(self.current_invoice_end, 1))
+
 	def cancel_subscription_at_period_end(self):
 		"""
 		Called when `Subscription.cancel_at_period_end` is truthy
@@ -601,9 +602,6 @@ class Subscription(Document):
 			else:
 				self.set_status_grace_period()
 
-			if getdate() > getdate(self.current_invoice_end):
-				self.update_subscription_period(add_days(self.current_invoice_end, 1))
-
 			# Generate invoices periodically even if current invoice are unpaid
 			if (
 				self.generate_new_invoices_past_due_date
@@ -613,6 +611,9 @@ class Subscription(Document):
 
 				prorate = frappe.db.get_single_value("Subscription Settings", "prorate")
 				self.generate_invoice(prorate)
+
+			if getdate() > getdate(self.current_invoice_end):
+				self.update_subscription_period(add_days(self.current_invoice_end, 1))
 
 	@staticmethod
 	def is_paid(invoice):

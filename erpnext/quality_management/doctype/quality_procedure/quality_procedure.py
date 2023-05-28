@@ -19,6 +19,11 @@ class QualityProcedure(NestedSet):
 
 	def after_insert(self):
 		self.set_parent()
+		#if Child is Added through Tree View.
+		if self.parent_quality_procedure:
+			parent_quality_procedure = frappe.get_doc("Quality Procedure", self.parent_quality_procedure)
+			parent_quality_procedure.append("processes", {"procedure": self.name})
+			parent_quality_procedure.save()
 
 		# add child to parent if missing
 		if self.parent_quality_procedure:
@@ -37,6 +42,8 @@ class QualityProcedure(NestedSet):
 		NestedSet.on_trash(self, allow_root_deletion=True)
 
 	def set_parent(self):
+		rebuild_tree('Quality Procedure', 'parent_quality_procedure')
+
 		for process in self.processes:
 			# Set parent for only those children who don't have a parent
 			has_parent = frappe.db.get_value(

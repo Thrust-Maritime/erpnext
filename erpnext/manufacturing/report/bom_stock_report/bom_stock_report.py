@@ -33,7 +33,6 @@ def get_columns():
 
 	return columns
 
-
 def get_bom_stock(filters):
 	qty_to_produce = filters.get("qty_to_produce")
 	if cint(qty_to_produce) <= 0:

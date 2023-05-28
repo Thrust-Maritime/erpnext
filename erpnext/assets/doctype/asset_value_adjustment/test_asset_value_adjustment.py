@@ -92,6 +92,7 @@ class TestAssetValueAdjustment(unittest.TestCase):
 		self.assertSequenceEqual(gle, expected_gle)
 
 
+
 def make_asset_value_adjustment(**args):
 	args = frappe._dict(args)
 

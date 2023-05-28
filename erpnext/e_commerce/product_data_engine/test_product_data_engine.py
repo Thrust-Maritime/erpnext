@@ -14,7 +14,6 @@ from erpnext.e_commerce.product_data_engine.query import ProductQuery
 
 test_dependencies = ["Item", "Item Group"]
 
-
 class TestProductDataEngine(unittest.TestCase):
 	"Test Products Querying and Filters for Product Listing."
 

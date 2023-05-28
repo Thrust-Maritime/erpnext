@@ -1,0 +1,35 @@
+{
+ "based_on": "",
+ "chart_name": "Last week Projects",
+ "chart_type": "Report",
+ "creation": "2021-10-19 20:44:36.377265",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "document_type": "",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "modified": "2021-10-19 20:45:32.849265",
+ "modified_by": "benhealy@thrustm.com",
+ "module": "Projects",
+ "name": "Last week Projects",
+ "number_of_groups": 0,
+ "owner": "benhealy@thrustm.com",
+ "report_name": "Project hours by user last week",
+ "source": "",
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Bar",
+ "use_report_chart": 0,
+ "value_based_on": "",
+ "x_field": "project_name",
+ "y_axis": [
+  {
+   "y_field": "hours"
+  }
+ ]
+}

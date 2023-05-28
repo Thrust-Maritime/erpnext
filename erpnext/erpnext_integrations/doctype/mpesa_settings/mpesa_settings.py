@@ -57,7 +57,6 @@ class MpesaSettings(Document):
 				from erpnext.erpnext_integrations.doctype.mpesa_settings.test_mpesa_settings import (
 					get_payment_request_response_payload,
 				)
-
 				response = frappe._dict(get_payment_request_response_payload(amount))
 			else:
 				response = frappe._dict(generate_stk_push(**args))
@@ -94,7 +93,6 @@ class MpesaSettings(Document):
 			from erpnext.erpnext_integrations.doctype.mpesa_settings.test_mpesa_settings import (
 				get_test_account_balance_response,
 			)
-
 			response = frappe._dict(get_test_account_balance_response())
 		else:
 			response = frappe._dict(get_account_balance(payload))

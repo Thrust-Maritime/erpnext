@@ -160,6 +160,7 @@ def get_columns(invoice_list, additional_table_columns):
 			"options": "Customer Group",
 			"width": 120,
 		},
+		{"label": _("Tax Id"), "fieldname": "tax_id", "fieldtype": "Data", "width": 120},
 		{
 			"label": _("Territory"),
 			"fieldname": "territory",

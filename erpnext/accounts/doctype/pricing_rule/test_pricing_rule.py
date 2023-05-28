@@ -202,7 +202,7 @@ class TestPricingRule(unittest.TestCase):
 			}
 		)
 		details = get_item_details(args)
-		self.assertEqual(details.get("discount_percentage"), 10)
+		self.assertEquals(details.get("discount_percentage"), 10)
 
 	def test_pricing_rule_for_variants(self):
 		from frappe import MandatoryError

@@ -1,6 +1,7 @@
 import frappe
 
 
+
 def execute():
 	from erpnext.setup.setup_wizard.operations.install_fixtures import read_lines
 

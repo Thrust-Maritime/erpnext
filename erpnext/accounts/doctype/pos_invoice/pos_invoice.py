@@ -55,7 +55,6 @@ class POSInvoice(SalesInvoice):
 		self.validate_loyalty_transaction()
 		if self.coupon_code:
 			from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
-
 			validate_coupon_code(self.coupon_code)
 
 	def on_submit(self):
@@ -437,7 +436,6 @@ class POSInvoice(SalesInvoice):
 	def set_pos_fields(self, for_validate=False):
 		"""Set retail related fields from POS Profiles"""
 		from erpnext.stock.get_item_details import get_pos_profile, get_pos_profile_item_details
-
 		if not self.pos_profile:
 			pos_profile = get_pos_profile(self.company) or {}
 			if not pos_profile:
@@ -576,6 +574,7 @@ class POSInvoice(SalesInvoice):
 				pay_req = self.get_existing_payment_request(pay)
 				if not pay_req:
 					pay_req = self.get_new_payment_request(pay)
+					pay_req.insert()
 					pay_req.submit()
 				else:
 					pay_req.request_phone_payment()
@@ -743,3 +742,7 @@ def add_return_modes(doc, pos_profile):
 		]:
 			payment_mode = get_mode_of_payment_info(mode_of_payment, doc.company)
 			append_payment(payment_mode[0])
+
+
+def on_doctype_update():
+	frappe.db.add_index("POS Invoice", ["return_against"])

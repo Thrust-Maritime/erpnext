@@ -12,6 +12,7 @@ from erpnext.crm.doctype.opportunity.test_opportunity import make_opportunity
 test_records = frappe.get_test_records("Tax Rule")
 
 
+
 class TestTaxRule(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):

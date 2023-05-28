@@ -7,6 +7,8 @@ import json
 import frappe
 from frappe import _, scrub
 from frappe.utils import flt
+from six import iteritems
+
 
 
 def execute(filters=None):

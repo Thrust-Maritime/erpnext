@@ -171,6 +171,26 @@ def get_cost_center_allocation_data(company, posting_date):
 	return cc_allocation
 
 
+def update_net_values(entry):
+	# In some scenarios net value needs to be shown in the ledger
+	# This method updates net values as debit or credit
+	if entry.post_net_value and entry.debit and entry.credit:
+		if entry.debit > entry.credit:
+			entry.debit = entry.debit - entry.credit
+			entry.debit_in_account_currency = (
+				entry.debit_in_account_currency - entry.credit_in_account_currency
+			)
+			entry.credit = 0
+			entry.credit_in_account_currency = 0
+		else:
+			entry.credit = entry.credit - entry.debit
+			entry.credit_in_account_currency = (
+				entry.credit_in_account_currency - entry.debit_in_account_currency
+			)
+
+			entry.debit = 0
+			entry.debit_in_account_currency = 0
+
 def merge_similar_entries(gl_map, precision=None):
 	merged_gl_map = []
 	accounting_dimensions = get_accounting_dimensions()
@@ -406,6 +426,7 @@ def raise_debit_credit_not_equal_error(debit_credit_diff, voucher_type, voucher_
 			voucher_type, voucher_no, debit_credit_diff
 		)
 	)
+
 
 
 def make_round_off_gle(gl_map, debit_credit_diff, precision):

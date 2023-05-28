@@ -323,6 +323,7 @@ def update_buying_defaults():
 	buying_settings.save()
 
 
+
 def update_item_variant_settings():
 	# set no copy fields of an item doctype to item variant settings
 	doc = frappe.get_doc("Item Variant Settings")

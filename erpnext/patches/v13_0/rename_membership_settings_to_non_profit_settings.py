@@ -3,11 +3,11 @@ from frappe.model.utils.rename_field import rename_field
 
 
 def execute():
-	if frappe.db.table_exists("Membership Settings"):
+	if frappe.db.exists("DocType", "Membership Settings"):
 		frappe.rename_doc("DocType", "Membership Settings", "Non Profit Settings")
 		frappe.reload_doctype("Non Profit Settings", force=True)
 
-	if frappe.db.table_exists("Non Profit Settings"):
+	if frappe.db.exists("DocType", "Non Profit Settings"):
 		rename_fields_map = {
 			"enable_invoicing": "allow_invoicing",
 			"create_for_web_forms": "automate_membership_invoicing",

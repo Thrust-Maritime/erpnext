@@ -10,6 +10,8 @@ from pypika.terms import ExistsCriterion
 
 from erpnext.stock.report.stock_ledger.stock_ledger import get_item_group_condition
 
+from erpnext.stock.report.stock_ledger.stock_ledger import get_item_group_condition
+
 
 def execute(filters=None):
 	if not filters:

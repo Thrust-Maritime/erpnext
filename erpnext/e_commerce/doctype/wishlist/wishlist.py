@@ -9,7 +9,6 @@ from frappe.model.document import Document
 class Wishlist(Document):
 	pass
 
-
 @frappe.whitelist()
 def add_to_wishlist(item_code):
 	"""Insert Item into wishlist."""

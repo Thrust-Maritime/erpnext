@@ -123,6 +123,15 @@ class Opportunity(TransactionBase, CRMNote):
 		if self.opportunity_from == "Lead":
 			frappe.db.set_value("Lead", self.party_name, {"disabled": 1, "docstatus": 1})
 
+	def map_fields(self):
+		for field in self.meta.fields:
+			if not self.get(field.fieldname):
+				try:
+					value = frappe.db.get_value(self.opportunity_from, self.party_name, field.fieldname)
+					frappe.db.set(self, field.fieldname, value)
+				except Exception:
+					continue
+
 	def make_new_lead_if_required(self):
 		"""Set lead against new opportunity"""
 		if (not self.get("party_name")) and self.contact_email:

@@ -14,7 +14,6 @@ def show_cart_count():
 
 	return False
 
-
 def set_cart_count(login_manager):
 	# since this is run only on hooks login event
 	# make sure user is already a customer
@@ -31,16 +30,13 @@ def set_cart_count(login_manager):
 		# cart count is calculated from this quotation's items
 		set_cart_count()
 
-
 def clear_cart_count(login_manager):
 	if show_cart_count():
 		frappe.local.cookie_manager.delete_cookie("cart_count")
 
-
 def update_website_context(context):
 	cart_enabled = is_cart_enabled()
 	context["shopping_cart_enabled"] = cart_enabled
-
 
 def is_customer():
 	if frappe.session.user and frappe.session.user != "Guest":

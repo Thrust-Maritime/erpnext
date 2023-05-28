@@ -24,6 +24,18 @@ from erpnext.stock.valuation import FIFOValuation, LIFOValuation, round_off_if_n
 class NegativeStockError(frappe.ValidationError):
 	pass
 
+import erpnext
+from erpnext.stock.doctype.bin.bin import update_qty as update_bin_qty
+from erpnext.stock.utils import (
+	get_incoming_outgoing_rate_for_cancel,
+	get_or_make_bin,
+	get_valuation_method,
+)
+
+
+class NegativeStockError(frappe.ValidationError):
+	pass
+
 
 class SerialNoExistsInFutureTransaction(frappe.ValidationError):
 	pass
@@ -1338,7 +1350,6 @@ def get_valuation_rate(
 		frappe.throw(msg=msg, title=_("Valuation Rate Missing"))
 
 	return valuation_rate
-
 
 def update_qty_in_future_sle(args, allow_negative_stock=False):
 	"""Recalculate Qty after Transaction in future SLEs based on current SLE."""

@@ -8,6 +8,7 @@ from frappe.utils import set_request
 from frappe.website.serve import get_response
 
 
+
 class TestHomepage(unittest.TestCase):
 	def test_homepage_load(self):
 		set_request(method="GET", path="home")

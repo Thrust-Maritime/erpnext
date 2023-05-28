@@ -27,6 +27,7 @@
   "customers",
   "preferences",
   "orientation",
+  "include_break",
   "include_ageing",
   "ageing_based_on",
   "section_break_14",
@@ -284,6 +285,12 @@
    "fieldtype": "Link",
    "label": "Terms and Conditions",
    "options": "Terms and Conditions"
+  },
+  {
+   "default": "1",
+   "fieldname": "include_break",
+   "fieldtype": "Check",
+   "label": "Page Break After Each SoA"
   }
  ],
  "links": [],
@@ -321,5 +328,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

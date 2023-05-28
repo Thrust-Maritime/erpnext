@@ -128,7 +128,6 @@ def get_balance_sheet_data(fiscal_year, companies, columns, filters):
 
 	return data, message, chart, report_summary
 
-
 def prepare_companywise_opening_balance(asset_data, liability_data, equity_data, companies):
 	opening_balance = {}
 	for company in companies:
@@ -288,7 +287,6 @@ def get_account_type_based_data(account_type, companies, fiscal_year, filters):
 	data["total"] = total
 	return data
 
-
 def get_columns(companies, filters):
 	columns = [
 		{
@@ -436,7 +434,6 @@ def calculate_values(accounts_by_name, gl_entries_by_account, companies, filters
 
 				if entry.posting_date < getdate(start_date):
 					d["opening_balance"] = d.get("opening_balance", 0.0) + flt(debit) - flt(credit)
-
 
 def accumulate_values_into_parents(accounts, accounts_by_name, companies):
 	"""accumulate children's values in parent accounts"""

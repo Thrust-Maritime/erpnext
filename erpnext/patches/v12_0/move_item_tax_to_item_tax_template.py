@@ -2,6 +2,8 @@ import json
 
 import frappe
 from frappe.model.naming import make_autoname
+from six import iteritems
+
 
 
 def execute():

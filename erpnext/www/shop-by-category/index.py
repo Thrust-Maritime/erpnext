@@ -3,7 +3,6 @@ from frappe import _
 
 sitemap = 1
 
-
 def get_context(context):
 	context.body_class = "product-page"
 

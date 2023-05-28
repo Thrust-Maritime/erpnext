@@ -96,7 +96,6 @@ def create_website_items_index():
 	reindex_all_web_items()
 	define_autocomplete_dictionary()
 
-
 def to_search_field(field):
 	if field == "tags":
 		return TagField("tags", separator=",")
@@ -121,7 +120,6 @@ def insert_item_to_index(website_item_doc):
 def insert_to_name_ac(web_name, doc_name):
 	ac = AutoCompleter(make_key(WEBSITE_ITEM_NAME_AUTOCOMPLETE), conn=frappe.cache())
 	ac.add_suggestions(Suggestion(web_name, payload=doc_name))
-
 
 def create_web_item_map(website_item_doc):
 	fields_to_index = get_fields_indexed()

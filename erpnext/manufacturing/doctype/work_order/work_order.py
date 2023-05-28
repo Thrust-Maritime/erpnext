@@ -1304,7 +1304,6 @@ def make_job_card(work_order, operations):
 			if row.job_card_qty > 0:
 				create_job_card(work_order, row, auto_create=True)
 
-
 @frappe.whitelist()
 def close_work_order(work_order, status):
 	if not frappe.has_permission("Work Order", "write"):

@@ -124,13 +124,11 @@ def get_chart(chart_template, existing_company=None):
 		from erpnext.accounts.doctype.account.chart_of_accounts.verified import (
 			standard_chart_of_accounts,
 		)
-
 		return standard_chart_of_accounts.get()
 	elif chart_template == "Standard with Numbers":
 		from erpnext.accounts.doctype.account.chart_of_accounts.verified import (
 			standard_chart_of_accounts_with_account_number,
 		)
-
 		return standard_chart_of_accounts_with_account_number.get()
 	else:
 		folders = ("verified",)

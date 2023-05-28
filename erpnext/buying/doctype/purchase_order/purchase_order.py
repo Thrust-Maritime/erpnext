@@ -618,6 +618,7 @@ def get_mapped_purchase_invoice(source_name, target_doc=None, ignore_permissions
 	return doc
 
 
+
 def get_list_context(context=None):
 	from erpnext.controllers.website_list_for_contact import get_list_context
 

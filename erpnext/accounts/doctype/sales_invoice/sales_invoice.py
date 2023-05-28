@@ -304,6 +304,8 @@ class SalesInvoice(SellingController):
 
 		self.process_common_party_accounting()
 
+		self.process_common_party_accounting()
+
 	def validate_pos_return(self):
 		if self.is_consolidated:
 			# pos return is already validated in pos invoice
@@ -653,6 +655,9 @@ class SalesInvoice(SellingController):
 			update_multi_mode_option(self, pos)
 
 		if pos:
+			if not for_validate:
+				self.tax_category = pos.get("tax_category")
+
 			if not for_validate:
 				self.tax_category = pos.get("tax_category")
 
@@ -1127,7 +1132,7 @@ class SalesInvoice(SellingController):
 		)
 
 		for tax in self.get("taxes"):
-			amount, base_amount = self.get_tax_amounts(tax, enable_discount_accounting)
+			amount, base_amount = self.get_tax_amounts(tax, self.enable_discount_accounting)
 
 			if flt(tax.base_tax_amount_after_discount_amount):
 				account_currency = get_account_currency(tax.account_head)
@@ -1213,7 +1218,7 @@ class SalesInvoice(SellingController):
 							else item.deferred_revenue_account
 						)
 
-						amount, base_amount = self.get_amount_and_base_amount(item, enable_discount_accounting)
+						amount, base_amount = self.get_amount_and_base_amount(item, self.enable_discount_accounting)
 
 						account_currency = get_account_currency(income_account)
 						gl_entries.append(
@@ -1762,7 +1767,6 @@ def get_total_in_party_account_currency(doc):
 
 	return flt(doc.get(total_fieldname), doc.precision(total_fieldname))
 
-
 def is_overdue(doc, total):
 	outstanding_amount = flt(doc.outstanding_amount, doc.precision("outstanding_amount"))
 	if outstanding_amount <= 0:
@@ -2303,6 +2307,7 @@ def update_pi_items(
 				)
 
 
+
 def update_pr_items(doc, sales_item_map, purchase_item_map, parent_child_map, warehouse_map):
 	for item in doc.get("items"):
 		item.warehouse = warehouse_map.get(sales_item_map.get(item.delivery_note_item))
@@ -2310,6 +2315,7 @@ def update_pr_items(doc, sales_item_map, purchase_item_map, parent_child_map, wa
 			item.warehouse = frappe.db.get_value(
 				"Purchase Order Item", item.purchase_order_item, "warehouse"
 			)
+
 
 
 def get_delivery_note_details(internal_reference):
@@ -2517,7 +2523,6 @@ def create_dunning(source_name, target_doc=None):
 		calculate_interest_and_amount,
 		get_dunning_letter_text,
 	)
-
 	def set_missing_values(source, target):
 		target.sales_invoice = source_name
 		target.outstanding_amount = source.outstanding_amount

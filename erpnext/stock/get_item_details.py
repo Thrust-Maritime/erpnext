@@ -75,6 +75,7 @@ def get_item_details(args, doc=None, for_validate=False, overwrite_warehouse=Tru
 
 	out = get_basic_details(args, item, overwrite_warehouse)
 
+	out = get_basic_details(args, item, overwrite_warehouse)
 	get_item_tax_template(args, item, out)
 	out["item_tax_rate"] = get_item_tax_map(
 		args.company,
@@ -162,7 +163,7 @@ def update_stock(args, out):
 	):
 
 		if out.has_batch_no and not args.get("batch_no"):
-			out.batch_no = get_batch_no(out.item_code, out.warehouse, out.qty)
+			out.batch_no = get_batch_no(out.item_code, out.warehouse, out.qty).get("batch_no", None)
 			actual_batch_qty = get_batch_qty(out.batch_no, out.warehouse, out.item_code)
 			if actual_batch_qty:
 				out.update(actual_batch_qty)
@@ -1214,7 +1215,6 @@ def get_serial_no_details(item_code, warehouse, stock_qty, serial_no):
 		{"item_code": item_code, "warehouse": warehouse, "stock_qty": stock_qty, "serial_no": serial_no}
 	)
 	serial_no = get_serial_no(args)
-
 	return {"serial_no": serial_no}
 
 
@@ -1234,7 +1234,6 @@ def get_bin_details_and_serial_nos(
 		bin_details_and_serial_nos.update(
 			get_serial_no_details(item_code, warehouse, stock_qty, serial_no)
 		)
-
 	return bin_details_and_serial_nos
 
 
@@ -1249,7 +1248,6 @@ def get_batch_qty_and_serial_no(batch_no, stock_qty, warehouse, item_code, has_s
 		)
 		serial_no = get_serial_no(args)
 		batch_qty_and_serial_no.update({"serial_no": serial_no})
-
 	return batch_qty_and_serial_no
 
 
@@ -1468,7 +1466,6 @@ def get_blanket_order_details(args):
 		args = frappe._dict(json.loads(args))
 
 	blanket_order_details = None
-
 	if args.item_code:
 		bo = frappe.qb.DocType("Blanket Order")
 		bo_item = frappe.qb.DocType("Blanket Order Item")

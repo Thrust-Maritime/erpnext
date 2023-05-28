@@ -13,6 +13,7 @@ from erpnext.support.doctype.service_level_agreement.service_level_agreement imp
 )
 
 
+
 class TestServiceLevelAgreement(unittest.TestCase):
 	def setUp(self):
 		self.create_company()

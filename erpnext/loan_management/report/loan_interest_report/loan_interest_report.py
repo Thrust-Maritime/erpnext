@@ -224,7 +224,6 @@ def get_sanctioned_amount_map():
 		)
 	)
 
-
 def get_payments(loans, filters):
 	query_filters = {"against_loan": ("in", loans)}
 

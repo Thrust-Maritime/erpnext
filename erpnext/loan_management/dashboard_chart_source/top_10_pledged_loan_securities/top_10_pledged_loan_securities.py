@@ -10,6 +10,11 @@ from erpnext.loan_management.report.applicant_wise_loan_security_exposure.applic
 )
 
 
+from erpnext.loan_management.report.applicant_wise_loan_security_exposure.applicant_wise_loan_security_exposure import (
+	get_loan_security_details,
+)
+
+
 @frappe.whitelist()
 @cache_source
 def get_data(

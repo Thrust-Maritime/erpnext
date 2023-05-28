@@ -214,6 +214,22 @@ class StockEntry(StockController):
 			self.from_bom = 1
 			self.bom_no = data.bom_no
 
+	def limits_crossed_error(self, args, item, qty_or_amount):
+		"""To override the method limits_crossed_error which is defined in the status_updater."""
+		"""Raise the exception for extra material transfer against the send to warehouse."""
+
+		send_to_ste = frappe.bold(get_link_to_form("Stock Entry", self.outgoing_stock_entry))
+		message = _("For more details please check the send to warehouse document {0}.").format(send_to_ste)
+
+		frappe.throw(_('For the item {0}, the received quantity {1} is more than the sent quantity {2}. {3}{4}')
+			.format(
+				frappe.bold(item.get('item_code')),
+				frappe.bold((item[args["target_field"]])),
+				frappe.bold(item[args["target_ref_field"]]),
+				'<br>',
+				message
+			), ExtraMaterialReceived, title = _('Extra Materials Transferred'))
+
 	def validate_work_order_status(self):
 		pro_doc = frappe.get_doc("Work Order", self.work_order)
 		if pro_doc.status == "Completed":
@@ -390,7 +406,7 @@ class StockEntry(StockController):
 		item_wise_qty = {}
 		if self.purpose == "Manufacture" and self.work_order:
 			for d in self.items:
-				if d.is_finished_item:
+				if d.is_finished_item or d.is_process_loss:
 					item_wise_qty.setdefault(d.item_code, []).append(d.qty)
 
 		precision = frappe.get_precision("Stock Entry Detail", "qty")
@@ -482,7 +498,7 @@ class StockEntry(StockController):
 
 			if self.purpose == "Manufacture":
 				if validate_for_manufacture:
-					if d.is_finished_item or d.is_scrap_item:
+					if d.is_finished_item or d.is_scrap_item or d.is_process_loss:
 						d.s_warehouse = None
 						if not d.t_warehouse:
 							frappe.throw(_("Target warehouse is mandatory for row {0}").format(d.idx))
@@ -1448,7 +1464,6 @@ class StockEntry(StockController):
 					and frappe.db.get_single_value("Manufacturing Settings", "material_consumption") == 1
 				):
 					self.get_unconsumed_raw_materials()
-
 				else:
 					if not self.fg_completed_qty:
 						frappe.throw(_("Manufacturing Quantity is mandatory"))
@@ -1493,6 +1508,7 @@ class StockEntry(StockController):
 
 		self.set_scrap_items()
 		self.set_actual_qty()
+		self.update_items_for_process_loss()
 		self.validate_customer_provided_item()
 		self.calculate_rate_and_amount(raise_error_if_no_rate=False)
 
@@ -2214,7 +2230,7 @@ class StockEntry(StockController):
 				"percent_join_field": "against_stock_entry",
 			}
 
-			self._update_percent_field_in_targets(args, update_modified=True)
+			self.update_prevdoc_status()
 
 	def update_quality_inspection(self):
 		if self.inspection_required:

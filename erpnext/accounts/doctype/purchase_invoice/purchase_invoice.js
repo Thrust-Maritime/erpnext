@@ -33,6 +33,9 @@ erpnext.accounts.PurchaseInvoice = class PurchaseInvoice extends erpnext.buying.
 		// Ignore linked advances
 		this.frm.ignore_doctypes_on_cancel_all = ['Journal Entry', 'Payment Entry', 'Purchase Invoice', "Repost Payment Ledger"];
 
+		// Ignore linked advances
+		this.frm.ignore_doctypes_on_cancel_all = ['Journal Entry', 'Payment Entry', 'Purchase Invoice'];
+
 		if(!this.frm.doc.__islocal) {
 			// show credit_to in print format
 			if(!this.frm.doc.supplier && this.frm.doc.credit_to) {

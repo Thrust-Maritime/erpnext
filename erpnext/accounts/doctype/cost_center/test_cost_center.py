@@ -27,6 +27,7 @@ class TestCostCenter(unittest.TestCase):
 		self.assertRaises(frappe.ValidationError, cost_center.save)
 
 
+
 def create_cost_center(**args):
 	args = frappe._dict(args)
 	if args.cost_center_name:

@@ -6,6 +6,7 @@ import erpnext
 from erpnext.controllers.taxes_and_totals import get_itemised_tax
 
 
+
 def update_itemised_tax_data(doc):
 	if not doc.taxes:
 		return

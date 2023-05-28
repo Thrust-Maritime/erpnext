@@ -257,6 +257,7 @@ class Lead(SellingController, CRMNote):
 			frappe.throw(_("Prospect {0} already exists").format(company_name or self.company_name))
 
 
+
 @frappe.whitelist()
 def make_customer(source_name, target_doc=None):
 	return _make_customer(source_name, target_doc)

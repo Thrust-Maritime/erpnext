@@ -82,6 +82,7 @@ class TestPeriodClosingVoucher(unittest.TestCase):
 			currency="USD",
 			customer="_Test Customer USD",
 		)
+
 		create_sales_invoice(
 			company=company,
 			cost_center=cost_center2,

@@ -3,12 +3,13 @@
 
 frappe.views.calendar["Deliverables"] = {
 	field_map: {
-		"start": "eng_start_date",
-		"end": "eng_complete_date",
-		"status": "eng_status",
 		"id": "name",
+		"end": "eng_complete_date",
+		"start": "eng_start_d",
 		"title": "deliv_title",
 		"allDay": "allDay",
+		"status": "eng_status",
+		"color":"color",
 		"progress": "progress"
 	},
 	gantt: true,
@@ -21,4 +22,6 @@ frappe.views.calendar["Deliverables"] = {
 		}
 	],
 	get_events_method: "frappe.desk.calendar.get_events"
+
 }
+

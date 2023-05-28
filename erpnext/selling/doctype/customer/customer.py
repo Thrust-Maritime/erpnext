@@ -254,6 +254,23 @@ class Customer(TransactionBase):
 		if past_credit_limits == current_credit_limits:
 			return
 
+		past_credit_limits = [
+			d.credit_limit
+			for d in frappe.db.get_all(
+				"Customer Credit Limit",
+				filters={"parent": self.name},
+				fields=["credit_limit"],
+				order_by="company",
+			)
+		]
+
+		current_credit_limits = [
+			d.credit_limit for d in sorted(self.credit_limits, key=lambda k: k.company)
+		]
+
+		if past_credit_limits == current_credit_limits:
+			return
+
 		company_record = []
 		for limit in self.credit_limits:
 			if limit.company in company_record:
@@ -463,6 +480,8 @@ def get_customer_list(doctype, txt, searchfield, start, page_len, filters=None):
 
 	if frappe.db.get_default("cust_master_name") == "Customer Name":
 		fields = ["name", "customer_group", "territory"]
+
+	fields = get_fields("Customer", fields)
 
 	fields = get_fields("Customer", fields)
 
