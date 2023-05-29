@@ -308,7 +308,6 @@ doc_events = {
 	"Sales Taxes and Charges Template": {
 		"on_update": "erpnext.e_commerce.doctype.e_commerce_settings.e_commerce_settings.validate_cart_settings"
 	},
-	"Tax Category": {"validate": "erpnext.regional.india.utils.validate_tax_category"},
 	"Sales Invoice": {
 		"on_submit": [
 			"erpnext.regional.create_transaction_log",
@@ -343,15 +342,6 @@ doc_events = {
 			"erpnext.regional.italy.utils.set_state_code",
 		],
 	},
-	"Supplier": {"validate": "erpnext.regional.india.utils.validate_pan_for_india"},
-	(
-		"Sales Invoice",
-		"Sales Order",
-		"Delivery Note",
-		"Purchase Invoice",
-		"Purchase Order",
-		"Purchase Receipt",
-	): {"validate": ["erpnext.regional.india.utils.set_place_of_supply"]},
 	"Contact": {
 		"on_trash": "erpnext.support.doctype.issue.issue.update_issue",
 		"after_insert": "erpnext.telephony.doctype.call_log.call_log.link_existing_conversations",
