@@ -1,44 +1,46 @@
 {
  "actions": [],
  "allow_import": 1,
- "allow_rename": 1,
  "autoname": ".########",
- "creation": "2022-05-26 21:53:45.816887",
+ "creation": "2022-06-07 20:37:54.139561",
  "doctype": "DocType",
  "document_type": "Document",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "deliverables_section",
-  "deliv_title",
+
   "description",
+  "deliv_title",
   "dwg_no",
   "revision",
-  "header_column_column",
+  "note_comment",
+  "folder",
+  "column_break_6",
   "project",
   "project_number",
-  "proj_title",
-  "color",
   "type",
   "level_1",
   "fully_complete",
+  "not_complete",
+  "progress",
   "engineering_section",
   "eng_status",
-  "eng_start_date",
-  "engineering_column_column",
+  "eng_start_d",
+  "column_break_12",
   "engineer",
   "eng_complete_date",
-  "production_section_break",
+  "section_break_14",
   "production_section",
   "prod_status",
-  "column_break_4",
+  "prod_start_date",
+  "column_break_17",
   "change",
-  "section_break_10",
+  "prod_complete_date",
+  "section_break_19",
   "sub_deliverables",
   "procurement_notes",
-  "file_test",
-  "folder",
-  "progress"
+  "color"
  ],
  "fields": [
   {
@@ -47,19 +49,14 @@
    "label": "Deliverables"
   },
   {
-   "bold": 1,
+   "columns": 2,
    "fieldname": "deliv_title",
    "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Title"
+   "label": "Title",
+   "read_only": 1
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Data",
-   "label": "Description"
-  },
-  {
-   "bold": 1,
+   "columns": 3,
    "fieldname": "dwg_no",
    "fieldtype": "Data",
    "in_global_search": 1,
@@ -68,23 +65,36 @@
    "label": "Dwg no"
   },
   {
+   "columns": 1,
    "fieldname": "revision",
    "fieldtype": "Data",
-   "label": "Latest Revision "
+   "label": "Latest Revision"
   },
   {
-   "fieldname": "header_column_column",
+   "fieldname": "note_comment",
+   "fieldtype": "Data",
+   "label": "Note / Comment"
+  },
+  {
+   "fieldname": "folder",
+   "fieldtype": "Data",
+   "label": "Folder",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_6",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "project",
    "fieldtype": "Link",
-   "in_global_search": 1,
    "in_standard_filter": 1,
    "label": "Project",
-   "options": "Project"
+   "options": "Project",
+   "reqd": 1
   },
   {
+   "default": "Non-physical",
    "fieldname": "type",
    "fieldtype": "Select",
    "label": "Type",
@@ -101,7 +111,17 @@
    "default": "0",
    "fieldname": "fully_complete",
    "fieldtype": "Check",
+   "hidden": 1,
    "label": "Fully Complete",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "not_complete",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Not Complete",
    "read_only": 1
   },
   {
@@ -110,43 +130,33 @@
    "label": "Engineering"
   },
   {
+   "columns": 1,
    "fieldname": "eng_status",
    "fieldtype": "Select",
-   "in_global_search": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Eng Status",
    "options": "Planned\nEIP\nReview/Approve\nComplete\nHold"
   },
   {
-   "fieldname": "eng_start_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "in_preview": 1,
-   "in_standard_filter": 1,
-   "label": "Eng Start Date"
-  },
-  {
-   "fieldname": "engineering_column_column",
+   "fieldname": "column_break_12",
    "fieldtype": "Column Break"
   },
   {
    "fieldname": "engineer",
    "fieldtype": "Link",
-   "in_global_search": 1,
-   "in_standard_filter": 1,
    "label": "Engineer",
    "options": "User"
   },
   {
+   "columns": 1,
    "fieldname": "eng_complete_date",
    "fieldtype": "Date",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Eng Complete Date"
+   "label": "Eng Complete Date",
+   "reqd": 1
   },
   {
-   "fieldname": "production_section_break",
+   "fieldname": "section_break_14",
    "fieldtype": "Section Break"
   },
   {
@@ -155,24 +165,39 @@
    "label": "Production"
   },
   {
+   "columns": 1,
    "fieldname": "prod_status",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Prod Status",
    "options": "Waiting on Eng\nProduction Ready\nProduction in Progress\nComplete\nHold"
   },
   {
-   "fieldname": "column_break_4",
+   "fieldname": "prod_start_date",
+   "fieldtype": "Date",
+   "label": "Prod Start Date"
+  },
+  {
+   "fieldname": "column_break_17",
    "fieldtype": "Column Break"
   },
   {
    "default": "0",
-   "description": "If ticked then there are New changes. \nProduction Only to untick",
+   "description": "If ticked then there are New changes. \nProduction Only to untick.",
    "fieldname": "change",
    "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Change"
   },
   {
-   "fieldname": "section_break_10",
+   "fieldname": "prod_complete_date",
+   "fieldtype": "Date",
+   "label": "Prod Complete Date"
+  },
+  {
+   "fieldname": "section_break_19",
    "fieldtype": "Section Break"
   },
   {
@@ -187,53 +212,43 @@
    "label": "Procurement Notes"
   },
   {
-   "default": "C:\\Users\\Ben\\Thrust Maritime\\Thrust Maritime - TM-Documents\\Job Files\\TM-0306 Technip-Brazil\\40 Drawings\\1 A-Frame\\010 Main Clevis",
-   "fieldname": "file_test",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "Folder",
-   "read_only": 1
-  },
-  {
-   "default": "X:\\",
-   "fieldname": "folder",
-   "fieldtype": "Data",
-   "label": "Folder",
-   "read_only": 1
-  },
-  {
-   "default": "#449CF0",
    "fieldname": "color",
    "fieldtype": "Color",
    "hidden": 1,
-   "label": "Color"
+   "label": "color"
   },
   {
-   "fieldname": "proj_title",
-   "fieldtype": "Data",
-   "label": "proj-title"
+   "fieldname": "eng_start_d",
+   "fieldtype": "Date",
+   "label": "Eng Start Date",
+   "reqd": 1
   },
   {
    "fetch_from": "project.project_number",
    "fieldname": "project_number",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Project Number"
   },
   {
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "label": "Description",
+   "reqd": 1
+  },
+  {
    "fieldname": "progress",
-   "fieldtype": "Int",
+   "fieldtype": "Percent",
    "in_list_view": 1,
-   "label": "progress",
-   "non_negative": 1
+   "label": "Progress %"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-11-14 21:11:19.753070",
+ "modified": "2022-11-14 20:11:32.861272",
  "modified_by": "Administrator",
  "module": "Projects",
  "name": "Deliverables",
- "nsm_parent_field": "parent_deliverables",
  "owner": "Administrator",
  "permissions": [
   {
@@ -245,6 +260,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Projects User",
    "share": 1,
    "write": 1
   }
