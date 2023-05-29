@@ -905,7 +905,7 @@ frappe.ui.form.on('Payment Entry', {
 			function(d) { return flt(d.amount) }));
 
 		frm.set_value("difference_amount", difference_amount - total_deductions +
-			frm.doc.base_total_taxes_and_charges);
+			flt(frm.doc.base_total_taxes_and_charges));
 
 		frm.events.hide_unhide_fields(frm);
 	},
@@ -1422,7 +1422,8 @@ frappe.ui.form.on('Payment Entry', {
 				},
 				callback: function(r, rt) {
 					if(r.message) {
-						
+						frappe.run_serially([
+							() => {
 								frm.set_value("paid_from_account_balance", r.message.paid_from_account_balance);
 								frm.set_value("paid_to_account_balance", r.message.paid_to_account_balance);
 								frm.set_value("party_balance", r.message.party_balance);
